@@ -551,7 +551,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   else
   if (real_read == 0 || real_read == -1) {
     real_read = strlen(Memo1->Text.c_str());
-    if (real_read > 7 && real_read < 2049) {
+    if (real_read > 7 && real_read < 257) {
       ctx_len = sizeof(SHA256_CTX);
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
