@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 228
-  Top = 295
+  Left = 220
+  Top = 254
   BorderStyle = bsNone
   Caption = 'Form1'
   ClientHeight = 276
@@ -113,7 +113,7 @@ object Form1: TForm1
     object Shape1: TShape
       Left = 8
       Top = 210
-      Width = 489
+      Width = 491
       Height = 18
     end
     object Shape2: TShape
@@ -172,7 +172,7 @@ object Form1: TForm1
       Left = 424
       Top = 24
       Width = 75
-      Height = 20
+      Height = 19
       Cursor = crHandPoint
       Caption = #1054#1090#1082#1088#1099#1090#1100
       TabOrder = 3
@@ -182,7 +182,7 @@ object Form1: TForm1
       Left = 424
       Top = 72
       Width = 75
-      Height = 20
+      Height = 19
       Cursor = crHandPoint
       Caption = #1054#1090#1082#1088#1099#1090#1100
       TabOrder = 4
@@ -190,7 +190,7 @@ object Form1: TForm1
     end
     object RadioButton1: TRadioButton
       Left = 168
-      Top = 104
+      Top = 105
       Width = 97
       Height = 17
       Caption = #1047#1072#1096#1080#1092#1088#1086#1074#1072#1090#1100
@@ -198,7 +198,7 @@ object Form1: TForm1
     end
     object RadioButton2: TRadioButton
       Left = 296
-      Top = 104
+      Top = 105
       Width = 97
       Height = 17
       Caption = #1056#1072#1089#1096#1080#1092#1088#1086#1074#1072#1090#1100
@@ -220,7 +220,7 @@ object Form1: TForm1
       Left = 424
       Top = 146
       Width = 75
-      Height = 20
+      Height = 19
       Cursor = crHandPoint
       Caption = #1054#1090#1082#1088#1099#1090#1100
       TabOrder = 8
@@ -228,9 +228,9 @@ object Form1: TForm1
     end
     object Button4: TButton
       Left = 424
-      Top = 182
+      Top = 184
       Width = 75
-      Height = 20
+      Height = 19
       Cursor = crHandPoint
       Caption = #1057#1090#1072#1088#1090
       TabOrder = 9
@@ -291,7 +291,7 @@ object Form1: TForm1
       Top = 112
       Width = 73
       Height = 17
-      Caption = 'Erased'
+      Caption = #1057#1090#1077#1088#1077#1090#1100
       TabOrder = 14
     end
   end
