@@ -1,3 +1,4 @@
+#include <io.h>
 #include <vcl.h>
 #include <time.h>
 #include <stdio.h>
@@ -49,7 +50,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.24 30NOV19 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.25 04DEC19 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -184,14 +185,14 @@ int erasedfile(uint8_t * filename) {
 
   if (fsize <= 0) {
     fclose(f);
-    return -2;
+    return -1;
   }
 
   uint8_t * data = (uint8_t *)calloc(512, 1);
 
   if (data == NULL) {
     fclose(f);
-    return -3;
+    return -1;
   }
 
   short int real = 0;
@@ -209,7 +210,7 @@ int erasedfile(uint8_t * filename) {
       free(data);
       data = NULL;
 
-      return -4;
+      return -1;
     }
     else
       fflush(f);
@@ -233,11 +234,17 @@ int erasedfile(uint8_t * filename) {
     }
   }
 
-  fclose(f);
   free(data);
   data = NULL;
 
-  return 0;
+  check = (char)chsize(fileno(f), 0);
+  fclose(f);
+
+  if (check != 0) {
+    return -1;
+  }
+  else
+    return 0;
 }
 
 int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_size, int cipher, int operation) {
