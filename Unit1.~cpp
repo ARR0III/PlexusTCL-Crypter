@@ -29,6 +29,7 @@
 #define ENCRYPT       0x00
 #define DECRYPT       0xDE
 
+#define BLOCK_SIZE    1024
 #define DATA_SIZE     4096
 
 #pragma hdrstop
@@ -37,7 +38,7 @@
 
 TForm1 *Form1;
 
-const float cas = 4.88; /* (float)Form1->Shape2->Width / (float)100 */
+const float cas = 4.88; /* ((float)Form1->Shape2->Width / (float)100) or (488 пкс / 100) */
 
 const TColor FORM_HEAD_COLOR = TColor(0x00804000);
 
@@ -50,7 +51,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.25 04DEC19 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.26 08DEC19 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -188,7 +189,7 @@ int erasedfile(uint8_t * filename) {
     return -1;
   }
 
-  uint8_t * data = (uint8_t *)calloc(512, 1);
+  uint8_t * data = (uint8_t *)calloc(BLOCK_SIZE, 1);
 
   if (data == NULL) {
     fclose(f);
@@ -202,31 +203,48 @@ int erasedfile(uint8_t * filename) {
   char  check;
 
   long int position = 0;
+  long int realread = 0;
 
   while (position < fsize) {
-    if (fwrite(data, 1, 512, f) != 512) {
-      fclose(f);
+    realread = fread(data, 1, BLOCK_SIZE, f);
 
-      free(data);
-      data = NULL;
+    if (realread > 0) {
+      memset(data, 0x00, realread);
+      fseek(f, position, SEEK_SET);
 
-      return -1;
+      if (fwrite(data, 1, realread, f) != realread) {
+        fclose(f);
+
+        free(data);
+        data = NULL;
+
+        return -1;
+      }
+      else
+        fflush(f);
+
+      position = position + realread;
     }
-    else
-      fflush(f);
 
-    position += 512;
+    ShowMessage(IntToStr(realread));
 
     real = (short int)((float)position / div + 0.1);
 
+    if (real > 100)
+      real = 100;
+
     if (real > past) {
-      Form1->Shape2->Width = ((int)((float)real * cas));
+        
+      Form1->Shape2->Width = (int)((float)real * cas);
 
       check = size_check(position);
 
       Form1->StatusBar1->Panels->Items[0]->Text = "Уничтожение файла; Обработано: " +
-        FloatToStrF((check ? ((float)position / (float)INT_SIZE_DATA[check - 1]) : position), ffFixed, 4, 2) +
-        " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
+
+      (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
+               IntToStr(position)) +
+
+      " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
 
       Application->ProcessMessages();
 
@@ -240,8 +258,9 @@ int erasedfile(uint8_t * filename) {
   check = (char)chsize(fileno(f), 0);
   fclose(f);
 
-  if (check != 0)
+  if (check != 0) {
     return -1;
+  }
   else
     return 0;
 }
@@ -288,8 +307,8 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   long  int position = 0;
   short int realread = 0;
 
-  short int real_percent = 0;
-  short int past_percent = 0;
+  short int real = 0;
+  short int past = 0;
 
   Form1->Shape2->Width = 0;
 
@@ -317,8 +336,9 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
                         return -5;
                       }
-                      else
+                      else {
                         fflush(fo);
+                      }
                       break;
         case DECRYPT: if (fread(vector, 1, block_size, fi) != block_size) {
                         fclose(fi);
@@ -367,25 +387,32 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
       return -5;
     }
-    else
+    else {
       fflush(fo);
+    }
 
-    position += realread;
-    real_percent = (short int)((float)position / div + 0.1);
+    position = position + realread;
+    real = (short int)((float)position / div + 0.1);
 
-    if (real_percent > past_percent) {
-      Form1->Shape2->Width = ((int)((float)real_percent * cas));
+    if (real > 100)
+      real = 100;
+
+    if (real > past) {
+      Form1->Shape2->Width = (int)((float)real * cas);
 
       check = size_check(position);
 
       Form1->StatusBar1->Panels->Items[0]->Text = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
-        ": " + AnsiString(ALGORITM_NAME[cipher]) + "; Обработано: " +
-        FloatToStrF((check ? ((float)position / (float)INT_SIZE_DATA[check - 1]) : position), ffFixed, 4, 2) +
-        " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+      ": " + AnsiString(ALGORITM_NAME[cipher]) + "; Обработано: " +
+
+      (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
+               IntToStr(position)) +
+
+      " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
 
       Application->ProcessMessages();
 
-      past_percent = real_percent;
+      past = real;
     }
   }
 
@@ -677,7 +704,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (operation == ENCRYPT)
         memset(vector, 0x00, block_size);
-        
+
       memset(buffer, 0x00, key_len);
 
       free(vector);
@@ -699,7 +726,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (operation == ENCRYPT)
         memset(vector, 0x00, block_size);
-        
+
       memset(buffer, 0x00, key_len);
 
       free(vector);
@@ -721,7 +748,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (operation == ENCRYPT)
         memset(vector, 0x00, block_size);
-        
+
       memset(buffer, 0x00, key_len);
 
       free(vector);
@@ -876,5 +903,3 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   free(memory);
   memory = NULL;
 }
-
-
