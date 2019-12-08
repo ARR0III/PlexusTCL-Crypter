@@ -226,8 +226,6 @@ int erasedfile(uint8_t * filename) {
       position = position + realread;
     }
 
-    ShowMessage(IntToStr(realread));
-
     real = (short int)((float)position / div + 0.1);
 
     if (real > 100)
