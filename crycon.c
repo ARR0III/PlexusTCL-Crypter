@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "src/arc4.h"
-#include "src/base64.h"
 #include "src/sha256.h"
 #include "src/serpent.h"
 #include "src/rijndael.h"
@@ -289,7 +288,7 @@ int main (int argc, uint8_t * argv[]) {
     if (strcmp(argv[1], "--serpent") == 0)
       cipher_number = SERPENT;
     else {
-      NAME_CIPHER_ERROR(argv[2]);
+      NAME_CIPHER_ERROR(argv[1]);
       return -1;
     }
   }
@@ -327,7 +326,7 @@ int main (int argc, uint8_t * argv[]) {
       key_len = 256;
     }
     else {
-      printf("[!] Key length incorrect!\n");
+      printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return -1;
     }
   }
