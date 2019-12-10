@@ -25,12 +25,12 @@
 
 #define DATA_SIZE     4096
 
-#define OPERATION(operation)      (operation ? "de" : "en")
+#define OPERATION(operation)    (operation ? "de" : "en")
 
-#define NAME_CIPHER_ERROR(name) printf("[#] Name cipher \"%s\" incorrect!\n", name)
-#define MEMORY_ERROR            printf("[#] Cannot allocate memory!\n")
+#define NAME_CIPHER_ERROR(name) printf("[!] Name cipher \"%s\" incorrect!\n", name)
+#define MEMORY_ERROR            printf("[!] Cannot allocate memory!\n")
 
-const uint8_t * PROGRAMM_NAME = "PlexusTCL Console Crypter 4.26 10DEC19 [RU]";
+const uint8_t * PROGRAMM_NAME = "PlexusTCL Console Crypter 4.26 11DEC19 [RU]";
 
 const uint8_t * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const uint8_t * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -65,11 +65,7 @@ void hash_init(uint8_t * input, uint8_t * output, int len) { /* размножить хэш в
   for (i = j = 0; i < len; i++) {
     temp = output[j];
     input[i] = temp;
-
-    if (j == 32)
-      j = 0;
-    else
-      j++;
+    j = (j == 32 ? 0 : ++j);
   }
 }
 
@@ -79,7 +75,7 @@ void cent(short int * number) {
   }
 }
 
-int variant (int cipher, int operation) { 
+int variant (int cipher, int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
@@ -218,8 +214,9 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
       if ((real_percent % 4) == 0) {
         memset(progress_bar, '#', (real_percent / 4));
-        printf("\r >  %s [%s] %d %%", OPERATION_NAME[variant(cipher, operation)], progress_bar, real_percent);
       }
+
+      printf("\r >  %s [%s] %d %%", OPERATION_NAME[variant(cipher, operation)], progress_bar, real_percent);
 
       past_percent = real_percent;
     }
@@ -239,9 +236,25 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
 int main (int argc, uint8_t * argv[]) {
   short int cipher_number, operation,
-            key_len, real_read,
-            block_size;
+            key_len, block_size = 0;
 
+  if (argc == 2) {
+    if (strcmp(argv[1], "--help") == 0) {
+      printf("%s\n", PROGRAMM_NAME);
+      printf("This is software for encrypt/decrypt file.\n\n");
+      printf("Algoritms:   --arc4, --aes, --serpent, --blowfish, --threefish.\n");
+      printf("Operation:   -e/--encrypt, -d/--decrypt.\n");
+      printf("Lengths key: --128, --192, --256.\n\n");
+      printf("Enter: [programm name] [--algoritm] [--operation]"
+      	     " [--key length] [input filename] [output filename] [key filename or string key]\n");
+      return 0;
+    }
+    else {
+      printf("[!] Incorrect parameter \"%s\"! Only \"--help\".\n", argv[1]);
+      return -1;
+    }
+  }
+  else
   if (argc == 5) { /* STREAM CIPHER */
     /* crypter --arc4 input output key */
     /*       0      1     2      3   4 */
@@ -285,8 +298,6 @@ int main (int argc, uint8_t * argv[]) {
     printf("[!] Enter: %s [algoritm] [parameters] [input] [output] [key]\n", argv[0]);
     return -1;
   }
-
-  printf("[#] %s\n", PROGRAMM_NAME);
 
   if (cipher_number == ARC4)
     key_len = 2048;
@@ -375,14 +386,14 @@ int main (int argc, uint8_t * argv[]) {
     return -1;
   }
 
-  int ctx_len;
-  real_read = (short int)readfromfile(argv[argc - 1], buffer, key_len);
+  int ctx_len = 0;
+  short int real_read = (short int)readfromfile(argv[argc - 1], buffer, key_len);
 
   if (real_read == key_len)
     printf("[#] Crypt key read from file \"%s\"!\n", argv[argc - 1]);
   else
   if (real_read > 0 && real_read < key_len) {
-    printf("[!] Data in key file: %d byte; necessary: %d byte!\n", real_read, key_len);
+    printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, key_len);
     free(buffer);
     buffer = NULL;
     return -1;
@@ -398,12 +409,11 @@ int main (int argc, uint8_t * argv[]) {
         sha256sum(sha256_ctx, argv[argc - 1], real_read);
         hash_init(buffer, sha256_ctx->hash, key_len);
 
-
-        printf("[#] Crypt key read from command line!\n");
-
         memset(sha256_ctx, 0x00, ctx_len);
         free(sha256_ctx);
         sha256_ctx = NULL;
+
+        printf("[#] Crypt key read from command line!\n");
       }
       else {
         MEMORY_ERROR;
@@ -413,7 +423,7 @@ int main (int argc, uint8_t * argv[]) {
       }
     }
     else {
-      printf("[!] Data in string key: %d byte; necessary: 8..256 byte", real_read);
+      printf("[!] Data in string key %d byte; necessary 8..256 byte", real_read);
       memset(buffer, 0x00, key_len);
       free(buffer);
       buffer = NULL;
@@ -421,7 +431,7 @@ int main (int argc, uint8_t * argv[]) {
     }
   }
 
-  printf("[#] Key length \"%d\" byte initialized!\n", key_len);
+  printf("[#] Key length %d-bits initialized!\n", key_len * 8);
 
   switch (cipher_number) {
     case AES:       block_size = 16;
@@ -453,7 +463,7 @@ int main (int argc, uint8_t * argv[]) {
 
     int i;
     srand(time(NULL));
-    
+
     for (i = 0; i < block_size; i++)
       vector[i] = (uint8_t)genrand(0, 255);
 
@@ -588,7 +598,7 @@ int main (int argc, uint8_t * argv[]) {
                 break;
     case -2:    printf("[!] Input file not opened!\n");
                 break;
-    case -3:    printf("[!] Size of file for %s !", OPERATION_NAME[variant(cipher_number, operation)]);
+    case -3:    printf("[!] Size of input file 0 or more 2 Gb!\n");
                 break;
     case -4:    MEMORY_ERROR;
                 break;
