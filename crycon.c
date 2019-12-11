@@ -30,7 +30,7 @@
 #define MEMORY_ERROR \
         printf("[!] Cannot allocate memory!\n")
 
-const uint8_t * PROGRAMM_NAME = "PlexusTCL Console Crypter 4.26 11DEC19 [RU]";
+const uint8_t * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.26 11DEC19 [RU]";
 
 const uint8_t * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const uint8_t * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -251,14 +251,16 @@ short int vector_init(uint8_t * data, short int size) {
 }
 
 int main (int argc, uint8_t * argv[]) {
-  short int cipher_number, operation,
-            key_len, block_size = 0;
+  int cipher_number,
+      operation,
+      key_len,
+      block_size = 0;
 
   if (argc == 2) {
     if (strcmp(argv[1], "--help") == 0) {
       printf("%s\n", PROGRAMM_NAME);
-      printf("This is software for encrypt/decrypt file.\n\n");
-      printf("Algoritms:   --arc4, --aes, --serpent, --blowfish, --threefish.\n");
+      printf("This is software for encrypt/decrypt files.\n\n");
+      printf("Algoritms:   -a/--arc4, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
       printf("Operation:   -e/--encrypt, -d/--decrypt.\n");
       printf("Lengths key: --128, --192, --256.\n\n");
       printf("Enter: [programm name] [--algoritm] [--operation]"
@@ -403,7 +405,7 @@ int main (int argc, uint8_t * argv[]) {
   }
 
   int ctx_len = 0;
-  short int real_read = (short int)readfromfile(argv[argc - 1], buffer, key_len);
+  int real_read = (short int)readfromfile(argv[argc - 1], buffer, key_len);
 
   if (real_read == key_len)
     printf("[#] Crypt key read from file \"%s\"!\n", argv[argc - 1]);
