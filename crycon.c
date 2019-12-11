@@ -24,15 +24,16 @@
 
 #define DATA_SIZE     4096
 
-#define OPERATION(operation)    (operation ? "de" : "en")
+#define NAME_CIPHER_ERROR(name) \
+        printf("[!] Name cipher \"%s\" incorrect!\n", name)
 
-#define NAME_CIPHER_ERROR(name) printf("[!] Name cipher \"%s\" incorrect!\n", name)
-#define MEMORY_ERROR            printf("[!] Cannot allocate memory!\n")
+#define MEMORY_ERROR \
+        printf("[!] Cannot allocate memory!\n")
 
 const uint8_t * PROGRAMM_NAME = "PlexusTCL Console Crypter 4.26 11DEC19 [RU]";
 
 const uint8_t * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
-const uint8_t * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
+const uint8_t * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
                                     "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
 uint8_t       * rijndael_ctx  = NULL;
@@ -57,7 +58,7 @@ void sha256sum(SHA256_CTX * ctx, uint8_t * data, int len) {
   sha256_final(ctx);
 }
 
-void hash_init(uint8_t * input, uint8_t * output, int len) { /* размножить хэш в длинну ключа */
+void hash_to_key(uint8_t * input, uint8_t * output, int len) {
   int i, j;
   uint8_t temp;
 
@@ -74,7 +75,7 @@ void cent(short int * number) {
   }
 }
 
-int variant (int cipher, int operation) {
+int operation_variant(int cipher, int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
@@ -215,7 +216,7 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
         memset(progress_bar, '#', (real_percent / 4));
       }
 
-      printf("\r >  %s [%s] %d %%", OPERATION_NAME[variant(cipher, operation)], progress_bar, real_percent);
+      printf("\r >  %s ]%s[ %3d %%", OPERATION_NAME[operation_variant(cipher, operation)], progress_bar, real_percent);
 
       past_percent = real_percent;
     }
@@ -231,6 +232,22 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   memory = NULL;
 
   return 0;
+}
+
+short int vector_init(uint8_t * data, short int size) {
+  short int i;
+
+  for (i = 0; i < size; i++)
+    data[i] = (uint8_t)genrand(0, 255);
+
+  size = size - 2;
+
+  for (i = 0; i < size; i++) {
+    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2])
+      break;
+  }
+
+  return i;
 }
 
 int main (int argc, uint8_t * argv[]) {
@@ -257,7 +274,7 @@ int main (int argc, uint8_t * argv[]) {
   if (argc == 5) { /* STREAM CIPHER */
     /* crypter --arc4 input output key */
     /*       0      1     2      3   4 */
-    if (strcmp(argv[1], "--arc4") == 0)
+    if (strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "--arc4") == 0)
       cipher_number = ARC4;
     else {
       NAME_CIPHER_ERROR(argv[1]);
@@ -268,10 +285,10 @@ int main (int argc, uint8_t * argv[]) {
   if (argc == 6) { /* BLOCK CIPHER */
     /* crypter --blowfish --encrypt/decrypt input output key */
     /*       0          1                 2     3      4   5 */
-    if (strcmp(argv[1], "--blowfish") == 0)
+    if (strcmp(argv[1], "-b") == 0 || strcmp(argv[1], "--blowfish") == 0)
       cipher_number = BLOWFISH;
     else
-    if (strcmp(argv[1], "--threefish") == 0)
+    if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--threefish") == 0)
       cipher_number = THREEFISH;
     else {
       NAME_CIPHER_ERROR(argv[1]);
@@ -282,10 +299,10 @@ int main (int argc, uint8_t * argv[]) {
   if (argc == 7) {
     /* crypter --aes --encrypt/decrypt --256 input output key */
     /*       0     1                 2     3     4      5   6*/
-    if (strcmp(argv[1], "--aes") == 0)
+    if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--aes") == 0)
       cipher_number = AES;
     else
-    if (strcmp(argv[1], "--serpent") == 0)
+    if (strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--serpent") == 0)
       cipher_number = SERPENT;
     else {
       NAME_CIPHER_ERROR(argv[1]);
@@ -406,7 +423,7 @@ int main (int argc, uint8_t * argv[]) {
 
       if (sha256_ctx != NULL) {
         sha256sum(sha256_ctx, argv[argc - 1], real_read);
-        hash_init(buffer, sha256_ctx->hash, key_len);
+        hash_to_key(buffer, sha256_ctx->hash, key_len);
 
         memset(sha256_ctx, 0x00, ctx_len);
         free(sha256_ctx);
@@ -458,20 +475,10 @@ int main (int argc, uint8_t * argv[]) {
     }
   }
 
-  if (operation == ENCRYPT && cipher_number != ARC4) {
-
-    int i;
+  if (cipher_number != ARC4 && operation == ENCRYPT) {
     srand(time(NULL));
 
-    for (i = 0; i < block_size; i++)
-      vector[i] = (uint8_t)genrand(0, 255);
-
-    for (i = 0; i < (block_size - 2); i++) {
-      if (vector[i] == vector[i + 1] && vector[i + 1] == vector[i + 2])
-        break;
-    }
-
-    if (i < (block_size - 2)) {
+    if (vector_init(vector, block_size) < (block_size - 2)) {
       printf("[!] System time stopped!\n");
       memset(buffer, 0x00, key_len);
       memset(vector, 0x00, block_size);
@@ -488,6 +495,7 @@ int main (int argc, uint8_t * argv[]) {
   if (cipher_number == ARC4) {
     arc4_init(buffer, key_len);
   }
+  else
   if (cipher_number == AES) {
     ctx_len = Nb * (Nr + 1) * 4;
     rijndael_ctx = (uint8_t *) calloc(ctx_len, 1);
@@ -511,6 +519,7 @@ int main (int argc, uint8_t * argv[]) {
 
     rijndael_init(buffer, rijndael_ctx);
   }
+  else
   if (cipher_number == SERPENT) {
     ctx_len = sizeof(SERPENT_CTX);
     serpent_ctx = (SERPENT_CTX *) calloc(1, ctx_len);
@@ -586,24 +595,24 @@ int main (int argc, uint8_t * argv[]) {
   free(buffer);
   buffer = NULL;
 
-  printf("[#] Operation %s file started!\n", OPERATION_NAME[variant(cipher_number, operation)]);
+  printf("[#] Operation %s file \"%s\" started!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
 
   int result = filecrypt(argv[argc - 3], argv[argc - 2], vector, block_size, cipher_number, operation);
 
   switch (result) {
-    case  0:    printf("[#] File %s complete!\n", OPERATION_NAME[variant(cipher_number, operation)]);
+    case  0:    printf("[#] %s file \"%s\" complete!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
                 break;
-    case -1:    printf("[!] File for %s not opened!\n", OPERATION_NAME[variant(cipher_number, operation)]);
+    case -1:    printf("[!] File for %s \"%s\" not opened!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
                 break;
-    case -2:    printf("[!] Input file not opened!\n");
+    case -2:    printf("[!] Output file \"%s\" not opened!\n", argv[argc - 2]);
                 break;
-    case -3:    printf("[!] Size of input file 0 or more 2 Gb!\n");
+    case -3:    printf("[!] Size of input file \"%s\" 0 or more 2 Gb!\n", argv[argc - 3]);
                 break;
     case -4:    MEMORY_ERROR;
                 break;
-    case -5:    printf("[!] Error write in file!\n");
+    case -5:    printf("[!] Error write in file \"%s\" !\n", argv[argc - 2]);
                 break;
-    case -6:    printf("[!] Error read form file!\n");
+    case -6:    printf("[!] Error read form file \"%s\" !\n", argv[argc - 3]);
                 break;
   }
 
