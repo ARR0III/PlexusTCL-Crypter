@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -30,7 +31,7 @@
 #define MEMORY_ERROR \
         printf("[!] Cannot allocate memory!\n")
 
-const uint8_t * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.26 11DEC19 [RU]";
+const uint8_t * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.27 12DEC19 [RU]";
 
 const uint8_t * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const uint8_t * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -63,9 +64,9 @@ void hash_to_key(uint8_t * input, uint8_t * output, int len) {
   uint8_t temp;
 
   for (i = j = 0; i < len; i++) {
-    temp = output[j];
-    input[i] = temp;
-    j = (j == 32 ? 0 : ++j);
+    temp = input[j];
+    output[i] = temp;
+    j = (j == 31 ? 0 : ++j);
   }
 }
 
@@ -114,8 +115,6 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   }
 
   float div = (float)fsize / 100.0;
-
-  char check;
 
   short int nblock;
 
@@ -382,17 +381,17 @@ int main (int argc, uint8_t * argv[]) {
     }
   }
 
-  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }
@@ -425,7 +424,7 @@ int main (int argc, uint8_t * argv[]) {
 
       if (sha256_ctx != NULL) {
         sha256sum(sha256_ctx, argv[argc - 1], real_read);
-        hash_to_key(buffer, sha256_ctx->hash, key_len);
+        hash_to_key(sha256_ctx->hash, buffer, key_len);
 
         memset(sha256_ctx, 0x00, ctx_len);
         free(sha256_ctx);
