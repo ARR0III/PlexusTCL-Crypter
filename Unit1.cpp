@@ -51,7 +51,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.26 08DEC19 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.27 12DEC19 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -141,13 +141,9 @@ void hash_init(uint8_t * input, uint8_t * output, int len) {
   uint8_t temp;
 
   for (i = j = 0; i < len; i++) {
-    temp = output[j];
-    input[i] = temp;
-
-    if (j == 32)
-      j = 0;
-    else
-      j++;
+    temp = input[j];
+    output[i] = temp;
+    j = (j == 31 ? 0 : ++j);
   }
 }
 
@@ -171,6 +167,12 @@ char size_check(uint32_t size) {
   }
 
   return result;
+}
+
+void centreal(short int * real) {
+  if (*real > 100) {
+    *real = 100;
+  }
 }
 
 int erasedfile(uint8_t * filename) {
@@ -202,11 +204,11 @@ int erasedfile(uint8_t * filename) {
   float div = (float)fsize / 100.0;
   char  check;
 
-  long int position = 0;
-  long int realread = 0;
+  long  int position = 0;
+  short int realread = 0;
 
   while (position < fsize) {
-    realread = fread(data, 1, BLOCK_SIZE, f);
+    realread = (short int)fread(data, 1, BLOCK_SIZE, f);
 
     if (realread > 0) {
       memset(data, 0x00, realread);
@@ -228,20 +230,17 @@ int erasedfile(uint8_t * filename) {
 
     real = (short int)((float)position / div + 0.1);
 
-    if (real > 100)
-      real = 100;
+    centreal(&real);
 
     if (real > past) {
-        
+
       Form1->Shape2->Width = (int)((float)real * cas);
 
       check = size_check(position);
 
       Form1->StatusBar1->Panels->Items[0]->Text = "Уничтожение файла; Обработано: " +
-
       (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                IntToStr(position)) +
-
       " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
 
       Application->ProcessMessages();
@@ -392,8 +391,7 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
     position = position + realread;
     real = (short int)((float)position / div + 0.1);
 
-    if (real > 100)
-      real = 100;
+    centreal(&real);
 
     if (real > past) {
       Form1->Shape2->Width = (int)((float)real * cas);
@@ -402,10 +400,8 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
       Form1->StatusBar1->Panels->Items[0]->Text = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
       ": " + AnsiString(ALGORITM_NAME[cipher]) + "; Обработано: " +
-
       (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                IntToStr(position)) +
-
       " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
 
       Application->ProcessMessages();
@@ -587,7 +583,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (sha256_ctx != NULL) {
         sha256sum(sha256_ctx, Memo1->Text.c_str(), real_read);
-        hash_init(buffer, sha256_ctx->hash, key_len);
+        hash_init(sha256_ctx->hash, buffer, key_len);
 
         memset(sha256_ctx, 0x00, ctx_len);
         free(sha256_ctx);
