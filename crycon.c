@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -381,17 +380,17 @@ int main (int argc, uint8_t * argv[]) {
     }
   }
 
-  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }
@@ -411,6 +410,7 @@ int main (int argc, uint8_t * argv[]) {
   else
   if (real_read > 0 && real_read < key_len) {
     printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, key_len);
+    memset(buffer, 0x00, key_len);    
     free(buffer);
     buffer = NULL;
     return -1;
@@ -447,6 +447,8 @@ int main (int argc, uint8_t * argv[]) {
       return -1;
     }
   }
+
+  hexprint(1, buffer, key_len);
 
   printf("[#] Key length %d-bits initialized!\n", key_len * 8);
 
