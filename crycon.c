@@ -448,8 +448,6 @@ int main (int argc, uint8_t * argv[]) {
     }
   }
 
-  hexprint(1, buffer, key_len);
-
   printf("[#] Key length %d-bits initialized!\n", key_len * 8);
 
   switch (cipher_number) {
