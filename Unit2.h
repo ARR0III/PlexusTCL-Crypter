@@ -12,17 +12,17 @@
 class TForm2 : public TForm
 {
 __published:	// IDE-managed Components
-        TPanel *Panel1;
+        TShape *Shape1;
         TLabel *Label5;
-        TLabel *Label6;
-        TPanel *Panel2;
-        TLabel *Label1;
-        TLabel *Label2;
+        TLabel *Label4;
+        TShape *Shape2;
         TLabel *Label3;
         TBevel *Bevel1;
-        void __fastcall Panel1MouseDown(TObject *Sender,
-          TMouseButton Button, TShiftState Shift, int X, int Y);
+        TLabel *Label2;
+        TLabel *Label1;
         void __fastcall Label5Click(TObject *Sender);
+        void __fastcall Shape1MouseDown(TObject *Sender,
+          TMouseButton Button, TShiftState Shift, int X, int Y);
 private:	// User declarations
 public:		// User declarations
         __fastcall TForm2(TComponent* Owner);

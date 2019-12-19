@@ -38,7 +38,7 @@
 
 TForm1 *Form1;
 
-const float cas = 4.88; /* ((float)Form1->Shape2->Width / (float)100) or (488 пкс / 100) */
+const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 пкс / 100) */
 
 const TColor FORM_HEAD_COLOR = TColor(0x00804000);
 
@@ -51,7 +51,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.27 12DEC19 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.30 18DEC19 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -94,9 +94,18 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   for (char i = 0; i < 5; i++)
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
 
-  Panel1->Color = FORM_HEAD_COLOR;
-  Form1->Label6->Caption = PROGRAMM_NAME;
   Form1->Caption = PROGRAMM_NAME;
+
+  Form1->Label6->Caption = PROGRAMM_NAME;
+
+  Form1->Shape1->Pen->Color   = FORM_HEAD_COLOR;
+
+  Form1->Shape2->Brush->Color = FORM_HEAD_COLOR;
+  Form1->Shape2->Pen->Color   = FORM_HEAD_COLOR;
+
+  Form1->Label5->Color = FORM_HEAD_COLOR;
+  Form1->Label6->Color = FORM_HEAD_COLOR;
+  Form1->Label7->Color = FORM_HEAD_COLOR;
 }
 
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
@@ -234,11 +243,11 @@ int erasedfile(uint8_t * filename) {
 
     if (real > past) {
 
-      Form1->Shape2->Width = (int)((float)real * cas);
+      Form1->Shape4->Width = (int)((float)real * cas) + 1;
 
       check = size_check(position);
 
-      Form1->StatusBar1->Panels->Items[0]->Text = "Уничтожение файла; Обработано: " +
+      Form1->Label9->Caption = "Уничтожение файла; Обработано: " +
       (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                IntToStr(position)) +
       " " + CHAR_SIZE_DATA[check] + "; Прогресс: " + IntToStr(real) + " %" ;
@@ -307,7 +316,7 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   short int real = 0;
   short int past = 0;
 
-  Form1->Shape2->Width = 0;
+  Form1->Shape4->Width = 0;
 
   while (position < fsize) {
     if (cipher != ARC4 && position == 0) {
@@ -394,11 +403,11 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
     centreal(&real);
 
     if (real > past) {
-      Form1->Shape2->Width = (int)((float)real * cas);
+      Form1->Shape4->Width = (int)((float)real * cas) + 1;
 
       check = size_check(position);
 
-      Form1->StatusBar1->Panels->Items[0]->Text = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
+      Form1->Label9->Caption = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
       ": " + AnsiString(ALGORITM_NAME[cipher]) + "; Обработано: " +
       (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                IntToStr(position)) +
@@ -420,22 +429,38 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   return 0;
 }
 
+short int vector_init(uint8_t * data, short int size) {
+  short int i;
+
+  for (i = 0; i < size; i++)
+    data[i] = (uint8_t)genrand(0, 255);
+
+  size = size - 2;
+
+  for (i = 0; i < size; i++) {
+    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2])
+      break;
+  }
+
+  return i;
+}
+
 void __fastcall TForm1::Button4Click(TObject *Sender) {
   short int cipher_number, operation,
             key_len, real_read,
             block_size, i;
 
-  if (Edit1->Text == "") {
+  if (strlen(Edit1->Text.c_str()) == 0) {
     ShowMessage("Имя обрабатываемого файла не введено!");
     return;
   }
 
-  if (Edit2->Text == "") {
+  if (strlen(Edit2->Text.c_str()) == 0) {
     ShowMessage("Имя файла назначения не введено!");
     return;
   }
 
-  if (Memo1->Text == "") {
+  if (strlen(Memo1->Text.c_str()) == 0) {
     ShowMessage("Имя ключевого файла не введено!");
     return;
   }
@@ -640,15 +665,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     srand(time(NULL));
 
-    for (i = 0; i < block_size; i++)
-      vector[i] = (uint8_t)genrand(0, 255);
-
-    for (i = 0; i < (block_size - 2); i++) {
-      if (vector[i] == vector[i + 1] && vector[i + 1] == vector[i + 2])
-        break;
-    }
-
-    if (i < (block_size - 2)) {
+    if (vector_init(vector, block_size) < (block_size - 2)) {
       ShowMessage("Критическая ошибка! Системное время остановлено!\n"
                   "Дальнейшие операции не позволены!");
 
@@ -803,7 +820,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     }
   }
 
-  Form1->Shape2->Width = 0;
+  Form1->Shape4->Width = 0;
   Application->ProcessMessages();
 
   switch (cipher_number) {
@@ -845,17 +862,17 @@ void __fastcall TForm1::Label5Click(TObject *Sender) {
   Form1->Close();
 }
 
-void __fastcall TForm1::Panel1MouseDown(TObject *Sender,
-      TMouseButton Button, TShiftState Shift, int X, int Y) {
-  ReleaseCapture();
-  Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);
-
-}
-
 void __fastcall TForm1::Label7Click(TObject *Sender) {
- Form2->Panel1->Color   = FORM_HEAD_COLOR;
- Form2->Label6->Caption = PROGRAMM_NAME;
- Form2->Show();
+  Form2->Label4->Caption = PROGRAMM_NAME;
+
+  Form2->Shape1->Brush->Color = FORM_HEAD_COLOR;
+  Form2->Shape1->Pen->Color   = FORM_HEAD_COLOR;
+
+  Form2->Shape2->Pen->Color   = FORM_HEAD_COLOR;
+
+  Form2->Label4->Color = FORM_HEAD_COLOR;
+  Form2->Label5->Color = FORM_HEAD_COLOR;
+  Form2->Show();
 }
 
 void __fastcall TForm1::Button5Click(TObject *Sender) {
@@ -897,3 +914,11 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   free(memory);
   memory = NULL;
 }
+
+void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
+      TMouseButton Button, TShiftState Shift, int X, int Y) {
+  ReleaseCapture();
+  Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);        
+}
+//---------------------------------------------------------------------------
+
