@@ -51,7 +51,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.30 18DEC19 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.32 16MAR20 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -91,6 +91,8 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::FormCreate(TObject *Sender) {
+  srand(time(NULL));
+
   for (char i = 0; i < 5; i++)
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
 
@@ -152,7 +154,10 @@ void hash_init(uint8_t * input, uint8_t * output, int len) {
   for (i = j = 0; i < len; i++) {
     temp = input[j];
     output[i] = temp;
-    j = (j == 31 ? 0 : ++j);
+    if (j == 31)
+      j = 0;
+    else
+      ++j;
   }
 }
 
@@ -890,8 +895,6 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
     ShowMessage("Недостаточно памяти!");
     return;
   }
-
-  srand(time(NULL));
 
   for (int i = 0; i < len; i++) {
     memory->data[i] = (uint8_t)genrand(0, 255);
