@@ -11,7 +11,7 @@ typedef struct {
 void serpent_init(SERPENT_CTX * key, int keylen, uint8_t * keymaterial) {
   unsigned long i, j;
   unsigned long w[132], k[132];
-  int rc, tempkeylen;
+  int tempkeylen;
 
   key->keylen = keylen; /* only 128, 192 or 256 number */
 

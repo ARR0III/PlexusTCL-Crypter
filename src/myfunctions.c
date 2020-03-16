@@ -1,20 +1,24 @@
 #include <stdio.h>
 #include <stdint.h>
 
-int genrand(int min, int max) {
+int genrand(const int min, const int max) {
   return min + rand() % ((max + 1) - min);
 }
 
-void vigenere (uint8_t * data, int length_data, const uint8_t * key, int length_key) {
+void vigenere (uint8_t * data, const int length_data, const uint8_t * key, const int length_key) {
   int i, j;
   
   for (i = 0, j = 0; i < length_data; i++) {
     data[i] ^= key[j];
-    j = (j == length_key) ? 0 : ++j;
+    
+    if (j == 31)
+      j = 0;
+    else
+      j++;
   }
 }
 
-int readfromfile(const uint8_t * filename, uint8_t * buffer, int length) {
+int readfromfile(const char * filename, uint8_t * buffer, const int length) {
   FILE * f = fopen(filename, "rb");
 
   if (f == NULL)
@@ -32,7 +36,7 @@ void strxor (uint8_t * one, const uint8_t * two, int length) {
   }
 }
 
-void hexprint(int tumbler, const uint8_t * data, int length) {
+void hexprint(const int tumbler, const uint8_t * data, const int length) {
   for (int i = 0; i < length; i++) {
     switch (tumbler) {
       case 0: printf("%2.2X", *(data + i));
