@@ -25,7 +25,7 @@
 
 #define DATA_SIZE     4096
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.33 16MAR20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.34 20MAR20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -330,7 +330,7 @@ int main (int argc, char * argv[]) {
     key_len = 2048;
   else
   if (cipher_number == AES || cipher_number == SERPENT) { // AES or SERPENT
-    if (strcmp(argv[3], "--128") == 0) {
+    if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--128") == 0) {
       if (cipher_number == AES) {
         Nk = 4;
         Nr = 10;
@@ -338,7 +338,7 @@ int main (int argc, char * argv[]) {
       key_len = 128;
     }
     else
-    if (strcmp(argv[3], "--192") == 0) {
+    if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--192") == 0) {
       if (cipher_number == AES) {
         Nk = 6;
         Nr = 12;
@@ -346,7 +346,7 @@ int main (int argc, char * argv[]) {
       key_len = 192;
     }
     else
-    if (strcmp(argv[3], "--256") == 0) {
+    if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--256") == 0) {
       if (cipher_number == AES) {
         Nk = 8;
         Nr = 14;
@@ -519,7 +519,6 @@ int main (int argc, char * argv[]) {
         memset(vector, 0x00, block_size);
 
       memset(buffer, 0x00, key_len);
-      memset(vector, 0x00, block_size);
 
       free(buffer);
       free(vector);
@@ -543,7 +542,6 @@ int main (int argc, char * argv[]) {
         memset(vector, 0x00, block_size);
 
       memset(buffer, 0x00, key_len);
-      memset(vector, 0x00, block_size);
 
       free(buffer);
       free(vector);
@@ -566,7 +564,6 @@ int main (int argc, char * argv[]) {
         memset(vector, 0x00, block_size);
 
       memset(buffer, 0x00, key_len);
-      memset(vector, 0x00, block_size);
 
       free(buffer);
       free(vector);
@@ -589,7 +586,6 @@ int main (int argc, char * argv[]) {
         memset(vector, 0x00, block_size);
 
       memset(buffer, 0x00, key_len);
-      memset(vector, 0x00, block_size);
 
       free(buffer);
       free(vector);
