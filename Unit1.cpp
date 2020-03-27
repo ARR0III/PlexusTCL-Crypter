@@ -51,7 +51,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.32 16MAR20 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.34 20MAR20 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -625,6 +625,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
         memset(buffer, 0x00, key_len);
         free(buffer);
         buffer = NULL;
+        return;
       }
     }
     else {
@@ -924,4 +925,5 @@ void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
   Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);        
 }
 //---------------------------------------------------------------------------
+
 

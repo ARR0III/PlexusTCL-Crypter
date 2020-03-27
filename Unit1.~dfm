@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 248
-  Top = 232
+  Left = 276
+  Top = 238
   BorderStyle = bsNone
   Caption = 'Form1'
   ClientHeight = 276
@@ -28,12 +28,12 @@ object Form1: TForm1
     OnMouseDown = Shape2MouseDown
   end
   object Label7: TLabel
-    Left = 392
+    Left = 424
     Top = 4
-    Width = 49
+    Width = 18
     Height = 13
     Cursor = crHandPoint
-    Caption = '['#1057#1087#1088#1072#1074#1082#1072']'
+    Caption = '[ ? ]'
     Color = clNavy
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWhite
