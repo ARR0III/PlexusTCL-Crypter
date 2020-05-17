@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -14,22 +13,22 @@
 
 #include "src/myfunctions.h"
 
-#define ARC4             0
-#define AES              1
-#define SERPENT          2
-#define BLOWFISH         3
-#define THREEFISH        4
+#define ARC4         0
+#define AES          1
+#define SERPENT      2
+#define BLOWFISH     3
+#define THREEFISH    4
 
-#define ENCRYPT       0x00
-#define DECRYPT       0xDE
+#define ENCRYPT   0x00
+#define DECRYPT   0xDE
 
-#define DATA_SIZE     4096
+#define DATA_SIZE 4096
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.34 20MAR20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.42 17MAY20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
-                                    "BLOWFISH-CFB", "THREEFISH-512-CFB"};
+                                 "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -49,31 +48,30 @@ void MEMORY_ERROR(void) {
   printf("[!] Cannot allocate memory!\n");
 }
 
-void sha256sum(SHA256_CTX * ctx, const uint8_t * data, uint8_t * hash, const int len) {
-  int count = (len * 2) - 1;
+void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const uint32_t password_len,
+                     uint8_t * key, const uint32_t key_len) {
 
-  sha256_init(ctx);
+  uint8_t hash[SHA256_BLOCK_SIZE];
 
-  for (int i = 0; i < count; i++) {  /* MAX = 511 */
-    sha256_update(ctx, data, len);
+  uint32_t i, j, k;
+  uint32_t count = key_len + (password_len * 2) - 1;
+
+  sha256_init(sha256_ctx);
+
+  for (i = k = 0; i < key_len; ++i, ++k) {
+    for (j = 0; j < count; ++j) {
+      sha256_update(sha256_ctx, password, password_len);
+      sha256_final(sha256_ctx, hash);
+    }
+    
+    if (k == SHA256_BLOCK_SIZE)
+      k = 0;
+
+    key[i] = hash[k];
   }
 
-  sha256_final(ctx, hash);
-}
-
-void hash_to_key(const uint8_t * input, uint8_t * output, const int len) {
-  int i, j;
-  uint8_t temp;
-
-  for (i = j = 0; i < len; i++) {
-    temp = input[j];
-    output[i] = temp;
-
-    if (j == 31)
-      j = 0;
-    else
-      j++;
-  }
+  memset(hash, 0x00, SHA256_BLOCK_SIZE);
+  count = i = j = k = 0;
 }
 
 void cent(short * number) {
@@ -86,7 +84,8 @@ int operation_variant(const int cipher, const int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
-int filecrypt(const char * finput, const char * foutput, uint8_t * vector, const int block_size, const int cipher, const int operation) {
+int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
+              const int block_size, const int cipher, const int operation) {
 
   FILE * fi = fopen(finput, "rb");
 
@@ -257,10 +256,8 @@ short vector_init(uint8_t * data, short size) {
 }
 
 int main (int argc, char * argv[]) {
-  uint8_t hash[32] = {0};
 
   int   ctx_len = 0;
-  
   short cipher_number, operation,
         result, real_read,
         key_len, block_size;
@@ -269,7 +266,7 @@ int main (int argc, char * argv[]) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
       printf("%s\n", PROGRAMM_NAME);
       printf("This is software for encrypt/decrypt files.\n\n");
-      printf("Algoritms:   -a/--arc4, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
+      printf("Algoritms:   -a/--arc4, -c/--chacha20, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
       printf("Operation:   -e/--encrypt, -d/--decrypt.\n");
       printf("Lengths key: --128, --192, --256.\n\n");
       printf("Enter: [programm name] [--algoritm] [--operation]"
@@ -391,17 +388,17 @@ int main (int argc, char * argv[]) {
     }
   }
 
-  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }
@@ -433,11 +430,9 @@ int main (int argc, char * argv[]) {
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
       if (sha256_ctx != NULL) {
-        sha256sum(sha256_ctx, (uint8_t*)argv[argc - 1], hash, real_read);
-        hash_to_key(hash, buffer, key_len);
+        password_to_key(sha256_ctx, (uint8_t *)argv[argc - 1], real_read, buffer, key_len);
 
         memset(sha256_ctx, 0x00, ctx_len);
-        memset(hash, 0x00, 32);
         free(sha256_ctx);
         sha256_ctx = NULL;
 
