@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -24,7 +25,7 @@
 
 #define DATA_SIZE 4096
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.42 17MAY20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.45 18MAY20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -64,6 +65,9 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const ui
       sha256_final(sha256_ctx, hash);
     }
     
+    /* This is good idea ???
+       password[0] = hash[k]; */
+
     if (k == SHA256_BLOCK_SIZE)
       k = 0;
 
@@ -266,9 +270,9 @@ int main (int argc, char * argv[]) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
       printf("%s\n", PROGRAMM_NAME);
       printf("This is software for encrypt/decrypt files.\n\n");
-      printf("Algoritms:   -a/--arc4, -c/--chacha20, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
+      printf("Algoritms:   -a/--arc4, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
       printf("Operation:   -e/--encrypt, -d/--decrypt.\n");
-      printf("Lengths key: --128, --192, --256.\n\n");
+      printf("Lengths key: -a/--128, -b/--192, -c/--256.\n\n");
       printf("Enter: [programm name] [--algoritm] [--operation]"
       	     " [--key length] [input filename] [output filename] [key filename or string key]\n");
       return 0;
@@ -388,17 +392,17 @@ int main (int argc, char * argv[]) {
     }
   }
 
-  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }

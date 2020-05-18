@@ -1,8 +1,7 @@
 object Form1: TForm1
-  Left = 276
-  Top = 238
+  Left = 213
+  Top = 230
   BorderStyle = bsNone
-  Caption = 'Form1'
   ClientHeight = 276
   ClientWidth = 506
   Color = clBtnFace
@@ -24,12 +23,12 @@ object Form1: TForm1
     Cursor = crSizeAll
     Align = alCustom
     Brush.Color = clNavy
-    Pen.Color = clNavy
+    Pen.Color = 6438400
     OnMouseDown = Shape2MouseDown
   end
   object Label7: TLabel
     Left = 424
-    Top = 4
+    Top = 5
     Width = 18
     Height = 13
     Cursor = crHandPoint
@@ -46,7 +45,7 @@ object Form1: TForm1
   end
   object Label5: TLabel
     Left = 450
-    Top = 4
+    Top = 5
     Width = 50
     Height = 13
     Cursor = crHandPoint
@@ -62,8 +61,8 @@ object Form1: TForm1
     OnClick = Label5Click
   end
   object Label6: TLabel
-    Left = 4
-    Top = 4
+    Left = 5
+    Top = 5
     Width = 3
     Height = 13
     Color = clNavy
@@ -304,11 +303,11 @@ object Form1: TForm1
     OnClick = Button4Click
   end
   object OpenDialog1: TOpenDialog
-    Left = 304
+    Left = 296
     Top = 32
   end
   object SaveDialog1: TSaveDialog
-    Left = 336
+    Left = 328
     Top = 32
   end
 end

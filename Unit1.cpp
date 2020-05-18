@@ -20,17 +20,19 @@
 #include "Unit1.h"
 #include "Unit2.h"
 
-#define ARC4             0
-#define AES              1
-#define SERPENT          2
-#define BLOWFISH         3
-#define THREEFISH        4
+#define ARC4                   0
+#define AES                    1
+#define SERPENT                2
+#define BLOWFISH               3
+#define THREEFISH              4
 
-#define ENCRYPT       0x00
-#define DECRYPT       0xDE
+#define ENCRYPT             0x00
+#define DECRYPT             0xDE
 
-#define BLOCK_SIZE    1024
-#define DATA_SIZE     4096
+#define SHA_256_HASH_LENGTH   32
+
+#define BLOCK_SIZE          1024
+#define DATA_SIZE           4096
 
 #pragma hdrstop
 #pragma package(smart_init)
@@ -40,7 +42,7 @@ TForm1 *Form1;
 
 const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 пкс / 100) */
 
-const TColor FORM_HEAD_COLOR = TColor(0x00804000);
+const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
 const uint32_t INT_SIZE_DATA[] = {1024, 1048576, 1073741824};
 
@@ -51,7 +53,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.34 20MAR20 [RU]";
+const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.45 18MAY20 [RU]";
 
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -91,9 +93,9 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::FormCreate(TObject *Sender) {
-  srand(time(NULL));
+  srand((uint32_t)time(NULL));
 
-  for (char i = 0; i < 5; i++)
+  for (int i = 0; i < 5; i++)
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
 
   Form1->Caption = PROGRAMM_NAME;
@@ -135,30 +137,42 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
   }
 }
 
-void sha256sum(SHA256_CTX * ctx, uint8_t * data, int len) {
-  int count = (len * 2) - 1;
+void cursorpos(uint8_t * data) {
+  TPoint position;
 
-  sha256_init(ctx);
+  GetCursorPos(&position);
 
-  for (int i = 0; i < count; i++) { /* MAX = 511 */
-    sha256_update(ctx, data, len);
-  }
+  data[0] ^= (uint8_t)position.x;
+  data[1] ^= (uint8_t)position.y;
 
-  sha256_final(ctx);
+  position.x = position.y = 0;
 }
 
-void hash_init(uint8_t * input, uint8_t * output, int len) {
-  int i, j;
-  uint8_t temp;
+void password_to_key(SHA256_CTX * sha256_ctx,
+                     const uint8_t * password, const uint32_t password_len,
+                     uint8_t * key, const uint32_t key_len) {
 
-  for (i = j = 0; i < len; i++) {
-    temp = input[j];
-    output[i] = temp;
-    if (j == 31)
-      j = 0;
-    else
-      ++j;
+  uint32_t count, i, j, k;
+  uint8_t hash[SHA256_BLOCK_SIZE];
+
+  count = key_len + (password_len * 2) - 1;
+
+  sha256_init(sha256_ctx);
+
+  for (i = k = 0; i < key_len; ++i, ++k) {
+    for (j = 0; j < count; ++j) {
+      sha256_update(sha256_ctx, password, password_len);
+      sha256_final(sha256_ctx, hash);
+    }
+
+    if (k == SHA256_BLOCK_SIZE)
+      k = 0;
+
+    key[i] = hash[k];
   }
+
+  memset(hash, 0x00, SHA256_BLOCK_SIZE);
+  count = i = j = k = 0;
 }
 
 char size_check(uint32_t size) {
@@ -183,7 +197,7 @@ char size_check(uint32_t size) {
   return result;
 }
 
-void centreal(short int * real) {
+void centreal(short * real) {
   if (*real > 100) {
     *real = 100;
   }
@@ -212,17 +226,17 @@ int erasedfile(uint8_t * filename) {
     return -1;
   }
 
-  short int real = 0;
-  short int past = 0;
+  short real = 0;
+  short past = 0;
 
   float div = (float)fsize / 100.0;
   char  check;
 
-  long  int position = 0;
-  short int realread = 0;
+  long int position = 0;
+  short realread = 0;
 
   while (position < fsize) {
-    realread = (short int)fread(data, 1, BLOCK_SIZE, f);
+    realread = (short)fread(data, 1, BLOCK_SIZE, f);
 
     if (realread > 0) {
       memset(data, 0x00, realread);
@@ -242,7 +256,7 @@ int erasedfile(uint8_t * filename) {
       position = position + realread;
     }
 
-    real = (short int)((float)position / div + 0.1);
+    real = (short)((float)position / div + 0.1);
 
     centreal(&real);
 
@@ -276,7 +290,8 @@ int erasedfile(uint8_t * filename) {
     return 0;
 }
 
-int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_size, int cipher, int operation) {
+int filecrypt(const uint8_t * finput, const uint8_t * foutput, uint8_t * vector,
+              int block_size, int cipher, int operation) {
 
   FILE * fi = fopen(finput, "rb");
 
@@ -313,13 +328,13 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
 
   char check;
 
-  short int nblock;
+  short nblock;
 
-  long  int position = 0;
-  short int realread = 0;
+  long int position = 0;
+  short realread = 0;
 
-  short int real = 0;
-  short int past = 0;
+  short real = 0;
+  short past = 0;
 
   Form1->Shape4->Width = 0;
 
@@ -365,7 +380,7 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
       }
     }
 
-    realread = (short int)fread(memory->data, 1, DATA_SIZE, fi);
+    realread = (short)fread(memory->data, 1, DATA_SIZE, fi);
 
     if (cipher == ARC4) {
       arc4(memory->data, memory->post, realread);
@@ -403,7 +418,7 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
     }
 
     position = position + realread;
-    real = (short int)((float)position / div + 0.1);
+    real = (short)((float)position / div + 0.1);
 
     centreal(&real);
 
@@ -434,13 +449,15 @@ int filecrypt(uint8_t * finput, uint8_t * foutput, uint8_t * vector, int block_s
   return 0;
 }
 
-short int vector_init(uint8_t * data, short int size) {
-  short int i;
+short vector_init(uint8_t * data, short size) {
+  short i;
 
   for (i = 0; i < size; i++)
     data[i] = (uint8_t)genrand(0, 255);
 
   size = size - 2;
+
+  cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
   for (i = 0; i < size; i++) {
     if (data[i] == data[i + 1] && data[i + 1] == data[i + 2])
@@ -451,9 +468,9 @@ short int vector_init(uint8_t * data, short int size) {
 }
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
-  short int cipher_number, operation,
-            key_len, real_read,
-            block_size, i;
+  short cipher_number, operation,
+        key_len, real_read,
+        block_size, i;
 
   if (strlen(Edit1->Text.c_str()) == 0) {
     ShowMessage("Имя обрабатываемого файла не введено!");
@@ -470,17 +487,17 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
-  if (strcmpi(Edit1->Text.c_str(), Edit2->Text.c_str()) == 0) {
+  if (Edit1->Text == Edit2->Text) {
     ShowMessage("Имена обрабатываемого файла и файла назначения совпадают!");
     return;
   }
 
-  if (strcmpi(Edit1->Text.c_str(), Memo1->Text.c_str()) == 0) {
+  if (Edit1->Text == Memo1->Text) {
     ShowMessage("Имена обрабатываемого файла и ключевого файла совпадают!");
     return;
   }
 
-  if (strcmpi(Edit2->Text.c_str(), Memo1->Text.c_str()) == 0) {
+  if (Edit2->Text == Memo1->Text) {
     ShowMessage("Имена файла назначения и ключевого файла совпадают!");
     return;
   }
@@ -594,7 +611,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 
   int ctx_len;
-  real_read = (short int)readfromfile(Memo1->Text.c_str(), buffer, key_len);
+  real_read = (short)readfromfile(Memo1->Text.c_str(), buffer, key_len);
 
   if (real_read > 0 && real_read < key_len) {
     ShowMessage("Данных в ключевом файле слишком мало!\n\n"
@@ -612,8 +629,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
       if (sha256_ctx != NULL) {
-        sha256sum(sha256_ctx, Memo1->Text.c_str(), real_read);
-        hash_init(sha256_ctx->hash, buffer, key_len);
+        password_to_key(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
 
         memset(sha256_ctx, 0x00, ctx_len);
         free(sha256_ctx);
@@ -669,11 +685,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if (cipher_number != ARC4 && operation == ENCRYPT) {
 
-    srand(time(NULL));
+    srand((uint32_t)time(NULL));
 
     if (vector_init(vector, block_size) < (block_size - 2)) {
-      ShowMessage("Критическая ошибка! Системное время остановлено!\n"
-                  "Дальнейшие операции не позволены!");
+      ShowMessage("Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!");
 
       memset(vector, 0x00, block_size);
       memset(buffer, 0x00, key_len);
@@ -922,8 +937,6 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
 void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
       TMouseButton Button, TShiftState Shift, int X, int Y) {
   ReleaseCapture();
-  Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);        
+  Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);     
 }
-//---------------------------------------------------------------------------
-
 

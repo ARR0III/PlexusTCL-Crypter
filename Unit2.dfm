@@ -1,6 +1,6 @@
 object Form2: TForm2
-  Left = 243
-  Top = 275
+  Left = 416
+  Top = 327
   BorderStyle = bsNone
   Caption = #1057#1055#1056#1040#1042#1050#1040
   ClientHeight = 132
@@ -28,7 +28,7 @@ object Form2: TForm2
   end
   object Label5: TLabel
     Left = 290
-    Top = 4
+    Top = 5
     Width = 50
     Height = 13
     Cursor = crHandPoint
@@ -44,8 +44,8 @@ object Form2: TForm2
     OnClick = Label5Click
   end
   object Label4: TLabel
-    Left = 4
-    Top = 4
+    Left = 5
+    Top = 5
     Width = 3
     Height = 13
     Color = clNavy
