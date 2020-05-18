@@ -12,14 +12,12 @@ void vigenere (uint8_t * data, const int data_len, const uint8_t * key, const in
   int i, j;
   uint8_t temp;
   
-  for (i = 0, j = 0; i < data_len; i++) {
-    temp = key[j];
-    data[i] ^= temp;
-    
-    ++j;
-    
+  for (i = 0, j = 0; i < data_len; ++i, ++j) {
     if (j == key_len)
       j = 0;
+    
+    temp = key[j];
+    data[i] ^= temp;
   }
 }
 
@@ -37,6 +35,7 @@ int readfromfile(const char * filename, uint8_t * buffer, const int length) {
 
 void strxor (uint8_t * one, const uint8_t * two, int length) {
   uint8_t temp;
+
   for (int i = 0; i < length; i++) {
     temp = two[i];
     one[i] ^= temp;

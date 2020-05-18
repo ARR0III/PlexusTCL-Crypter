@@ -46,7 +46,7 @@ void threefish_encrypt(THREEFISH_CTX * keys, U64 * input, U64 * output) {
   U64 y[2];
   U64 x[2];
 
-  memcpy(&v[0], input, 64);
+  memmove(&v[0], input, 64);
 
   for (round = 0; round < 72; round++) {
     if (round % 4 == 0) {
@@ -87,7 +87,7 @@ void threefish_decrypt(THREEFISH_CTX * keys, U64 * input, U64 * output) {
   U64 y[2];
   U64 x[2];
 
-  memcpy(&v[0], input, 64);
+  memmove(&v[0], input, 64);
 
   for (round = 72; round > 0; round--) {
     if (round % 4 == 0) {
@@ -127,8 +127,8 @@ void threefish_init(THREEFISH_CTX * keys, U64 * keydata, U64 * vector) {
 
   U64 k8 = C240;
 
-  memcpy(&K[0], keydata, 64);
-  memcpy(&T[0], vector, 16);
+  memmove(&K[0], keydata, 64);
+  memmove(&T[0], vector, 16);
 
   for (i = 0; i < 8; i++) {
     k8   ^= K[i];
