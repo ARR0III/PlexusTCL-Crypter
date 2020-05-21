@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -25,7 +24,7 @@
 
 #define DATA_SIZE 4096
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.45 18MAY20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.46 21MAY20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream cipher"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -392,17 +391,17 @@ int main (int argc, char * argv[]) {
     }
   }
 
-  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }
