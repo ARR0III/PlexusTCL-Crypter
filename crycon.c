@@ -249,8 +249,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   return 0;
 }
 
-size_t vector_init(uint8_t * data, int size) {
-  size_t i;
+int vector_init(uint8_t * data, int size) {
+  int i;
 
   for (i = 0; i < size; i++)
     data[i] = (uint8_t)genrand(0, 255);
