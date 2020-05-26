@@ -272,7 +272,7 @@ static const unsigned long ORIG_S[4][256] = {
         0xB74E6132L, 0xCE77E25BL, 0x578FDFE3L, 0x3AC372E6L  }
 };
 
-static unsigned long F(BLOWFISH_CTX * ctx, unsigned long x) {
+static unsigned long F(const BLOWFISH_CTX * ctx, unsigned long x) {
    unsigned short a, b, c, d;
    unsigned long  y;
 
@@ -290,7 +290,7 @@ static unsigned long F(BLOWFISH_CTX * ctx, unsigned long x) {
    return y;
 }
 
-void blowfish_encrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
+void blowfish_encrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
   unsigned long  Xl;
   unsigned long  Xr;
   unsigned long  temp;
@@ -319,7 +319,7 @@ void blowfish_encrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
   *xr = Xr;
 }
 
-void blowfish_decrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
+void blowfish_decrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
   unsigned long  Xl;
   unsigned long  Xr;
   unsigned long  temp;
@@ -350,7 +350,7 @@ void blowfish_decrypt(BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
   *xr = Xr;
 }
 
-void blowfish_init(BLOWFISH_CTX *ctx, unsigned char *key, int keyLen) {
+void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char *key, const int keyLen) {
   int i, j, k;
   unsigned long data, datal, datar;
 

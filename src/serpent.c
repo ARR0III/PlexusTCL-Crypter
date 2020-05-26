@@ -8,7 +8,7 @@ typedef struct {
   unsigned long subkeys[33][4];
 } SERPENT_CTX;
 
-void serpent_init(SERPENT_CTX * key, int keylen, uint8_t * keymaterial) {
+void serpent_init(SERPENT_CTX * key, const int keylen, const uint8_t * keymaterial) {
   int i, j, tempkeylen;
   unsigned long w[132], k[132];
 
@@ -20,19 +20,19 @@ void serpent_init(SERPENT_CTX * key, int keylen, uint8_t * keymaterial) {
 
   for (i = 0; i < tempkeylen; i++)
     w[i] = key->key[i];
-  
+
   if (keylen < 256)
     w[i] = (key->key[i] & ((1L << ((keylen & 31))) - 1)) | (1L << ((keylen & 31)));
-  
+
   for(i++; i < 8; i++)
     w[i] = 0;
-  
+
   for(i = 8; i < 16; i++)
     w[i] = ROL(w[i - 8] ^ w[i - 5] ^ w[i - 3] ^ w[i - 1] ^ PHI ^ (i - 8), 11);
-  
+
   for(i = 0; i < 8; i++)
     w[i] = w[i + 8];
-  
+
   for(i = 8; i < 132; i++)
     w[i] = ROL(w[i - 8] ^ w[i - 5] ^ w[i - 3] ^ w[i - 1] ^ PHI ^ i, 11);
 
@@ -76,7 +76,7 @@ void serpent_init(SERPENT_CTX * key, int keylen, uint8_t * keymaterial) {
   }
 }
 
-void serpent_encrypt(SERPENT_CTX * ctx, unsigned long * plaintext, unsigned long * ciphertext) {
+void serpent_encrypt(SERPENT_CTX * ctx, const unsigned long * plaintext, unsigned long * ciphertext) {
   register unsigned long x0, x1, x2, x3;
   register unsigned long y0, y1, y2, y3;
 
@@ -189,7 +189,7 @@ void serpent_encrypt(SERPENT_CTX * ctx, unsigned long * plaintext, unsigned long
   ciphertext[3] = x3;
 }
 
-void serpent_decrypt(SERPENT_CTX * ctx, unsigned long * ciphertext, unsigned long * plaintext) {
+void serpent_decrypt(SERPENT_CTX * ctx, const unsigned long * ciphertext, unsigned long * plaintext) {
   register unsigned long x0, x1, x2, x3;
   register unsigned long y0, y1, y2, y3;
 

@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 uint8_t gmult(uint8_t a, uint8_t b) {
-  uint8_t p = 0, hbs = 0;
+  uint8_t hbs, p = 0;
 
   for (int i = 0; i < 8; i++) {
     if (b & 1)
@@ -15,15 +15,17 @@ uint8_t gmult(uint8_t a, uint8_t b) {
 
     b >>= 1;
   }
- return (uint8_t)p;
+ return p;
 }
 
-void coef_add(uint8_t a[], uint8_t b[], uint8_t d[]) {
-  for (int i = 0; i < 4; i++)
-    d[i] = a[i] ^ b[i];
+void coef_add(const uint8_t a[], const uint8_t b[], uint8_t d[]) {
+  d[0] = a[0] ^ b[0];
+  d[1] = a[1] ^ b[1];
+  d[2] = a[2] ^ b[2];
+  d[3] = a[3] ^ b[3];
 }
 
-void coef_mult(uint8_t *a, uint8_t *b, uint8_t *d) {
+void coef_mult(const uint8_t *a, const uint8_t *b, uint8_t *d) {
   d[0] = gmult(a[0],b[0])^gmult(a[3],b[1])^gmult(a[2],b[2])^gmult(a[1],b[3]);
   d[1] = gmult(a[1],b[0])^gmult(a[0],b[1])^gmult(a[3],b[2])^gmult(a[2],b[3]);
   d[2] = gmult(a[2],b[0])^gmult(a[1],b[1])^gmult(a[0],b[2])^gmult(a[3],b[3]);
@@ -35,7 +37,7 @@ int Nb = 4;
 int Nk = 0;
 int Nr = 0;
 
-static uint8_t s_box[256] = {
+const uint8_t s_box[256] = {
   // 0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
   0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76, // 0
   0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, // 1
@@ -54,7 +56,7 @@ static uint8_t s_box[256] = {
   0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf, // e
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};// f
 
-static uint8_t inv_s_box[256] = {
+const uint8_t inv_s_box[256] = {
   // 0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
   0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb, // 0
   0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb, // 1
@@ -90,7 +92,7 @@ uint8_t * Rcon(uint8_t i) {
  return R;
 }
 
-void add_round_key(uint8_t *state, uint8_t *w, uint8_t r) {
+void add_round_key(uint8_t *state, const uint8_t *w, const uint8_t r) {
   for (uint8_t c = 0; c < Nb; c++) {
     state[Nb*0+c] = state[Nb*0+c] ^ w[4*Nb*r+4*c+0];   //debug, so it works for Nb !=4
     state[Nb*1+c] = state[Nb*1+c] ^ w[4*Nb*r+4*c+1];
@@ -201,10 +203,10 @@ void rot_word(uint8_t *w) {
   w[3] = tmp;
 }
 
-void rijndael_init(uint8_t *key, uint8_t *w) {
+void rijndael_init(const uint8_t * key, uint8_t *w) {
   uint8_t tmp[4];
   uint8_t i;
-  uint8_t len = Nb*(Nr+1);
+  uint8_t len = Nb * (Nr + 1);
 
   for (i = 0; i < Nk; i++) {
     w[4*i+0] = key[4*i+0];
@@ -226,7 +228,7 @@ void rijndael_init(uint8_t *key, uint8_t *w) {
     }
     else
     if (Nk > 6 && i % Nk == 4)
-         sub_word(tmp);
+      sub_word(tmp);
 
     w[4*i+0] = w[4*(i-Nk)+0]^tmp[0];
     w[4*i+1] = w[4*(i-Nk)+1]^tmp[1];
@@ -235,7 +237,7 @@ void rijndael_init(uint8_t *key, uint8_t *w) {
   }
 }
 
-void rijndael_encrypt(uint8_t *w, uint8_t *in, uint8_t *out) {
+void rijndael_encrypt(uint8_t *w, const uint8_t *in, uint8_t *out) {
   uint8_t state[16];
   uint8_t i, j;
 
@@ -263,7 +265,7 @@ void rijndael_encrypt(uint8_t *w, uint8_t *in, uint8_t *out) {
   }
 }
 
-void rijndael_decrypt(uint8_t *w, uint8_t *in, uint8_t *out) {
+void rijndael_decrypt(uint8_t *w, const uint8_t *in, uint8_t *out) {
   uint8_t state[16];
   uint8_t i, j;
 
