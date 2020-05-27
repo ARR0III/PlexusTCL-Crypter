@@ -43,7 +43,7 @@
     <PFLAGS value="-$Y- -$L- -$D- -$A8 -v -JPHNE -M"/>
     <RFLAGS value=""/>
     <AFLAGS value="/mx /w2 /zn"/>
-    <LFLAGS value="-D&quot;&quot; -aa -Tpe -x"/>
+    <LFLAGS value="-D&quot;&quot; -aa -Tpe -x -w"/>
     <OTHERFILES value=""/>
   </OPTIONS>
   <LINKER>
