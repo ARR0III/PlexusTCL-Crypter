@@ -1,7 +1,7 @@
 #include <stdint.h>
+#include <stddef.h>
 
-
-int i, j;
+size_t i, j;
 uint8_t secret_key[256] = {0};
 
 void swap (uint8_t * a, uint8_t * b) {
@@ -11,7 +11,7 @@ void swap (uint8_t * a, uint8_t * b) {
   *b = t;
 }
 
-void arc4_init(const uint8_t * key, const int length) {
+void arc4_init(const uint8_t * key, const size_t length) {
 
   for (i = 0; i < 256; i++)
     secret_key[i] = (uint8_t)i;
@@ -24,8 +24,8 @@ void arc4_init(const uint8_t * key, const int length) {
   i = j = 0;
 }
 
-void arc4(const uint8_t * data, uint8_t * post, const int length) {
-  register int k;
+void arc4(const uint8_t * data, uint8_t * post, const size_t length) {
+  register size_t k;
     for (k = 0; k < length; k++) {
       i = (i + 1) % 256;
       j = (j + secret_key[i]) % 256;

@@ -44,8 +44,7 @@ void demix(uint64_t * y, uint8_t * z, uint64_t * x) {
 }
 
 void threefish_encrypt(THREEFISH_CTX * ctx, const uint64_t * input, uint64_t * output) {
-  uint8_t round;
-  uint8_t i;
+  uint8_t round, i;
 
   memmove(ctx->v, input, 64);
 
@@ -78,8 +77,7 @@ void threefish_encrypt(THREEFISH_CTX * ctx, const uint64_t * input, uint64_t * o
 }
 
 void threefish_decrypt(THREEFISH_CTX * ctx, const uint64_t * input, uint64_t * output) {
-  uint8_t round;
-  uint8_t i;
+  uint8_t round, i;
 
   memmove(ctx->v, input, 64);
 
@@ -112,8 +110,7 @@ void threefish_decrypt(THREEFISH_CTX * ctx, const uint64_t * input, uint64_t * o
 }
 
 void threefish_init(THREEFISH_CTX * ctx, const uint64_t * keydata, const uint64_t * vector) {
-  uint8_t round;
-  uint8_t i;
+  uint8_t round, i;
 
   uint64_t k8 = C240;
 

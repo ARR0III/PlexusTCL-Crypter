@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 
 #define HEX_TABLE  1
 #define HEX_STRING 0
@@ -9,7 +8,7 @@ int genrand(const int min, const int max) {
   return min + rand() % ((max + 1) - min);
 }
 
-int readfromfile(const char * filename, uint8_t * buffer, const size_t length) {
+int readfromfile(const char * filename, uint8_t * buffer, const int length) {
   FILE * f = fopen(filename, "rb");
 
   if (f == NULL)
@@ -21,7 +20,7 @@ int readfromfile(const char * filename, uint8_t * buffer, const size_t length) {
   return result;
 }
 
-void strxor (uint8_t * one, const uint8_t * two, const size_t length) {
+void strxor (uint8_t * one, const uint8_t * two, const int length) {
   uint8_t temp;
 
   for (int i = 0; i < length; i++) {
@@ -30,7 +29,7 @@ void strxor (uint8_t * one, const uint8_t * two, const size_t length) {
   }
 }
 
-void printhex(const int tumbler, const uint8_t * data, const size_t length) {
+void printhex(const int tumbler, const uint8_t * data, const int length) {
   for (int i = 0; i < length; i++) {
     if (tumbler == HEX_TABLE)
       printf("%02X%c", data[i], (((i + 1) % 16) ? ' ' : '\n'));
