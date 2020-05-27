@@ -1,9 +1,10 @@
 #include <time.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -249,8 +250,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   return 0;
 }
 
-int vector_init(uint8_t * data, int size) {
-  int i;
+size_t vector_init(uint8_t * data, size_t size) {
+  size_t i;
 
   for (i = 0; i < size; i++)
     data[i] = (uint8_t)genrand(0, 255);
@@ -266,8 +267,8 @@ int vector_init(uint8_t * data, int size) {
 }
 
 int main (int argc, char * argv[]) {
-  int ctx_len, block_size, key_len,
-      real_read, cipher_number, operation, result;
+  size_t ctx_len, block_size;
+  int    key_len, real_read, cipher_number, operation, result;
 
   if (argc == 2) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -276,8 +277,8 @@ int main (int argc, char * argv[]) {
       printf("Algoritms:   -a/--arc4, -r/--aes, -s/--serpent, -b/--blowfish, -t/--threefish.\n");
       printf("Operation:   -e/--encrypt, -d/--decrypt.\n");
       printf("Lengths key: -a/--128, -b/--192, -c/--256.\n\n");
-      printf("Enter: [programm name] [algoritm] [operation]"
-      	     " [key length] [input filename] [output filename] [key filename or string key]\n");
+      printf("Enter: [%s] [algoritm] [operation]"
+      	     " [key length] [input filename] [output filename] [key filename or string key]\n", argv[0]);
       return 0;
     }
     else {
@@ -422,16 +423,16 @@ int main (int argc, char * argv[]) {
   if (real_read == key_len)
     printf("[#] Crypt key read from file \"%s\"!\n", argv[argc - 1]);
   else
-  if (real_read > 0 && real_read < key_len) {
+  if ((real_read > 0) && (real_read < key_len)) {
     printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, key_len);
     memset(buffer, 0x00, key_len);
     free(buffer);
     return -1;
   }
   else
-  if (real_read == 0 || real_read == -1) {
+  if ((real_read == 0)|| (real_read == -1)) {
     real_read = strlen(argv[argc - 1]);
-    if (real_read > 7 && real_read < 257) {
+    if ((real_read > 7) && (real_read < 257)) {
       ctx_len = sizeof(SHA256_CTX);
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
