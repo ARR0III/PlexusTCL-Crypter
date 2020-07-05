@@ -1,10 +1,10 @@
 #include <time.h>
-
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <windows.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -29,12 +29,13 @@
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.51 27MAY20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.60 05JUL20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
+ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
 BLOWFISH_CTX  * blowfish_ctx  = NULL;
@@ -57,13 +58,13 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const si
                      uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
-  size_t count = key_len + (password_len * 2) - 1;
+  size_t count = key_len + (password_len * 2) - 1; /* MAX = 196,352 */
 
   uint8_t hash[SHA256_BLOCK_SIZE];
 
   sha256_init(sha256_ctx);
 
-  for (i = k = 0; i < key_len; ++i, ++k) { /* MAX = 196,352 */
+  for (i = k = 0; i < key_len; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(sha256_ctx, password, password_len);
       sha256_final(sha256_ctx, hash);
@@ -75,7 +76,7 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const si
     key[i] = hash[k];
   }
 
-  memset(hash, 0x00, SHA256_BLOCK_SIZE);
+  memset((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
 }
 
@@ -141,10 +142,10 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   short past_percent = 0;
 
   uint8_t progress_bar[26] = {0};
-  memset(progress_bar, '-', 25);
+  memset((void *)progress_bar, '-', 25);
 
   while (position < fsize) {
-    if (cipher != ARC4 && position == 0) {
+    if ((cipher != ARC4) && (position == 0)) {
       switch (operation) {
         case ENCRYPT: switch (cipher) {
                         case AES:       rijndael_encrypt(rijndael_ctx, vector, memory->output);
@@ -160,11 +161,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
                       memmove(vector, memory->output, block_size);
 
-                      if (fwrite(vector, 1, block_size, fo) != block_size) {
+                      if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
                         fclose(fi);
                         fclose(fo);
 
-                        free(memory);
+                        free((void *)memory);
 
                         return -5;
                       }
@@ -173,11 +174,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                       }
                       break;
 
-        case DECRYPT: if (fread(vector, 1, block_size, fi) != block_size) {
+        case DECRYPT: if (fread((void *)vector, 1, block_size, fi) != block_size) {
                         fclose(fi);
                         fclose(fo);
 
-                        free(memory);
+                        free((void *)memory);
 
                         return -6;
                       }
@@ -186,10 +187,10 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
       }
     }
 
-    realread = fread(memory->input, 1, DATA_SIZE, fi);
+    realread = fread((void *)(memory->input), 1, DATA_SIZE, fi);
 
     if (cipher == ARC4) {
-      arc4(memory->input, memory->output, realread);
+      arc4(arc4_ctx, memory->input, memory->output, realread);
     }
     else {
       for (nblock = 0; nblock < realread; nblock += block_size) {
@@ -210,11 +211,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
       }
     }
 
-    if (fwrite(memory->output, 1, realread, fo) != realread) {
+    if (fwrite((void *)(memory->output), 1, realread, fo) != realread) {
       fclose(fi);
       fclose(fo);
 
-      free(memory);
+      free((void *)memory);
 
       return -5;
     }
@@ -229,7 +230,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
     if (real_percent > past_percent) {
 
       if ((real_percent % 4) == 0) {
-        memset(progress_bar, '#', (real_percent / 4));
+        memset((void *)progress_bar, '#', (real_percent / 4));
 
         printf("\r >  %s ]%s[ %3d %%", OPERATION_NAME[operation_variant(cipher, operation)], progress_bar, real_percent);
         fflush(stdout);
@@ -244,8 +245,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   fclose(fi);
   fclose(fo);
 
-  memset(memory, 0x00, memory_len);
-  free(memory);
+  memset((void *)memory, 0x00, memory_len);
+  free((void *)memory);
 
   return 0;
 }
@@ -254,12 +255,12 @@ size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
 
   for (i = 0; i < size; i++)
-    data[i] = (uint8_t)genrand(0, 255);
+    data[i] = (uint8_t)genrand(0x00, 0xFF);
 
   size = size - 2;
 
   for (i = 0; i < size; i++) {
-    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2])
+    if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2]))
       break;
   }
 
@@ -396,17 +397,17 @@ int main (int argc, char * argv[]) {
     }
   }
 
-  if (strcmp(argv[argc - 3], argv[argc - 2]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 2]) == 0) {
     printf("[!] Names input and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 2], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 2], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and output files equal!\n");
     return -1;
   }
   else
-  if (strcmp(argv[argc - 3], argv[argc - 1]) == 0) {
+  if (strcmpi(argv[argc - 3], argv[argc - 1]) == 0) {
     printf("[!] Names keyfile and input files equal!\n");
     return -1;
   }
@@ -425,12 +426,12 @@ int main (int argc, char * argv[]) {
   else
   if ((real_read > 0) && (real_read < key_len)) {
     printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, key_len);
-    memset(buffer, 0x00, key_len);
-    free(buffer);
+    memset((void *)buffer, 0x00, key_len);
+    free((void *)buffer);
     return -1;
   }
   else
-  if ((real_read == 0)|| (real_read == -1)) {
+  if ((real_read == 0) || (real_read == -1)) {
     real_read = strlen(argv[argc - 1]);
     if ((real_read > 7) && (real_read < 257)) {
       ctx_len = sizeof(SHA256_CTX);
@@ -439,22 +440,22 @@ int main (int argc, char * argv[]) {
       if (sha256_ctx != NULL) {
         password_to_key(sha256_ctx, (uint8_t *)argv[argc - 1], real_read, buffer, key_len);
 
-        memset(sha256_ctx, 0x00, ctx_len);
-        free(sha256_ctx);
+        memset((void *)sha256_ctx, 0x00, ctx_len);
+        free((void *)sha256_ctx);
 
         printf("[#] Crypt key read from command line!\n");
       }
       else {
         MEMORY_ERROR();
-        memset(buffer, 0x00, key_len);
-        free(buffer);
+        memset((void *)buffer, 0x00, key_len);
+        free((void *)buffer);
         return -1;
       }
     }
     else {
       printf("[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
-      memset(buffer, 0x00, key_len);
-      free(buffer);
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
       return -1;
     }
   }
@@ -479,30 +480,42 @@ int main (int argc, char * argv[]) {
 
     if (vector == NULL) {
       MEMORY_ERROR();
-      memset(buffer, 0x00, key_len);
-      free(buffer);
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
 
       return -1;
     }
   }
 
-  if (cipher_number != ARC4 && operation == ENCRYPT) {
+  if ((cipher_number != ARC4) && (operation == ENCRYPT)) {
     srand((unsigned int)time(NULL));
 
     if (vector_init(vector, block_size) < (block_size - 2)) {
       printf("[!] System time stopped!\n");
-      memset(buffer, 0x00, key_len);
-      memset(vector, 0x00, block_size);
+      memset((void *)buffer, 0x00, key_len);
+      memset((void *)vector, 0x00, block_size);
 
-      free(buffer);
-      free(vector);
+      free((void *)buffer);
+      free((void *)vector);
 
       return -1;
     }
   }
 
   if (cipher_number == ARC4) {
-    arc4_init(buffer, key_len);
+    ctx_len = sizeof(ARC4_CTX);
+    arc4_ctx = (ARC4_CTX *) calloc(1, ctx_len);
+
+    if (arc4_ctx == NULL) {
+      MEMORY_ERROR();
+
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
+
+      return -1;
+    }
+
+    arc4_init(arc4_ctx, buffer, key_len);
   }
   else
   if (cipher_number == AES) {
@@ -512,12 +525,12 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(buffer);
-      free(vector);
+      free((void *)buffer);
+      free((void *)vector);
 
       return -1;
     }
@@ -532,12 +545,12 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(buffer);
-      free(vector);
+      free((void *)buffer);
+      free((void *)vector);
 
       return -1;
     }
@@ -551,12 +564,12 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(buffer);
-      free(vector);
+      free((void *)buffer);
+      free((void *)vector);
 
       return -1;
     }
@@ -570,12 +583,12 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(buffer);
-      free(vector);
+      free((void *)buffer);
+      free((void *)vector);
 
       return -1;
     }
@@ -584,8 +597,8 @@ int main (int argc, char * argv[]) {
 
   printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[cipher_number]);
 
-  memset(buffer, 0x00, key_len);
-  free(buffer);
+  memset((void *)buffer, 0x00, key_len);
+  free((void *)buffer);
 
   printf("[#] Operation %s file \"%s\" started!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
 
@@ -609,29 +622,30 @@ int main (int argc, char * argv[]) {
   }
 
   switch (cipher_number) {
-    case ARC4:      memset(secret_key, 0x00, key_len);
+    case ARC4:      memset((void *)arc4_ctx, 0x00, ctx_len);
+                    free((void *)arc4_ctx);
                     break;
 
-    case AES:       memset(rijndael_ctx, 0x00, ctx_len);
-                    free(rijndael_ctx);
+    case AES:       memset((void *)rijndael_ctx, 0x00, ctx_len);
+                    free((void *)rijndael_ctx);
                     break;
 
-    case SERPENT:   memset(serpent_ctx, 0x00, ctx_len);
-                    free(serpent_ctx);
+    case SERPENT:   memset((void *)serpent_ctx, 0x00, ctx_len);
+                    free((void *)serpent_ctx);
                     break;
 
-    case BLOWFISH:  memset(blowfish_ctx, 0x00, ctx_len);
-                    free(blowfish_ctx);
+    case BLOWFISH:  memset((void *)blowfish_ctx, 0x00, ctx_len);
+                    free((void *)blowfish_ctx);
                     break;
 
-    case THREEFISH: memset(threefish_ctx, 0x00, ctx_len);
-                    free(threefish_ctx);
+    case THREEFISH: memset((void *)threefish_ctx, 0x00, ctx_len);
+                    free((void *)threefish_ctx);
                     break;
 
   }
 
   if (vector != NULL) {
-    memset(vector, 0x00, block_size);
-    free(vector);
+    memset((void *)vector, 0x00, block_size);
+    free((void *)vector);
   }
 }
