@@ -51,15 +51,17 @@ const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
 const uint32_t INT_SIZE_DATA[] = {1024, 1048576, 1073741824};
 
-const char * CHAR_SIZE_DATA[] = {"Бт", "Кб", "Мб", "Гб"};
+const char * CHAR_SIZE_DATA[] = {"Бт", "КиБ", "МиБ", "ГиБ"};
 
 const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработка"};
 
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME = "PlexusTCL Crypter 4.51 27MAY20 [RU]";
+const char * PROGRAMM_NAME  = "PlexusTCL Crypter 4.60 05JUL20 [RU]";
+const char * MEMORY_BLOCKED = MEMORY_BLOCKED;
 
+ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
 BLOWFISH_CTX  * blowfish_ctx  = NULL;
@@ -99,7 +101,7 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::FormCreate(TObject *Sender) {
-  srand((uint32_t)time(NULL));
+  srand((unsigned int)time(NULL));
 
   for (char i = 0; i < 5; i++)
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
@@ -148,8 +150,8 @@ void cursorpos(uint8_t * data) {
 
   GetCursorPos(&position);
 
-  data[0] ^= (uint8_t)position.x;
-  data[1] ^= (uint8_t)position.y;
+  data[0] ^= (uint8_t)(position.x);
+  data[1] ^= (uint8_t)(position.y);
 
   position.x = position.y = 0;
 }
@@ -176,7 +178,7 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const si
     key[i] = hash[k];
   }
 
-  memset(hash, 0x00, SHA256_BLOCK_SIZE);
+  memset((void *)hash, 0x00, SHA256_BLOCK_SIZE);
 }
 
 int size_check(uint32_t size) {
@@ -247,15 +249,15 @@ int erasedfile(const char * filename) {
   size_t realread;
 
   while (position < fsize) {
-    realread = fread(data, 1, BLOCK_SIZE, f);
+    realread = fread((void *)data, 1, BLOCK_SIZE, f);
 
     if (realread > 0) {
-      memset(data, 0x00, realread);
+      memset((void *)data, 0x00, realread);
       fseek(f, position, SEEK_SET);
 
-      if (fwrite(data, 1, realread, f) != realread) {
+      if (fwrite((void *)data, 1, realread, f) != realread) {
         fclose(f);
-        free(data);
+        free((void *)data);
         data = NULL;
         return -1;
       }
@@ -286,7 +288,7 @@ int erasedfile(const char * filename) {
     }
   }
 
-  free(data);
+  free((void *)data);
   data = NULL;
 
   check = chsize(fileno(f), 0);
@@ -359,11 +361,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                                         break;
                       }
                       memmove(vector, memory->output, block_size);
-                      if (fwrite(vector, 1, block_size, fo) != block_size) {
+                      if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
                         fclose(fi);
                         fclose(fo);
 
-                        free(memory);
+                        free((void *)memory);
                         memory = NULL;
 
                         return -5;
@@ -372,11 +374,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                         fflush(fo);
                       }
                       break;
-        case DECRYPT: if (fread(vector, 1, block_size, fi) != block_size) {
+        case DECRYPT: if (fread((void *)vector, 1, block_size, fi) != block_size) {
                         fclose(fi);
                         fclose(fo);
 
-                        free(memory);
+                        free((void *)memory);
                         memory = NULL;
 
                         return -6;
@@ -386,10 +388,10 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
       }
     }
 
-    realread = fread(memory->input, 1, DATA_SIZE, fi);
+    realread = fread((void *)memory->input, 1, DATA_SIZE, fi);
 
     if (cipher == ARC4) {
-      arc4(memory->input, memory->output, realread);
+      arc4(arc4_ctx, memory->input, memory->output, realread);
     }
     else {
       for (nblock = 0; nblock < realread; nblock += block_size) {
@@ -410,11 +412,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
       }
     }
 
-    if (fwrite(memory->output, 1, realread, fo) != realread) {
+    if (fwrite((void *)memory->output, 1, realread, fo) != realread) {
       fclose(fi);
       fclose(fo);
 
-      free(memory);
+      free((void *)memory);
       memory = NULL;
 
       return -5;
@@ -450,8 +452,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   fclose(fi);
   fclose(fo);
 
-  memset(memory, 0x00, memory_ctx_len);
-  free(memory);
+  memset((void *)memory, 0x00, memory_ctx_len);
+  free((void *)memory);
   memory = NULL;
 
   return 0;
@@ -613,7 +615,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   uint8_t * buffer = (uint8_t*)calloc(key_len, 1);
 
   if (buffer == NULL) {
-    ShowMessage("Недостаточно памяти!");
+    ShowMessage(MEMORY_BLOCKED);
     return;
   }
 
@@ -623,13 +625,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ShowMessage("Данных в ключевом файле слишком мало!\n\n"
                 "Было считано: " + IntToStr(real_read) + " " + CHAR_SIZE_DATA[0] + "\n" +
                 "Необходимо: " + IntToStr(key_len) + " " + CHAR_SIZE_DATA[0]);
-    free(buffer);
+    free((void *)buffer);
     buffer = NULL;
     
     return;
   }
   else
-  if ((real_read == 0)|| (real_read == -1)) {
+  if ((real_read == 0) || (real_read == -1)) {
     real_read = strlen(Memo1->Text.c_str());
     if ((real_read > 7) && (real_read < 257)) {
       ctx_len = sizeof(SHA256_CTX);
@@ -638,15 +640,15 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       if (sha256_ctx != NULL) {
         password_to_key(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
 
-        memset(sha256_ctx, 0x00, ctx_len);
-        free(sha256_ctx);
+        memset((void *)sha256_ctx, 0x00, ctx_len);
+        free((void *)sha256_ctx);
         sha256_ctx = NULL;
       }
       else {
-        ShowMessage("Недостаточно памяти!");
+        ShowMessage(MEMORY_BLOCKED);
 
-        memset(buffer, 0x00, key_len);
-        free(buffer);
+        memset((void *)buffer, 0x00, key_len);
+        free((void *)buffer);
         buffer = NULL;
         return;
       }
@@ -656,8 +658,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                   "Было считано: " + IntToStr(real_read) + " " + CHAR_SIZE_DATA[0] + "\n" +
                   "Необходимо: от 8 до 256 " + CHAR_SIZE_DATA[0]);
 
-      memset(buffer, 0x00, key_len);
-      free(buffer);
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
       buffer = NULL;
       return;
     }
@@ -680,10 +682,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     vector = (uint8_t*)calloc(block_size, 1);
 
     if (vector == NULL) {
-      ShowMessage("Недостаточно памяти!");
+      ShowMessage(MEMORY_BLOCKED);
 
-      memset(buffer, 0x00, key_len);
-      free(buffer);
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
       buffer = NULL;
       return;
     }
@@ -696,11 +698,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if (vector_init(vector, block_size) < (block_size - 2)) {
       ShowMessage("Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!");
 
-      memset(vector, 0x00, block_size);
-      memset(buffer, 0x00, key_len);
+      memset((void *)vector, 0x00, block_size);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(vector);
-      free(buffer);
+      free((void *)vector);
+      free((void *)buffer);
 
       vector = NULL;
       buffer = NULL;
@@ -710,21 +712,34 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 
   if (cipher_number == ARC4) {
-    arc4_init(buffer, key_len);
+    ctx_len = sizeof(ARC4_CTX);
+    arc4_ctx = (ARC4_CTX *)calloc(1, ctx_len);
+
+    if (arc4_ctx == NULL) {
+      ShowMessage(MEMORY_BLOCKED);
+
+      memset((void *)buffer, 0x00, key_len);
+      free((void *)buffer);
+      buffer = NULL;
+
+      return;
+    }
+
+    arc4_init(arc4_ctx, buffer, key_len);
   }
   if (cipher_number == AES) {
     ctx_len = Nb * (Nr + 1) * 4;
     rijndael_ctx = (uint8_t *) calloc(ctx_len, 1);
     if (rijndael_ctx == NULL) {
-      ShowMessage("Недостаточно памяти!");
+      ShowMessage(MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(vector);
-      free(buffer);
+      free((void *)vector);
+      free((void *)buffer);
 
       vector = NULL;
       buffer = NULL;
@@ -738,15 +753,15 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(SERPENT_CTX);
     serpent_ctx = (SERPENT_CTX *) calloc(1, ctx_len);
     if (serpent_ctx == NULL) {
-      ShowMessage("Недостаточно памяти!");
+      ShowMessage(MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(vector);
-      free(buffer);
+      free((void *)vector);
+      free((void *)buffer);
 
       vector = NULL;
       buffer = NULL;
@@ -760,15 +775,15 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(BLOWFISH_CTX);
     blowfish_ctx = (BLOWFISH_CTX*)calloc(1, ctx_len);
     if (blowfish_ctx == NULL) {
-      ShowMessage("Недостаточно памяти!");
+      ShowMessage(MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(vector);
-      free(buffer);
+      free((void *)vector);
+      free((void *)buffer);
 
       vector = NULL;
       buffer = NULL;
@@ -782,15 +797,15 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(THREEFISH_CTX);
     threefish_ctx = (THREEFISH_CTX *)calloc(1, ctx_len);
     if (threefish_ctx == NULL) {
-      ShowMessage("Недостаточно памяти!");
+      ShowMessage(MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
-        memset(vector, 0x00, block_size);
+        memset((void *)vector, 0x00, block_size);
 
-      memset(buffer, 0x00, key_len);
+      memset((void *)buffer, 0x00, key_len);
 
-      free(vector);
-      free(buffer);
+      free((void *)vector);
+      free((void *)buffer);
 
       vector = NULL;
       buffer = NULL;
@@ -800,8 +815,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     threefish_init(threefish_ctx, (uint64_t *)buffer, (uint64_t *)buffer);
   }
 
-  memset(buffer, 0x00, key_len);
-  free(buffer);
+  memset((void *)buffer, 0x00, key_len);
+  free((void *)buffer);
   buffer = NULL;
   
   int result = 0xDE;
@@ -827,7 +842,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                 break;
     case -3:    ShowMessage("Файл для обработки пуст или его размер превышает 2 Гб!");
                 break;
-    case -4:    ShowMessage("Недостаточно памяти!");
+    case -4:    ShowMessage(MEMORY_BLOCKED);
                 break;
     case -5:    ShowMessage("Ошибка записи в файл!");
                 break;
@@ -851,34 +866,36 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   Application->ProcessMessages();
 
   switch (cipher_number) {
-    case ARC4:      memset(secret_key, 0x00, key_len);
+    case ARC4:      memset((void *)arc4_ctx->secret_key, 0x00, key_len);
+                    free((void *)arc4_ctx);
+                    arc4_ctx = NULL;
                     break;
 
-    case AES:       memset(rijndael_ctx, 0x00, ctx_len);
-                    free(rijndael_ctx);
+    case AES:       memset((void *)rijndael_ctx, 0x00, ctx_len);
+                    free((void *)rijndael_ctx);
                     rijndael_ctx = NULL;
                     break;
 
-    case SERPENT:   memset(serpent_ctx, 0x00, ctx_len);
-                    free(serpent_ctx);
+    case SERPENT:   memset((void *)serpent_ctx, 0x00, ctx_len);
+                    free((void *)serpent_ctx);
                     serpent_ctx = NULL;
                     break;
 
-    case BLOWFISH:  memset(blowfish_ctx, 0x00, ctx_len);
-                    free(blowfish_ctx);
+    case BLOWFISH:  memset((void *)blowfish_ctx, 0x00, ctx_len);
+                    free((void *)blowfish_ctx);
                     blowfish_ctx = NULL;
                     break;
 
-    case THREEFISH: memset(threefish_ctx, 0x00, ctx_len);
-                    free(threefish_ctx);
+    case THREEFISH: memset((void *)threefish_ctx, 0x00, ctx_len);
+                    free((void *)threefish_ctx);
                     threefish_ctx = NULL;
                     break;
 
   }
 
   if (vector != NULL) {
-    memset(vector, 0x00, block_size);
-    free(vector);
+    memset((void *)vector, 0x00, block_size);
+    free((void *)vector);
     vector = NULL;
   }
 
@@ -905,27 +922,40 @@ void __fastcall TForm1::Label7Click(TObject *Sender) {
 void __fastcall TForm1::Button5Click(TObject *Sender) {
   int len = atoi(Edit3->Text.c_str());
 
-  if (len < 8 || len > 256) {
+  if ((len < 8) || (len > 256)) {
     ShowMessage("Введите число от 8 до 256!");
     return;
   }
 
+  size_t ctx_len        = sizeof(ARC4_CTX);
   size_t memory_ctx_len = sizeof(MEMORY_CTX);
-  MEMORY_CTX * memory = (MEMORY_CTX *)calloc(1, memory_ctx_len);
 
-  if (memory == NULL) {
-    ShowMessage("Недостаточно памяти!");
+  MEMORY_CTX * memory   = (MEMORY_CTX *)calloc(1, memory_ctx_len);
+  arc4_ctx = (ARC4_CTX *) calloc(1, ctx_len);
+
+  if ((memory == NULL) || (arc4_ctx == NULL)) {
+    if (memory != NULL) {
+      free((void *)memory);
+      memory = NULL;
+    }
+
+    if (arc4_ctx != NULL) {
+      free((void *)arc4_ctx);
+      arc4_ctx = NULL;
+    }
+
+    ShowMessage(MEMORY_BLOCKED);
     return;
   }
 
   for (int i = 0; i < len; i++) {
-    memory->input[i] = (uint8_t)genrand(0, 255);
+    memory->input[i] = (uint8_t)genrand(0x00, 0xFF);
   }
 
-  arc4_init(memory->input, len);
-  arc4(memory->input, memory->output, len);
+  arc4_init(arc4_ctx, memory->input, len);
+  arc4(arc4_ctx, memory->input, memory->output, len);
 
-  memset(memory->input, 0x00, len);
+  memset((void *)memory->input, 0x00, len);
 
   base64encode(memory->output, memory->input, len);
   memory->input[len] = 0x00;
@@ -933,11 +963,14 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   Memo1->Clear();
   Memo1->Lines->Text = AnsiString((char*)memory->input);
 
-  memset(secret_key, 0x00, 256);
-  memset(memory, 0x00, memory_ctx_len);
+  memset((void *)arc4_ctx->secret_key, 0x00, ctx_len);
+  memset((void *)memory, 0x00, memory_ctx_len);
 
-  free(memory);
+  free((void *)memory);
+  free((void *)arc4_ctx);
+
   memory = NULL;
+  arc4_ctx = NULL;
 }
 
 void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
