@@ -23,13 +23,13 @@ uint8_t PI[8]  = {2, 1, 4, 7, 6, 5, 0, 3};
 uint8_t RPI[8] = {6, 1, 0, 7, 2, 5, 4, 3};
 
 uint8_t rex[8][4] = {{46, 36, 19, 37},
-                   {33, 27, 14, 42},
-                   {17, 49, 36, 39},
-                   {44,  9, 54, 56},
-                   {39, 30, 34, 24},
-                   {13, 50, 10, 17},
-                   {25, 29, 39, 43},
-                   { 8, 35, 56, 22}};
+                     {33, 27, 14, 42},
+                     {17, 49, 36, 39},
+                     {44,  9, 54, 56},
+                     {39, 30, 34, 24},
+                     {13, 50, 10, 17},
+                     {25, 29, 39, 43},
+                     { 8, 35, 56, 22}};
 
 void mix(uint64_t * x, uint8_t * z, uint64_t * y) {
   y[0]  =  x[0] + x[1];
@@ -130,7 +130,7 @@ void threefish_init(THREEFISH_CTX * ctx, const uint64_t * keydata, const uint64_
 
   for (round = 0; round <= 18; round++) {
     for (i = 0; i < 8; i++) {
-      ctx->SUBKEYS[round][i] = ctx->key[(round + i) % (8 + 1)];
+      ctx->SUBKEYS[round][i] = ctx->key[(round + i) % 9];
       if (i == 5)
         ctx->SUBKEYS[round][i] += ctx->t[round % 3];
       else
