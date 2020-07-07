@@ -28,11 +28,11 @@ void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {
   i = j = 0;
 }
 
-void arc4(ARC4_CTX * ctx, const uint8_t * data, uint8_t * post, const size_t length) {
+void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, const size_t length) {
   for (register size_t k = 0; k < length; k++) {
     i = (i + 1) % 256;
     j = (j + ctx->secret_key[i]) % 256;
     swap(&ctx->secret_key[i], &ctx->secret_key[j]);
-    post[k] = data[k] ^ ctx->secret_key[(ctx->secret_key[i] + ctx->secret_key[j]) % 256];
+    output[k] = input[k] ^ ctx->secret_key[(ctx->secret_key[i] + ctx->secret_key[j]) % 256];
   }
 }

@@ -5,12 +5,12 @@
 typedef struct {
   int           keylen;
   unsigned long key[8];
+  unsigned long w[132], k[132];
   unsigned long subkeys[33][4];
 } SERPENT_CTX;
 
 void serpent_init(SERPENT_CTX * key, const int keylen, const uint8_t * keymaterial) {
   int i, j, tempkeylen;
-  unsigned long w[132], k[132];
 
   key->keylen = keylen; /* only 128, 192 or 256 number */
 
@@ -19,60 +19,60 @@ void serpent_init(SERPENT_CTX * key, const int keylen, const uint8_t * keymateri
   tempkeylen = keylen / 32;
 
   for (i = 0; i < tempkeylen; i++)
-    w[i] = key->key[i];
+    key->w[i] = key->key[i];
 
   if (keylen < 256)
-    w[i] = (key->key[i] & ((1L << ((keylen & 31))) - 1)) | (1L << ((keylen & 31)));
+    key->w[i] = (key->key[i] & ((1L << ((keylen & 31))) - 1)) | (1L << ((keylen & 31)));
 
   for(i++; i < 8; i++)
-    w[i] = 0;
+    key->w[i] = 0;
 
   for(i = 8; i < 16; i++)
-    w[i] = ROL(w[i - 8] ^ w[i - 5] ^ w[i - 3] ^ w[i - 1] ^ PHI ^ (i - 8), 11);
+    key->w[i] = ROL(key->w[i - 8] ^ key->w[i - 5] ^ key->w[i - 3] ^ key->w[i - 1] ^ PHI ^ (i - 8), 11);
 
   for(i = 0; i < 8; i++)
-    w[i] = w[i + 8];
+    key->w[i] = key->w[i + 8];
 
   for(i = 8; i < 132; i++)
-    w[i] = ROL(w[i - 8] ^ w[i - 5] ^ w[i - 3] ^ w[i - 1] ^ PHI ^ i, 11);
+    key->w[i] = ROL(key->w[i - 8] ^ key->w[i - 5] ^ key->w[i - 3] ^ key->w[i - 1] ^ PHI ^ i, 11);
 
-  RND03(w[  0], w[  1], w[  2], w[  3], k[  0], k[  1], k[  2], k[  3]);
-  RND02(w[  4], w[  5], w[  6], w[  7], k[  4], k[  5], k[  6], k[  7]);
-  RND01(w[  8], w[  9], w[ 10], w[ 11], k[  8], k[  9], k[ 10], k[ 11]);
-  RND00(w[ 12], w[ 13], w[ 14], w[ 15], k[ 12], k[ 13], k[ 14], k[ 15]);
-  RND31(w[ 16], w[ 17], w[ 18], w[ 19], k[ 16], k[ 17], k[ 18], k[ 19]);
-  RND30(w[ 20], w[ 21], w[ 22], w[ 23], k[ 20], k[ 21], k[ 22], k[ 23]);
-  RND29(w[ 24], w[ 25], w[ 26], w[ 27], k[ 24], k[ 25], k[ 26], k[ 27]);
-  RND28(w[ 28], w[ 29], w[ 30], w[ 31], k[ 28], k[ 29], k[ 30], k[ 31]);
-  RND27(w[ 32], w[ 33], w[ 34], w[ 35], k[ 32], k[ 33], k[ 34], k[ 35]);
-  RND26(w[ 36], w[ 37], w[ 38], w[ 39], k[ 36], k[ 37], k[ 38], k[ 39]);
-  RND25(w[ 40], w[ 41], w[ 42], w[ 43], k[ 40], k[ 41], k[ 42], k[ 43]);
-  RND24(w[ 44], w[ 45], w[ 46], w[ 47], k[ 44], k[ 45], k[ 46], k[ 47]);
-  RND23(w[ 48], w[ 49], w[ 50], w[ 51], k[ 48], k[ 49], k[ 50], k[ 51]);
-  RND22(w[ 52], w[ 53], w[ 54], w[ 55], k[ 52], k[ 53], k[ 54], k[ 55]);
-  RND21(w[ 56], w[ 57], w[ 58], w[ 59], k[ 56], k[ 57], k[ 58], k[ 59]);
-  RND20(w[ 60], w[ 61], w[ 62], w[ 63], k[ 60], k[ 61], k[ 62], k[ 63]);
-  RND19(w[ 64], w[ 65], w[ 66], w[ 67], k[ 64], k[ 65], k[ 66], k[ 67]);
-  RND18(w[ 68], w[ 69], w[ 70], w[ 71], k[ 68], k[ 69], k[ 70], k[ 71]);
-  RND17(w[ 72], w[ 73], w[ 74], w[ 75], k[ 72], k[ 73], k[ 74], k[ 75]);
-  RND16(w[ 76], w[ 77], w[ 78], w[ 79], k[ 76], k[ 77], k[ 78], k[ 79]);
-  RND15(w[ 80], w[ 81], w[ 82], w[ 83], k[ 80], k[ 81], k[ 82], k[ 83]);
-  RND14(w[ 84], w[ 85], w[ 86], w[ 87], k[ 84], k[ 85], k[ 86], k[ 87]);
-  RND13(w[ 88], w[ 89], w[ 90], w[ 91], k[ 88], k[ 89], k[ 90], k[ 91]);
-  RND12(w[ 92], w[ 93], w[ 94], w[ 95], k[ 92], k[ 93], k[ 94], k[ 95]);
-  RND11(w[ 96], w[ 97], w[ 98], w[ 99], k[ 96], k[ 97], k[ 98], k[ 99]);
-  RND10(w[100], w[101], w[102], w[103], k[100], k[101], k[102], k[103]);
-  RND09(w[104], w[105], w[106], w[107], k[104], k[105], k[106], k[107]);
-  RND08(w[108], w[109], w[110], w[111], k[108], k[109], k[110], k[111]);
-  RND07(w[112], w[113], w[114], w[115], k[112], k[113], k[114], k[115]);
-  RND06(w[116], w[117], w[118], w[119], k[116], k[117], k[118], k[119]);
-  RND05(w[120], w[121], w[122], w[123], k[120], k[121], k[122], k[123]);
-  RND04(w[124], w[125], w[126], w[127], k[124], k[125], k[126], k[127]);
-  RND03(w[128], w[129], w[130], w[131], k[128], k[129], k[130], k[131]);
+  RND03(key->w[  0], key->w[  1], key->w[  2], key->w[  3], key->k[  0], key->k[  1], key->k[  2], key->k[  3]);
+  RND02(key->w[  4], key->w[  5], key->w[  6], key->w[  7], key->k[  4], key->k[  5], key->k[  6], key->k[  7]);
+  RND01(key->w[  8], key->w[  9], key->w[ 10], key->w[ 11], key->k[  8], key->k[  9], key->k[ 10], key->k[ 11]);
+  RND00(key->w[ 12], key->w[ 13], key->w[ 14], key->w[ 15], key->k[ 12], key->k[ 13], key->k[ 14], key->k[ 15]);
+  RND31(key->w[ 16], key->w[ 17], key->w[ 18], key->w[ 19], key->k[ 16], key->k[ 17], key->k[ 18], key->k[ 19]);
+  RND30(key->w[ 20], key->w[ 21], key->w[ 22], key->w[ 23], key->k[ 20], key->k[ 21], key->k[ 22], key->k[ 23]);
+  RND29(key->w[ 24], key->w[ 25], key->w[ 26], key->w[ 27], key->k[ 24], key->k[ 25], key->k[ 26], key->k[ 27]);
+  RND28(key->w[ 28], key->w[ 29], key->w[ 30], key->w[ 31], key->k[ 28], key->k[ 29], key->k[ 30], key->k[ 31]);
+  RND27(key->w[ 32], key->w[ 33], key->w[ 34], key->w[ 35], key->k[ 32], key->k[ 33], key->k[ 34], key->k[ 35]);
+  RND26(key->w[ 36], key->w[ 37], key->w[ 38], key->w[ 39], key->k[ 36], key->k[ 37], key->k[ 38], key->k[ 39]);
+  RND25(key->w[ 40], key->w[ 41], key->w[ 42], key->w[ 43], key->k[ 40], key->k[ 41], key->k[ 42], key->k[ 43]);
+  RND24(key->w[ 44], key->w[ 45], key->w[ 46], key->w[ 47], key->k[ 44], key->k[ 45], key->k[ 46], key->k[ 47]);
+  RND23(key->w[ 48], key->w[ 49], key->w[ 50], key->w[ 51], key->k[ 48], key->k[ 49], key->k[ 50], key->k[ 51]);
+  RND22(key->w[ 52], key->w[ 53], key->w[ 54], key->w[ 55], key->k[ 52], key->k[ 53], key->k[ 54], key->k[ 55]);
+  RND21(key->w[ 56], key->w[ 57], key->w[ 58], key->w[ 59], key->k[ 56], key->k[ 57], key->k[ 58], key->k[ 59]);
+  RND20(key->w[ 60], key->w[ 61], key->w[ 62], key->w[ 63], key->k[ 60], key->k[ 61], key->k[ 62], key->k[ 63]);
+  RND19(key->w[ 64], key->w[ 65], key->w[ 66], key->w[ 67], key->k[ 64], key->k[ 65], key->k[ 66], key->k[ 67]);
+  RND18(key->w[ 68], key->w[ 69], key->w[ 70], key->w[ 71], key->k[ 68], key->k[ 69], key->k[ 70], key->k[ 71]);
+  RND17(key->w[ 72], key->w[ 73], key->w[ 74], key->w[ 75], key->k[ 72], key->k[ 73], key->k[ 74], key->k[ 75]);
+  RND16(key->w[ 76], key->w[ 77], key->w[ 78], key->w[ 79], key->k[ 76], key->k[ 77], key->k[ 78], key->k[ 79]);
+  RND15(key->w[ 80], key->w[ 81], key->w[ 82], key->w[ 83], key->k[ 80], key->k[ 81], key->k[ 82], key->k[ 83]);
+  RND14(key->w[ 84], key->w[ 85], key->w[ 86], key->w[ 87], key->k[ 84], key->k[ 85], key->k[ 86], key->k[ 87]);
+  RND13(key->w[ 88], key->w[ 89], key->w[ 90], key->w[ 91], key->k[ 88], key->k[ 89], key->k[ 90], key->k[ 91]);
+  RND12(key->w[ 92], key->w[ 93], key->w[ 94], key->w[ 95], key->k[ 92], key->k[ 93], key->k[ 94], key->k[ 95]);
+  RND11(key->w[ 96], key->w[ 97], key->w[ 98], key->w[ 99], key->k[ 96], key->k[ 97], key->k[ 98], key->k[ 99]);
+  RND10(key->w[100], key->w[101], key->w[102], key->w[103], key->k[100], key->k[101], key->k[102], key->k[103]);
+  RND09(key->w[104], key->w[105], key->w[106], key->w[107], key->k[104], key->k[105], key->k[106], key->k[107]);
+  RND08(key->w[108], key->w[109], key->w[110], key->w[111], key->k[108], key->k[109], key->k[110], key->k[111]);
+  RND07(key->w[112], key->w[113], key->w[114], key->w[115], key->k[112], key->k[113], key->k[114], key->k[115]);
+  RND06(key->w[116], key->w[117], key->w[118], key->w[119], key->k[116], key->k[117], key->k[118], key->k[119]);
+  RND05(key->w[120], key->w[121], key->w[122], key->w[123], key->k[120], key->k[121], key->k[122], key->k[123]);
+  RND04(key->w[124], key->w[125], key->w[126], key->w[127], key->k[124], key->k[125], key->k[126], key->k[127]);
+  RND03(key->w[128], key->w[129], key->w[130], key->w[131], key->k[128], key->k[129], key->k[130], key->k[131]);
 
   for(i = 0; i <= 32; i++) { /* Make keys */
     for(j = 0; j < 4; j++)
-      key->subkeys[i][j] = k[4 * i + j];
+      key->subkeys[i][j] = key->k[4 * i + j];
   }
 }
 

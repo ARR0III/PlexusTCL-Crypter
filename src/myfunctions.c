@@ -41,6 +41,10 @@ void printhex(const int tumbler, const uint8_t * data, const size_t length) {
     for (i = 0; i < length; i++)
       printf("%02X", data[i]);
   }
+  else {
+    printf("Parameter \"%d\" not correct!\n", tumbler);
+    return;
+  }
 
   putc('\n', stdout);
 }
