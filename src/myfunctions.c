@@ -8,13 +8,13 @@ int genrand(const int min, const int max) {
   return min + rand() % ((max + 1) - min);
 }
 
-size_t readfromfile(const char * filename, uint8_t * buffer, const size_t length) {
+int readfromfile(const char * filename, uint8_t * buffer, const size_t length) {
   FILE * f = fopen(filename, "rb");
 
   if (f == NULL)
     return -1;
 
-  size_t result = fread(buffer, 1, length, f);
+  int result = fread(buffer, 1, length, f);
   fclose(f);
 
   return result;
