@@ -29,7 +29,7 @@
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.61 06JUL20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.62 31JUL20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
