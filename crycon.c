@@ -58,14 +58,14 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const si
                      uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
-  size_t count = key_len + (password_len * 2) - 1; /* MAX = 196,352 */
+  size_t count = key_len + (password_len * 2) - 1;
 
   uint8_t hash[SHA256_BLOCK_SIZE];
 
   sha256_init(sha256_ctx);
 
-  for (i = k = 0; i < key_len; ++i, ++k) {
-    for (j = 0; j < count; ++j) {
+  for (i = k = 0; i < key_len; i++, k++) {
+    for (j = 0; j < count; j++) { /* MAX = 196,352 */
       sha256_update(sha256_ctx, password, password_len);
       sha256_final(sha256_ctx, hash);
     }
@@ -76,7 +76,7 @@ void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const si
     key[i] = hash[k];
   }
 
-  memset((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  memset((void *)hash, 0x00, SHA256_BLOCK_SIZE); /* 32 byte */
   count = i = j = k = 0;
 }
 
