@@ -58,7 +58,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME  = "PlexusTCL Crypter 4.61 06JUL20 [RU]";
+const char * PROGRAMM_NAME  = "PlexusTCL Crypter 4.62 31JUL20 [RU]";
 const char * MEMORY_BLOCKED = MEMORY_BLOCKED;
 
 ARC4_CTX      * arc4_ctx      = NULL;
