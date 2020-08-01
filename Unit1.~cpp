@@ -58,8 +58,8 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME  = "PlexusTCL Crypter 4.62 31JUL20 [RU]";
-const char * MEMORY_BLOCKED = MEMORY_BLOCKED;
+const char * PROGRAMM_NAME  = "PlexusTCL Crypter 4.64 02AUG20 [RU]";
+const char * MEMORY_BLOCKED = "Ошибка выделения памяти!";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -101,6 +101,7 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::FormCreate(TObject *Sender) {
+
   srand((unsigned int)time(NULL));
 
   for (char i = 0; i < 5; i++)
@@ -683,7 +684,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     if (vector == NULL) {
       ShowMessage(MEMORY_BLOCKED);
-
+                       
       memset((void *)buffer, 0x00, key_len);
       free((void *)buffer);
       buffer = NULL;
