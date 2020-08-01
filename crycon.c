@@ -29,7 +29,7 @@
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.62 31JUL20 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.64 02AUG20 [RU]";
 
 const char * OPERATION_NAME[] = {"Encrypt", "Decrypt", "Stream"};
 const char * ALGORITM_NAME[]  = {"ARC4", "AES-CFB", "SERPENT-CFB",
@@ -54,7 +54,8 @@ void MEMORY_ERROR(void) {
   printf("[!] Cannot allocate memory!\n");
 }
 
-void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
+void password_to_key(SHA256_CTX * sha256_ctx,
+                     const uint8_t * password, const size_t password_len,
                      uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
