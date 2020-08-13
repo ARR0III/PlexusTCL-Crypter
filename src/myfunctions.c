@@ -14,7 +14,7 @@ int readfromfile(const char * filename, uint8_t * buffer, const size_t length) {
   if (f == NULL)
     return -1;
 
-  int result = fread(buffer, 1, length, f);
+  int result = (int)fread(buffer, 1, length, f);
   fclose(f);
 
   return result;
