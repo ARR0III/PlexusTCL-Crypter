@@ -3,7 +3,7 @@
   Console Cryptography Software v4.66;
 
   Make date:    17 August 2020;
-  Modification: None (Original);
+  Modification: Colors in console;
   Language:     English;
 */
 
