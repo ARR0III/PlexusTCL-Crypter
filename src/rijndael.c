@@ -15,7 +15,7 @@ uint8_t gmult(uint8_t a, uint8_t b) {
 
     b >>= 1;
   }
- return p;
+  return p;
 }
 
 void coef_add(const uint8_t a[], const uint8_t b[], uint8_t d[]) {
@@ -26,10 +26,10 @@ void coef_add(const uint8_t a[], const uint8_t b[], uint8_t d[]) {
 }
 
 void coef_mult(const uint8_t *a, const uint8_t *b, uint8_t *d) {
-  d[0] = gmult(a[0],b[0])^gmult(a[3],b[1])^gmult(a[2],b[2])^gmult(a[1],b[3]);
-  d[1] = gmult(a[1],b[0])^gmult(a[0],b[1])^gmult(a[3],b[2])^gmult(a[2],b[3]);
-  d[2] = gmult(a[2],b[0])^gmult(a[1],b[1])^gmult(a[0],b[2])^gmult(a[3],b[3]);
-  d[3] = gmult(a[3],b[0])^gmult(a[2],b[1])^gmult(a[1],b[2])^gmult(a[0],b[3]);
+  d[0] = gmult(a[0], b[0]) ^ gmult(a[3], b[1]) ^ gmult(a[2], b[2]) ^ gmult(a[1], b[3]);
+  d[1] = gmult(a[1], b[0]) ^ gmult(a[0], b[1]) ^ gmult(a[3], b[2]) ^ gmult(a[2], b[3]);
+  d[2] = gmult(a[2], b[0]) ^ gmult(a[1], b[1]) ^ gmult(a[0], b[2]) ^ gmult(a[3], b[3]);
+  d[3] = gmult(a[3], b[0]) ^ gmult(a[2], b[1]) ^ gmult(a[1], b[2]) ^ gmult(a[0], b[3]);
 }
 
 int K  = 0;
@@ -79,7 +79,7 @@ uint8_t R[] = {0x02, 0x00, 0x00, 0x00};
 
 uint8_t * Rcon(uint8_t i) {
   if (i == 1)
-    R[0] = 0x01; // x^(1-1) = x^0 = 1
+    R[0] = 0x01; /* x^(1-1) = x^0 = 1 */
   else
   if (i > 1) {
     R[0] = 0x02;
@@ -89,7 +89,7 @@ uint8_t * Rcon(uint8_t i) {
       i--;
     }
   }
- return R;
+  return R;
 }
 
 void add_round_key(uint8_t *state, const uint8_t *w, const uint8_t r) {

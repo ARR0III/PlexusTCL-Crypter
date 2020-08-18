@@ -8,10 +8,12 @@ typedef struct {
 } ARC4_CTX;
 
 void swap (uint8_t * a, uint8_t * b) {
-  uint8_t t = *a;
+  if ((*a) != (*b)) {
+    uint8_t t = *a;
 
-  *a = *b;
-  *b = t;
+    *a = *b;
+    *b = t;
+  }
 }
 
 void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {

@@ -116,7 +116,7 @@ void sha256_final(SHA256_CTX *ctx, uint8_t * hash) {
       ctx->data[i++] = 0x00;
 
     sha256_transform(ctx, ctx->data);
-    memset(ctx->data, 0, 56);
+    memset((void*)(ctx->data), 0, 56);
   }
 
   ctx->bitlen += ctx->datalen * 8;
