@@ -13,11 +13,11 @@
 #define HEX_STRING 0
 
 int genrand(const int min, const int max) {
-  return (int)(min + rand() % ((max + 1) - min));
+  return (int)(((uint64_t)min + rand()) % ((max + 1) - min));
 }
 
 /* "meminit" always upload in memory and executed */
-void meminit(void * data, const uint8_t simbol, size_t size) {
+void meminit(void * data, const uint8_t simbol, size_t length) {
 
   if (data == NULL) {
     return;
@@ -25,18 +25,18 @@ void meminit(void * data, const uint8_t simbol, size_t size) {
 
   volatile uint8_t * temp = (uint8_t *)data;
 
-  while (size) {
+  while (length) {
     *temp = simbol;
 
+     --length;
      ++temp;
-     --size;
   }
 }
 
 size_t __strnlen(const char * string, size_t length) {
   size_t result = 0;
 
-  while (('\0' != string[result]) && length) {
+  while (length && ('\0' != (string[result]))) {
     ++result;
     --length;
   }
@@ -64,7 +64,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 
 void strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
-  if (output == NULL || input == NULL) {
+  if (input == NULL || output == NULL) {
     return;
   }
 
@@ -76,21 +76,23 @@ void strxor(uint8_t * output, const uint8_t * input, size_t length) {
   }
 }
 
-void printhex(const int32_t tumbler, const void * data, size_t length) {
+void printhex(const int tumbler, const void * data, size_t length) {
 
-  if (data == NULL || length == 0) {
+  if (data == NULL) {
     return;
   }
 
+  uint8_t * temp = (uint8_t *)data;
+
   if (tumbler == HEX_TABLE) {
     for (size_t i = 0; i < length; ++i) {
-      printf("%02X%c", ((uint8_t *)data)[i], (((i + 1) % 16) ? ' ' : '\n'));
+      printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
   else
   if (tumbler == HEX_STRING) {
     for (size_t i = 0; i < length; ++i) {
-      printf("%02X", ((uint8_t *)data)[i]);
+      printf("%02X",  temp[i]);
     }
   }
   else {
