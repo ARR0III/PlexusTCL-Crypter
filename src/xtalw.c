@@ -13,14 +13,14 @@
 #define HEX_STRING 0
 
 int genrand(const int min, const int max) {
-  return (int)(((uint64_t)min + rand()) % ((max + 1) - min));
+  return (int)((min + rand()) % (max + 1 - min));
 }
 
 /* "meminit" always upload in memory and executed */
-void meminit(void * data, const uint8_t simbol, size_t length) {
+void * meminit(void * data, const uint8_t simbol, size_t length) {
 
-  if (data == NULL) {
-    return;
+  if (NULL == data || 0 == length) {
+    return data;
   }
 
   volatile uint8_t * temp = (uint8_t *)data;
@@ -31,10 +31,18 @@ void meminit(void * data, const uint8_t simbol, size_t length) {
      --length;
      ++temp;
   }
+
+  return data;
+
 }
 
 size_t __strnlen(const char * string, size_t length) {
-  size_t result = 0;
+
+  size_t result = 0;  
+
+  if (NULL == string) {
+    return result;
+  }
 
   while (length && ('\0' != (string[result]))) {
     ++result;
@@ -46,14 +54,14 @@ size_t __strnlen(const char * string, size_t length) {
 
 int readfromfile(const char * filename, void * buffer, const size_t length) {
 
-  if (filename == NULL || buffer == NULL || length == 0) {
-    return -1;
+  if (NULL == filename || NULL == buffer || 0 == length) {
+    return (-1);
   }
 
   FILE * f = fopen(filename, "rb");
 
-  if (f == NULL) {
-    return -1;
+  if (NULL == f) {
+    return (-1);
   }
 
   int result = (int)fread(buffer, 1, length, f);
@@ -62,10 +70,10 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   return result;
 }
 
-void strxor(uint8_t * output, const uint8_t * input, size_t length) {
+void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
-  if (input == NULL || output == NULL) {
-    return;
+  if (NULL == input || NULL == output || 0 == length) {
+    return output;
   }
 
   uint8_t temp;
@@ -74,30 +82,31 @@ void strxor(uint8_t * output, const uint8_t * input, size_t length) {
     temp  = input[i];
     output[i] ^= temp;
   }
+  return output;
 }
 
-void printhex(const int tumbler, const void * data, size_t length) {
+size_t printhex(const int tumbler, const void * data, size_t length) {
 
-  if (data == NULL) {
-    return;
+  size_t i = 0;
+
+  if (NULL == data || 0 == length) {
+    return i;
   }
 
   uint8_t * temp = (uint8_t *)data;
 
   if (tumbler == HEX_TABLE) {
-    for (size_t i = 0; i < length; ++i) {
+    for (; i < length; ++i) {
       printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
   else
   if (tumbler == HEX_STRING) {
-    for (size_t i = 0; i < length; ++i) {
+    for (; i < length; ++i) {
       printf("%02X",  temp[i]);
     }
   }
-  else {
-    return;
-  }
 
   putc('\n', stdout);
+  return i;
 }
