@@ -2,7 +2,7 @@
   Plexus Technology Cybernetic Laboratories;
   Console Cryptography Software v4.66;
 
-  Make date:    18 August 2020;
+  Make date:    27 September 2020;
   Modification: None (Original);
   Language:     English;
 */
@@ -26,11 +26,13 @@
 #define ENCRYPT   0x00
 #define DECRYPT   0xDE
 
+#define BOUNDARY  2048
+
 #define DATA_SIZE 4096
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.66 18AUG20 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.67 27SEP20 [EN]";
 
 enum {
   ARC4      = 0,
@@ -112,9 +114,10 @@ float sizetofloatprint(const int status, const float size) {
   return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
 }
 
-void clear_end_string(const int print_count) {
+void clear_end_string(int print_count) {
   if ((print_count > 0) && (print_count < 80)) {
-    for (int i = 0; i < (79 - print_count); i++)
+    print_count -= 79;
+    for (int i = 0; i < print_count; i++)
       putc((int)0x20, stdout); /* PROBEL */
   }
 }
@@ -182,7 +185,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   FILE * fo = fopen(foutput, PARAM_WRITE_BYTE);
 
   if (fo == NULL) {
-    fclose(fi);
+    (void)fclose(fi);
     return (-2);
   }
 
@@ -190,8 +193,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   long int position = 0;
 
   if ((fsize == (-1)) || (fsize == 0)) {
-    fclose(fi);
-    fclose(fo);
+    (void)fclose(fi);
+    (void)fclose(fo);
     return (-3);
   }
 
@@ -199,8 +202,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   MEMORY_CTX * memory = (MEMORY_CTX *)calloc(1, memory_len);
 
   if (memory == NULL) {
-    fclose(fi);
-    fclose(fo);
+    (void)fclose(fi);
+    (void)fclose(fo);
     return (-4);
   }
 
@@ -209,6 +212,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   int   real_check  = 0;
   int   fsize_check = size_check(fsize);
   float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
+
+  int print_real;
 
   size_t nblock;
   size_t realread = 0;
@@ -237,8 +242,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                       memmove(vector, memory->output, block_size);
 
                       if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
-                        fclose(fi);
-                        fclose(fo);
+                        (void)fclose(fi);
+                        (void)fclose(fo);
 
                         free((void *)memory);
                         memory = NULL;
@@ -251,8 +256,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                       break;
 
         case DECRYPT: if (fread((void *)vector, 1, block_size, fi) != block_size) {
-                        fclose(fi);
-                        fclose(fo);
+                        (void)fclose(fi);
+                        (void)fclose(fo);
 
                         free((void *)memory);
                         memory = NULL;
@@ -289,8 +294,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
     }
 
     if (fwrite((void *)(memory->output), 1, realread, fo) != realread) {
-      fclose(fi);
-      fclose(fo);
+      (void)fclose(fi);
+      (void)fclose(fo);
 
       free((void *)memory);
       memory = NULL;
@@ -312,7 +317,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
         real_check = size_check(position);
 
-        int print_real = printf(" >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
+        print_real = printf(" >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
           OPERATION_NAME[operation_variant(cipher, operation)],
           progress_bar,
           sizetofloatprint(real_check, (float)position),
@@ -333,8 +338,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
   putc('\n', stdout);
 
-  fclose(fi);
-  fclose(fo);
+  (void)fclose(fi);
+  (void)fclose(fo);
 
   meminit((void *)memory, 0x00, memory_len);
   free((void *)memory);
@@ -360,6 +365,15 @@ size_t vector_init(uint8_t * data, size_t size) {
 }
 
 int main (int argc, char * argv[]) {
+
+  if (argc > 1 && argc < 8) {
+    for (int i = 1; i < (argc - 1); ++i) {
+      if (__strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* BOUNDARY = 2048 */
+        printf("[!] Warning: argument \"%d\" length more \"%d\"!\n", i, BOUNDARY);
+        return (-1);
+      }
+    }
+  }
 
   size_t ctx_len, block_size;
   int    key_len, real_read, cipher_number, operation, result;
@@ -425,6 +439,8 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
+  key_len = 0;
+
   if (cipher_number == ARC4)
     key_len = 2048;
   else
@@ -466,7 +482,10 @@ int main (int argc, char * argv[]) {
     key_len = 512;
   }
 
-  key_len /= 8;
+  if (key_len > 0)
+    key_len /= 8;
+  else
+    return (-1);
 
   /*
     ARC4      = (key_len = 256);
