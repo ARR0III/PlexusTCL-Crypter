@@ -122,7 +122,7 @@ void clear_end_string(int print_count) {
   }
 }
 
-void KDFCLOMUL(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
+void * KDFCLOMUL(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
                      uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
@@ -162,6 +162,7 @@ void KDFCLOMUL(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t p
 */
   (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
+  return key;
 }
 
 void cent(short * number) {
