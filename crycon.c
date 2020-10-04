@@ -158,7 +158,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t
     key[i] = hash[k];
   }
 /*
-  printf("Execute time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
+  printf("Execution time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
 */
   (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
