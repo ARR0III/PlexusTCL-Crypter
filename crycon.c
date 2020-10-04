@@ -1,8 +1,8 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.66;
+  Console Cryptography Software v4.70;
 
-  Make date:    27 September 2020;
+  Make date:    04 Oktober 2020;
   Modification: None (Original);
   Language:     English;
 */
@@ -22,17 +22,17 @@
 #include "src/threefish-512.h"
 
 #include "src/xtalw.h"
+#include "src/clomul.h"
 
 #define ENCRYPT   0x00
 #define DECRYPT   0xDE
 
 #define BOUNDARY  2048
-
 #define DATA_SIZE 4096
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.67 27SEP20 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.70 04OKT20 [EN]";
 
 enum {
   ARC4      = 0,
@@ -122,29 +122,45 @@ void clear_end_string(int print_count) {
   }
 }
 
-void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
+void KDFCLOMUL(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
                      uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
-  size_t count = key_len + (password_len * 2) - 1; /* MAX = 196,352 */
-
+  size_t count = 0;
   uint8_t hash[SHA256_BLOCK_SIZE];
 
+/*
+  srand(time(0));
+  clock_t min = clock();
+*/
+  for (i = 0; i < password_len; ++i) {
+    count += (((size_t)password[i] + (i + 1)) * CLOMUL_CONST);
+    count += (((password_len * CLOMUL_CONST) + key_len) << 1);
+    count += CLOMUL_CONST;
+  }
+
+  count *= CLOMUL_CONST;
+/*
+  printf("Count = %d\n", count);
+*/
   sha256_init(sha256_ctx);
 
   for (i = k = 0; i < key_len; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(sha256_ctx, password, password_len);
-      sha256_final(sha256_ctx, hash);
     }
+
+    sha256_final(sha256_ctx, hash);
 
     if (k == SHA256_BLOCK_SIZE)
       k = 0;
 
     key[i] = hash[k];
   }
-
-  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+/*
+  printf("Execute time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
+*/
+  (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
 }
 
@@ -222,7 +238,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   short past_percent = 0;
 
   uint8_t progress_bar[26] = {0};
-  meminit((void *)progress_bar, '-', 25);
+  (void *)meminit((void *)progress_bar, '-', 25);
 
   while (position < fsize) {
     if ((cipher != ARC4) && (position == 0)) {
@@ -288,7 +304,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                           break;
         }
 
-        strxor(memory->output + nblock, memory->input + nblock, block_size);
+        (void *)strxor(memory->output + nblock, memory->input + nblock, block_size);
         memmove(vector, (operation ? memory->input : memory->output) + nblock, block_size);
       }
     }
@@ -313,7 +329,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
     if (real_percent > past_percent) {
 
       if ((real_percent % 4) == 0) {
-        meminit((void *)progress_bar, '#', (real_percent / 4));
+        (void *)meminit((void *)progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
@@ -341,7 +357,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   (void)fclose(fi);
   (void)fclose(fo);
 
-  meminit((void *)memory, 0x00, memory_len);
+  (void *)meminit((void *)memory, 0x00, memory_len);
   free((void *)memory);
   memory = NULL;
 
@@ -539,7 +555,7 @@ int main (int argc, char * argv[]) {
   if ((real_read > 0) && (real_read < key_len)) {
     printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, key_len);
 
-    meminit((void *)buffer, 0x00, key_len);
+    (void *)meminit((void *)buffer, 0x00, key_len);
     free((void *)buffer);
     buffer = NULL;
 
@@ -547,15 +563,16 @@ int main (int argc, char * argv[]) {
   }
   else
   if ((real_read == 0) || (real_read == (-1))) {
-    real_read = (int)__strnlen(argv[argc - 1], 256); /* Max password length = 256 byte; min = 8  */
+    real_read = (int)__strnlen(argv[argc - 1], 256);
 
-    if ((real_read > 7) && (real_read < 257)) {
+    if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       ctx_len = sizeof(SHA256_CTX);
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
       if (sha256_ctx != NULL) {
-        password_to_key(sha256_ctx, (uint8_t *)argv[argc - 1], real_read, buffer, key_len);
-        meminit((void *)sha256_ctx, 0x00, ctx_len);
+        /* Password -> crypt key; Pseudo PBKDF2 */
+        KDFCLOMUL(sha256_ctx, (uint8_t *)argv[argc - 1], real_read, buffer, key_len);
+        (void *)meminit((void *)sha256_ctx, 0x00, ctx_len);
 
         free((void *)sha256_ctx);
         sha256_ctx = NULL;
@@ -565,7 +582,7 @@ int main (int argc, char * argv[]) {
       else {
         MEMORY_ERROR();
 
-        meminit((void *)buffer, 0x00, key_len);
+        (void *)meminit((void *)buffer, 0x00, key_len);
         free((void *)buffer);
         buffer = NULL;
 
@@ -575,7 +592,7 @@ int main (int argc, char * argv[]) {
     else {
       printf("[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
       buffer = NULL;
 
@@ -603,7 +620,7 @@ int main (int argc, char * argv[]) {
 
     if (vector == NULL) {
       MEMORY_ERROR();
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
       buffer = NULL;
 
@@ -616,8 +633,8 @@ int main (int argc, char * argv[]) {
 
     if (vector_init(vector, block_size) < (block_size - 2)) {
       printf("[!] System time stopped!\n");
-      meminit((void *)buffer, 0x00, key_len);
-      meminit((void *)vector, 0x00, block_size);
+      (void *)meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)vector, 0x00, block_size);
 
       free((void *)buffer);
       free((void *)vector);
@@ -636,7 +653,7 @@ int main (int argc, char * argv[]) {
     if (arc4_ctx == NULL) {
       MEMORY_ERROR();
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
 
       buffer = NULL;
@@ -654,9 +671,9 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
+        (void *)meminit((void *)vector, 0x00, block_size);
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
 
       free((void *)buffer);
       free((void *)vector);
@@ -677,9 +694,9 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
+        (void *)meminit((void *)vector, 0x00, block_size);
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
 
       free((void *)buffer);
       free((void *)vector);
@@ -699,9 +716,9 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
+        (void *)meminit((void *)vector, 0x00, block_size);
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
 
       free((void *)buffer);
       free((void *)vector);
@@ -721,9 +738,9 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
 
       if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
+        (void *)meminit((void *)vector, 0x00, block_size);
 
-      meminit((void *)buffer, 0x00, key_len);
+      (void *)meminit((void *)buffer, 0x00, key_len);
 
       free((void *)buffer);
       free((void *)vector);
@@ -738,7 +755,7 @@ int main (int argc, char * argv[]) {
 
   printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[cipher_number]);
 
-  meminit((void *)buffer, 0x00, key_len);
+  (void *)meminit((void *)buffer, 0x00, key_len);
   free((void *)buffer);
 
   buffer = NULL;
@@ -765,27 +782,27 @@ int main (int argc, char * argv[]) {
   }
 
   switch (cipher_number) {
-    case ARC4:      meminit((void *)arc4_ctx, 0x00, ctx_len);
+    case ARC4:      (void *)meminit((void *)arc4_ctx, 0x00, ctx_len);
                     free((void *)arc4_ctx);
                     arc4_ctx = NULL;
                     break;
 
-    case AES:       meminit((void *)rijndael_ctx, 0x00, ctx_len);
+    case AES:       (void *)meminit((void *)rijndael_ctx, 0x00, ctx_len);
                     free((void *)rijndael_ctx);
                     rijndael_ctx = NULL;
                     break;
 
-    case SERPENT:   meminit((void *)serpent_ctx, 0x00, ctx_len);
+    case SERPENT:   (void *)meminit((void *)serpent_ctx, 0x00, ctx_len);
                     free((void *)serpent_ctx);
                     serpent_ctx = NULL;
                     break;
 
-    case BLOWFISH:  meminit((void *)blowfish_ctx, 0x00, ctx_len);
+    case BLOWFISH:  (void *)meminit((void *)blowfish_ctx, 0x00, ctx_len);
                     free((void *)blowfish_ctx);
                     blowfish_ctx = NULL;
                     break;
 
-    case THREEFISH: meminit((void *)threefish_ctx, 0x00, ctx_len);
+    case THREEFISH: (void *)meminit((void *)threefish_ctx, 0x00, ctx_len);
                     free((void *)threefish_ctx);
                     threefish_ctx = NULL;
                     break;
@@ -793,7 +810,7 @@ int main (int argc, char * argv[]) {
   }
 
   if (vector != NULL) {
-    meminit((void *)vector, 0x00, block_size);
+    (void *)meminit((void *)vector, 0x00, block_size);
     free((void *)vector);
     vector = NULL;
   }
