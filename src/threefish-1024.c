@@ -72,14 +72,14 @@ threefish_encrypt_block(uint64_t ks[9], uint64_t ts[3],
 	uint64_t x5 = le64dec(&in[40]);
 	uint64_t x6 = le64dec(&in[48]);
 	uint64_t x7 = le64dec(&in[56]);
-	
+
 #define MIX(a, b, rotk) ((a) += (b), (b) = ROTL64((b), (rotk)) ^ (a))
 
 #define ER(n0, n1, n2, n3, n4, n5, n6, n7, r) do {			\
-	MIX(x##n0, x##n1, RotK[r][0]);					\
-	MIX(x##n2, x##n3, RotK[r][1]);					\
-	MIX(x##n4, x##n5, RotK[r][2]);					\
-	MIX(x##n6, x##n7, RotK[r][3]);					\
+	MIX(n0, n1, RotK[r][0]);					\
+	MIX(n2, n3, RotK[r][1]);					\
+	MIX(n4, n5, RotK[r][2]);					\
+	MIX(n6, n7, RotK[r][3]);					\
 } while (0)
 
 #define EI(r) do {							\
@@ -110,7 +110,7 @@ threefish_encrypt_block(uint64_t ks[9], uint64_t ts[3],
 	EROUNDS(0); EROUNDS(1); EROUNDS(2);
 	EROUNDS(3); EROUNDS(4); EROUNDS(5);
 	EROUNDS(6); EROUNDS(7); EROUNDS(8);
- 
+
 #undef EROUNDS
 #undef EI
 #undef ER
@@ -137,34 +137,34 @@ threefish_decrypt_block(uint64_t ks[9], uint64_t ts[3],
 	uint64_t x5 = le64dec(&in[40]);
 	uint64_t x6 = le64dec(&in[48]);
 	uint64_t x7 = le64dec(&in[56]);
-	
+
 #define UNMIX(a, b, rotk) ((b) = ROTR64((b) ^ ((a)), (rotk)), (a) -= (b))
 
 #define DR(n0, n1, n2, n3, n4, n5, n6, n7, r) do {			\
-	UNMIX(x##n0, x##n1, RotK[r][0]);				\
-	UNMIX(x##n2, x##n3, RotK[r][1]);				\
-	UNMIX(x##n4, x##n5, RotK[r][2]);				\
-	UNMIX(x##n6, x##n7, RotK[r][3]);				\
+	UNMIX(n0, n1, RotK[r][0]);				\
+	UNMIX(n2, n3, RotK[r][1]);				\
+	UNMIX(n4, n5, RotK[r][2]);				\
+	UNMIX(n6, n7, RotK[r][3]);				\
 } while (0)
 
-#define DI(R) do {							\
-	x0 -= ks[((R)+1) % 9];						\
-	x1 -= ks[((R)+2) % 9];						\
-	x2 -= ks[((R)+3) % 9];						\
-	x3 -= ks[((R)+4) % 9];						\
-	x4 -= ks[((R)+5) % 9];						\
+#define DI(R) do {							    						\
+	x0 -= ks[((R)+1) % 9];												\
+	x1 -= ks[((R)+2) % 9];												\
+	x2 -= ks[((R)+3) % 9];												\
+	x3 -= ks[((R)+4) % 9];												\
+	x4 -= ks[((R)+5) % 9];												\
 	x5 -= ks[((R)+6) % 9] + ts[((R)+1) % 3];			\
 	x6 -= ks[((R)+7) % 9] + ts[((R)+2) % 3];			\
-	x7 -= ks[((R)+8) % 9] + (R)+1;					\
+	x7 -= ks[((R)+8) % 9] + (R)+1;								\
 } while (0)
 
-#define DROUNDS(R) do {							\
-	DI(2*(R)+1);							\
+#define DROUNDS(R) do {										\
+	DI(2*(R)+1);														\
 	DR(6, 1, 0, 7, 2, 5, 4, 3, 7);					\
 	DR(4, 1, 6, 3, 0, 5, 2, 7, 6);					\
 	DR(2, 1, 4, 7, 6, 5, 0, 3, 5);					\
 	DR(0, 1, 2, 3, 4, 5, 6, 7, 4);					\
-	DI(2*(R));							\
+	DI(2*(R));															\
 	DR(6, 1, 0, 7, 2, 5, 4, 3, 3);					\
 	DR(4, 1, 6, 3, 0, 5, 2, 7, 2);					\
 	DR(2, 1, 4, 7, 6, 5, 0, 3, 1);					\
@@ -175,7 +175,7 @@ threefish_decrypt_block(uint64_t ks[9], uint64_t ts[3],
 	DROUNDS(5); DROUNDS(4); DROUNDS(3);
 	DROUNDS(2); DROUNDS(1); DROUNDS(0);
 	DI(-1);
- 
+
 #undef DROUNDS
 #undef DI
 #undef DR

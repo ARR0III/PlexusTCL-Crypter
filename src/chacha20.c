@@ -1,6 +1,5 @@
 /*
-  Developer:    D. J. Bernstein;
-  Modification: ARR0III;
+  Developer: D. J. Bernstein;
 */
 #include <stdint.h>
 

@@ -13,7 +13,10 @@
 #define HEX_STRING 0
 
 int genrand(const int min, const int max) {
-  return (int)((min + rand()) % (max + 1 - min));
+  uint64_t new_min = (uint64_t)min + rand();
+  uint64_t new_max = (uint64_t)max - min + 1;
+  
+  return (int)(new_min % new_max);
 }
 
 /* "meminit" always upload in memory and executed */
@@ -33,12 +36,11 @@ void * meminit(void * data, const uint8_t simbol, size_t length) {
   }
 
   return data;
-
 }
 
 size_t __strnlen(const char * string, size_t length) {
 
-  size_t result = 0;  
+  size_t result = 0;
 
   if (NULL == string) {
     return result;
@@ -93,17 +95,17 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
     return i;
   }
 
-  uint8_t * temp = (uint8_t *)data;
+  const uint8_t * temp = (uint8_t *)data;
 
   if (tumbler == HEX_TABLE) {
     for (; i < length; ++i) {
-      printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
+      (void)printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
   else
   if (tumbler == HEX_STRING) {
     for (; i < length; ++i) {
-      printf("%02X",  temp[i]);
+      (void)printf("%02X",  temp[i]);
     }
   }
 
