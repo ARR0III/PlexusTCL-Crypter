@@ -16,6 +16,8 @@
 #include "src/blowfish.h"
 #include "src/threefish-512.h"
 
+#include "src/clomul.h"
+
 #include "src/xtalw.h"
 
 #include "Unit1.h"
@@ -60,7 +62,7 @@ const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработ
 const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
                                  "BLOWFISH-CFB", "THREEFISH-512-CFB"};
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.67 27SEP20 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.70 04OKT20 [RU]";
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
 ARC4_CTX      * arc4_ctx      = NULL;
@@ -159,29 +161,78 @@ void cursorpos(uint8_t * data) {
   position.y = 0;
 }
 
-void password_to_key(SHA256_CTX * sha256_ctx, const uint8_t * password, const size_t password_len,
-                     uint8_t * key, const size_t key_len) {
+void centreal(short * real_percent) {
+  if (*real_percent > 100) {
+    *real_percent = 100;
+  }
+}
+
+void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
+                   const uint8_t * password, const size_t password_len,
+                         uint8_t * key, const size_t key_len) {
 
   size_t i, j, k;
-  size_t count = key_len + (password_len * 2) - 1;
+  size_t count = 0;
+
+  short real  = 0;
+  short past = 0;
 
   uint8_t hash[SHA256_BLOCK_SIZE];
 
+  float div = (float)(key_len) / 100.0;
+
+  for (i = 0; i < password_len; ++i) {
+    count += (((size_t)password[i] + (i + 1)) * CLOMUL_CONST);
+    count += (((password_len * CLOMUL_CONST) + key_len) << 1);
+    count += CLOMUL_CONST;
+  }
+
+  count *= CLOMUL_CONST;
+
   sha256_init(sha256_ctx);
 
-  for (i = k = 0; i < key_len; ++i, ++k) { /* MAX = 196,352 */
+  i = k = 0;
+
+  while (i < key_len) {
     for (j = 0; j < count; ++j) {
       sha256_update(sha256_ctx, password, password_len);
-      sha256_final(sha256_ctx, hash);
     }
+
+    sha256_final(sha256_ctx, hash);
 
     if (k == SHA256_BLOCK_SIZE)
       k = 0;
 
     key[i] = hash[k];
+
+    ++i;
+    ++k;
+
+    real = (short)((float)i / div + 0.1);
+
+    centreal(&real);
+
+    /*
+      ShowMessage("PERCENT:" + IntToStr((int)real) + " %");
+    */
+
+    if (real > past) {
+      if ((real % 4) == 0) {
+        Form1->Shape4->Width = (int)((float)real * cas) + 1;
+        Form1->Label9->Caption = "Генерация "
+                               + IntToStr(key_len * 8) + "-битного ключа из "
+                               + IntToStr(password_len) + "-символьного пароля: "
+                               + IntToStr(real) + " %";
+        Application->ProcessMessages();
+      }
+      past = real;
+    }
   }
 
-  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  count = i = j = k = 0;
+
+  return key;
 }
 
 int size_check(uint32_t size) {
@@ -204,12 +255,6 @@ int size_check(uint32_t size) {
   }
 
   return result;
-}
-
-void centreal(short * real_percent) {
-  if (*real_percent > 100) {
-    *real_percent = 100;
-  }
 }
 
 long int size_of_file(FILE * f) {
@@ -283,7 +328,7 @@ int erasedfile(const char * filename) {
       position += (long int)realread;
     }
 
-    real_percent = (int)((float)position / div + 0.1);
+    real_percent = (short)((float)position / div + 0.1);
 
     centreal(&real_percent);
 
@@ -457,7 +502,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
         Form1->Label9->Caption = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
         ": " + AnsiString(ALGORITM_NAME[cipher]) + "; Обработано: " +
-        (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
+        (check ? FloatToStrF(((float)position / (float)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
                  IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
                  FloatToStrF(fsize_float, ffFixed, 4, 2) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
@@ -660,7 +705,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
 
       if (sha256_ctx != NULL) {
-        password_to_key(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
+        Button4->Enabled = False;
+        /* Crypt key generator; crypt key from password */
+        KDFCLOMUL(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
+        Button4->Enabled = True;
 
         meminit((void *)sha256_ctx, 0x00, ctx_len);
         free((void *)sha256_ctx);
@@ -846,7 +894,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (MessageDlg("Приступить к выбранной операции? Отменить операцию будет невозможно!\n\n"
                  "Операция: " + AnsiString(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
                  "Алгоритм: " + AnsiString(ALGORITM_NAME[cipher_number]) + "\n"
-                 "Длина ключа: " + IntToStr(key_len * 8), mtCustom, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
+                 "Длина ключа: " + IntToStr(key_len * 8) + " бит" + (key_len == 24 ? "а" : "ов"), mtCustom, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
 
       Button4->Enabled = false;
       result = filecrypt(Edit1->Text.c_str(), Edit2->Text.c_str(), vector, block_size, cipher_number, operation);
@@ -862,9 +910,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                 break;
     case -2:    ShowMessage("Файл назначения не был открыт!");
                 break;
-    case -3:    ShowMessage("Файл для обработки пуст или его размер превышает 2 Гб!");
+    case -3:    ShowMessage("Файл для обработки пуст или его размер превышает 2 ГиБ!");
                 break;
-    case -4:    ShowMessage(MEMORY_BLOCKED);
+    case -4:    ShowMessage(MEMORY_BLOCKED); /* Cannot allocate memory! */
                 break;
     case -5:    ShowMessage("Ошибка записи в файл!");
                 break;
@@ -876,7 +924,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if (MessageDlg("Вы уверены что хотите уничтожить файл для обработки?\n"
                    "Стертые данные невозможно будет восстановить!", mtWarning, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
 
-      if ((erasedfile(Edit1->Text.c_str()) == 0) && (DeleteFile(Edit1->Text) == True)) {
+      if ((erasedfile(Edit1->Text.c_str()) == 0) && (DeleteFile(Edit1->Text) == True)) { /* WTF ??? */
         ShowMessage("Файл был уничтожен!");
       }
       else

@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 224
-  Top = 229
+  Left = 299
+  Top = 204
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -23,7 +23,7 @@ object Form1: TForm1
     Cursor = crSizeAll
     Align = alCustom
     Brush.Color = clNavy
-    Pen.Color = 6438400
+    Pen.Color = clPurple
     OnMouseDown = Shape2MouseDown
   end
   object Label7: TLabel
@@ -81,7 +81,7 @@ object Form1: TForm1
     Height = 252
     Align = alCustom
     Brush.Color = clBtnFace
-    Pen.Color = clNavy
+    Pen.Color = clPurple
   end
   object Label1: TLabel
     Left = 8
