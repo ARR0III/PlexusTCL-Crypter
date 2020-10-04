@@ -22,7 +22,7 @@
 #include "src/threefish-512.h"
 
 #include "src/xtalw.h"
-#include "src/clomul.h"
+#include "src/clomul.h" /* Const CLOMUL_CONST and description */
 
 #define ENCRYPT   0x00
 #define DECRYPT   0xDE
