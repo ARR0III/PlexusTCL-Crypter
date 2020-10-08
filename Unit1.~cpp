@@ -53,17 +53,44 @@ const char * PARAM_REWRITE_BYTE = "r+b";
 
 const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
-const uint32_t INT_SIZE_DATA[] = {1024, 1048576, 1073741824};
+const uint32_t INT_SIZE_DATA[] = {
+  1024,
+  1048576,
+  1073741824
+};
 
-const char * CHAR_SIZE_DATA[] = {"Бт", "КиБ", "МиБ", "ГиБ"};
+const char * CHAR_SIZE_DATA[] = {
+  "Бт",
+  "КиБ",
+  "МиБ",
+  "ГиБ"
+};
 
-const char * OPERATION_NAME[] = {"Шифрование", "Расшифровка", "Потоковая обработка"};
+const char * OPERATION_NAME[] = {
+  "Шифрование",
+  "Расшифровка",
+  "Потоковая обработка"
+};
 
-const char * ALGORITM_NAME[] =  {"ARC4", "AES-CFB", "SERPENT-CFB",
-                                 "BLOWFISH-CFB", "THREEFISH-512-CFB"};
+const char * ALGORITM_NAME[] = {
+  "ARC4",
+  "AES-CFB",
+  "SERPENT-CFB",
+  "BLOWFISH-CFB",
+  "THREEFISH-512-CFB"
+};
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.70 04OKT20 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.72 09OKT20 [RU]";
+
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
+
+const char * OK_MSG          = PROGRAMM_NAME;
+const char * WARNING_MSG     = "Внимание!";
+const char * ERROR_MSG       = "!!! Ошибка !!!";
+
+const char * INPUT_FILENAME  = "Файл для шифрования";
+const char * OUTPUT_FILENAME = "Файл назначения";
+const char * KEY_FILENAME    = "Ключ шифрования";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -80,7 +107,7 @@ __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
 void __fastcall TForm1::Button1Click(TObject *Sender) {
-  OpenDialog1->Title = "Файл для шифрования";
+  OpenDialog1->Title = INPUT_FILENAME;
   if (OpenDialog1->Execute()) {
     Edit1->Clear();
     Edit1->Text = OpenDialog1->FileName;
@@ -88,7 +115,7 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::Button2Click(TObject *Sender) {
-  SaveDialog1->Title = "Файл назначения";
+  SaveDialog1->Title = OUTPUT_FILENAME;
   if (SaveDialog1->Execute()) {
     Edit2->Clear();
     Edit2->Text = SaveDialog1->FileName;
@@ -96,7 +123,7 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::Button3Click(TObject *Sender) {
-  OpenDialog1->Title = "Ключ шифрования";
+  OpenDialog1->Title = KEY_FILENAME;
   if (OpenDialog1->Execute()) {
     Memo1->Clear();
     Memo1->Lines->Text = OpenDialog1->FileName;
@@ -107,8 +134,9 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 
   srand((unsigned int)time(NULL));
 
-  for (char i = 0; i < 5; i++)
+  for (char i = 0; i < 5; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
+  }
 
   Form1->Caption = PROGRAMM_NAME;
 
@@ -150,15 +178,14 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
 }
 
 void cursorpos(uint8_t * data) {
-  TPoint position;
+  TPoint position; /* position cursor write in initialization vector */
 
   GetCursorPos(&position);
 
   data[0] ^= (uint8_t)(position.x);
   data[1] ^= (uint8_t)(position.y);
 
-  position.x = 0;
-  position.y = 0;
+  meminit((void *)&position, 0x00, sizeof(TPoint));
 }
 
 void centreal(short * real_percent) {
@@ -169,12 +196,11 @@ void centreal(short * real_percent) {
 
 void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
                    const uint8_t * password, const size_t password_len,
-                         uint8_t * key, const size_t key_len) {
+                         uint8_t * key,      const size_t key_len) {
 
-  size_t i, j, k;
-  size_t count = 0;
+  size_t i, j, k, count = 0;
 
-  short real  = 0;
+  short real = 0;
   short past = 0;
 
   uint8_t hash[SHA256_BLOCK_SIZE];
@@ -182,6 +208,8 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
   float div = (float)(key_len) / 100.0;
 
   for (i = 0; i < password_len; ++i) {
+    /* Read CLOMUL_CONST from file /src/clomul.h */
+    /* Max size CLOMUL_CONST = 106 */
     count += (((size_t)password[i] + (i + 1)) * CLOMUL_CONST);
     count += (((password_len * CLOMUL_CONST) + key_len) << 1);
     count += CLOMUL_CONST;
@@ -200,8 +228,9 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 
     sha256_final(sha256_ctx, hash);
 
-    if (k == SHA256_BLOCK_SIZE)
+    if (k == SHA256_BLOCK_SIZE) {
       k = 0;
+    }
 
     key[i] = hash[k];
 
@@ -212,15 +241,11 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 
     centreal(&real);
 
-    /*
-      ShowMessage("PERCENT:" + IntToStr((int)real) + " %");
-    */
-
     if (real > past) {
       if ((real % 4) == 0) {
         Form1->Shape4->Width = (int)((float)real * cas) + 1;
         Form1->Label9->Caption = "Генерация "
-                               + IntToStr(key_len * 8) + "-битного ключа из "
+                               + IntToStr(key_len * 8)  + "-битного ключа из "
                                + IntToStr(password_len) + "-символьного пароля: "
                                + IntToStr(real) + " %";
         Application->ProcessMessages();
@@ -230,7 +255,6 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
   }
 
   (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
-  count = i = j = k = 0;
 
   return key;
 }
@@ -287,14 +311,14 @@ int erasedfile(const char * filename) {
   long int position = 0;
 
   if ((fsize == -1L) || (fsize == 0)) {
-    (void)fclose(f);
+    fclose(f);
     return -1;
   }
 
   uint8_t * data = (uint8_t *)calloc(BLOCK_SIZE, 1);
 
   if (data == NULL) {
-    (void)fclose(f);
+    fclose(f);
     return -1;
   }
 
@@ -317,7 +341,7 @@ int erasedfile(const char * filename) {
       fseek(f, position, SEEK_SET);
 
       if (fwrite((void *)data, 1, realread, f) != realread) {
-        (void)fclose(f);
+        fclose(f);
         free((void *)data);
         data = NULL;
         return -1;
@@ -340,11 +364,10 @@ int erasedfile(const char * filename) {
         Form1->Label9->Caption = "Уничтожение файла; Обработано: " +
         (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                  IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-                 FloatToStrF(fsize_float, ffFixed, 4, 2) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+        (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
         Application->ProcessMessages();
       }
-
       past_percent = real_percent;
     }
   }
@@ -353,7 +376,7 @@ int erasedfile(const char * filename) {
   data = NULL;
 
   check = chsize(fileno(f), 0);
-  (void)fclose(f);
+  fclose(f);
 
   if (check != 0) {
     return -1;
@@ -375,14 +398,14 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   long int position = 0;
 
   if ((fsize == -1L) || (fsize == 0)) {
-    (void)fclose(fi);
+    fclose(fi);
     return -3;
   }
 
   FILE * fo = fopen(foutput, PARAM_WRITE_BYTE);
 
   if (fo == NULL) {
-    (void)fclose(fi);
+    fclose(fi);
     return -2;
   }
 
@@ -390,8 +413,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   MEMORY_CTX * memory = (MEMORY_CTX *) calloc(1, memory_ctx_len);
 
   if (memory == NULL) {
-    (void)fclose(fi);
-    (void)fclose(fo);
+    fclose(fi);
+    fclose(fo);
     return -4;
   }
 
@@ -426,8 +449,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                       }
                       memmove(vector, memory->output, block_size);
                       if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
-                        (void)fclose(fi);
-                        (void)fclose(fo);
+                        fclose(fi);
+                        fclose(fo);
 
                         free((void *)memory);
                         memory = NULL;
@@ -439,8 +462,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
                       }
                       break;
         case DECRYPT: if (fread((void *)vector, 1, block_size, fi) != block_size) {
-                        (void)fclose(fi);
-                        (void)fclose(fo);
+                        fclose(fi);
+                        fclose(fo);
 
                         free((void *)memory);
                         memory = NULL;
@@ -477,8 +500,8 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
     }
 
     if (fwrite((void *)memory->output, 1, realread, fo) != realread) {
-      (void)fclose(fi);
-      (void)fclose(fo);
+      fclose(fi);
+      fclose(fo);
 
       free((void *)memory);
       memory = NULL;
@@ -508,13 +531,12 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
         Application->ProcessMessages();
       }
-
       past_percent = real_percent;
     }
   }
 
-  (void)fclose(fi);
-  (void)fclose(fo);
+  fclose(fi);
+  fclose(fo);
 
   meminit((void *)memory, 0x00, memory_ctx_len);
   free((void *)memory);
@@ -527,7 +549,7 @@ size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
 
   for (i = 0; i < size; i++)
-    data[i] = (uint8_t)genrand(0, 255);
+    data[i] = (uint8_t)genrand(0x00, 0xFF);
 
   size = size - 2;
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
@@ -540,48 +562,56 @@ size_t vector_init(uint8_t * data, size_t size) {
   return i;
 }
 
+uint32_t MessageForUser(const int tumbler,
+                        const char * head,
+                        const char * message) {
+                        
+  uint32_t result = Application->MessageBox(message, head, tumbler);
+
+  return result;
+}
+
 void __fastcall TForm1::Button4Click(TObject *Sender) {
   size_t ctx_len, block_size;
   int    key_len, real_read,
          cipher_number, operation;
 
+  String UnicodeMsg = "";
+
   if (__strnlen(Edit1->Text.c_str(), 2048) == 0) {
-    ShowMessage("Имя обрабатываемого файла не введено!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Имя обрабатываемого файла не введено!");
     return;
   }
 
   if (__strnlen(Edit2->Text.c_str(), 2048) == 0) {
-    ShowMessage("Имя файла назначения не введено!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Имя файла назначения не введено!");
     return;
   }
 
   if (__strnlen(Memo1->Text.c_str(), 2048) == 0) {
-           ShowMessage("Имя ключевого файла не введено!");
-           return;
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Пароль или имя ключевого файла не введены!");
+    return;
   }
 
   if (Edit1->Text == Edit2->Text) {
-    ShowMessage("Имена обрабатываемого файла и файла назначения совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Имена обрабатываемого файла и файла назначения совпадают!");
     return;
   }
 
   if (Edit1->Text == Memo1->Text) {
-    ShowMessage("Имена обрабатываемого файла и ключевого файла совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Имена обрабатываемого файла и ключевого файла совпадают!");
     return;
   }
 
   if (Edit2->Text == Memo1->Text) {
-    ShowMessage("Имена файла назначения и ключевого файла совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Имена файла назначения и ключевого файла совпадают!");
     return;
-  }
-
-  if (FileExists(Edit2->Text) == True) {
-    if (MessageDlg("Файл назначения существует! Старые данные будут утеряны!\n"
-                   "Вы уверены что хотите перезаписать его?", mtWarning, TMsgDlgButtons() << mbYes << mbNo, 0) == mrNo) {
-
-      ShowMessage("Измените имя файла назначения!");
-      return;
-    }
   }
 
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[ARC4])) {
@@ -604,7 +634,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     cipher_number = THREEFISH;
   }
   else {
-    ShowMessage("Алгоритм шифрования не был выбран!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Алгоритм шифрования не был выбран!");
     return;
   }
 
@@ -639,7 +670,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       key_len = 256;
     }
     else {
-      ShowMessage("Длина ключа шифрования не выбрана!");
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Длина ключа шифрования не была выбрана!");
       return;
     }
   }
@@ -673,24 +705,50 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       operation = DECRYPT;
     }
     else {
-      ShowMessage("Операция не была выбрана!");
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                                      "Операция не была выбрана!");
       return;
     }
   }
 
+  if (FileExists(Edit2->Text) == True) {
+    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
+                 "Вы уверены что хотите перезаписать его?";
+    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
+    
+      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                     "Измените имя файла назначения!");
+      UnicodeMsg = "";
+      return;
+    }
+    UnicodeMsg = "";
+  }
+
+  UnicodeMsg = "Сгенерировать " + IntToStr(key_len * 8) + "-битный ключ шифрования?";
+
+  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDNO) {
+    UnicodeMsg = "";
+    return;
+  }
+
+  UnicodeMsg = "";
+
   uint8_t * buffer = (uint8_t*)calloc(key_len, 1);
 
   if (buffer == NULL) {
-    ShowMessage(MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
 
   real_read = readfromfile(Memo1->Text.c_str(), buffer, key_len);
 
   if ((real_read > 0) && (real_read < key_len)) {
-    ShowMessage("Данных в ключевом файле слишком мало!\n\n"
-                "Было считано: " + IntToStr(real_read) + " " + CHAR_SIZE_DATA[0] + "\n" +
-                "Необходимо: " + IntToStr(key_len) + " " + CHAR_SIZE_DATA[0]);
+    UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
+                  "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+                  "Необходимо:\t" + IntToStr(key_len) + " Бт";
+    Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
+
+    UnicodeMsg = "";
     free((void *)buffer);
     buffer = NULL;
 
@@ -706,7 +764,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (sha256_ctx != NULL) {
         Button4->Enabled = False;
-        /* Crypt key generator; crypt key from password */
+        /* Crypt key generator; generate crypt key from password */
         KDFCLOMUL(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
         Button4->Enabled = True;
 
@@ -715,7 +773,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
         sha256_ctx = NULL;
       }
       else {
-        ShowMessage(MEMORY_BLOCKED);
+        MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
         meminit((void *)buffer, 0x00, key_len);
         free((void *)buffer);
@@ -724,10 +782,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       }
     }
     else {
-      ShowMessage("Длина строкового ключа некорректна!\n\n"
-                  "Было считано: " + IntToStr(real_read) + " " + CHAR_SIZE_DATA[0] + "\n" +
-                  "Необходимо: от 8 до 256 " + CHAR_SIZE_DATA[0]);
+      UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
+                   "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+                   "Необходимо:\tот 8 до 256 Бт";
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG, UnicodeMsg.c_str());
 
+      UnicodeMsg = "";
       meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
       buffer = NULL;
@@ -752,7 +812,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     vector = (uint8_t*)calloc(block_size, 1);
 
     if (vector == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
@@ -766,7 +826,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     srand((unsigned int)time(NULL));
 
     if (vector_init(vector, block_size) < (block_size - 2)) {
-      ShowMessage("Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!");
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!");
 
       meminit((void *)vector, 0x00, block_size);
       meminit((void *)buffer, 0x00, key_len);
@@ -786,7 +847,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     arc4_ctx = (ARC4_CTX *)calloc(1, ctx_len);
 
     if (arc4_ctx == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       meminit((void *)buffer, 0x00, key_len);
       free((void *)buffer);
@@ -801,7 +862,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = Nb * (Nr + 1) * 4;
     rijndael_ctx = (uint8_t *) calloc(ctx_len, 1);
     if (rijndael_ctx == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
         meminit((void *)vector, 0x00, block_size);
@@ -823,7 +884,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(SERPENT_CTX);
     serpent_ctx = (SERPENT_CTX *) calloc(1, ctx_len);
     if (serpent_ctx == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
         meminit((void *)vector, 0x00, block_size);
@@ -845,7 +906,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(BLOWFISH_CTX);
     blowfish_ctx = (BLOWFISH_CTX*)calloc(1, ctx_len);
     if (blowfish_ctx == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
         meminit((void *)vector, 0x00, block_size);
@@ -867,7 +928,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     ctx_len = sizeof(THREEFISH_CTX);
     threefish_ctx = (THREEFISH_CTX *)calloc(1, ctx_len);
     if (threefish_ctx == NULL) {
-      ShowMessage(MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       if (operation == ENCRYPT)
         meminit((void *)vector, 0x00, block_size);
@@ -891,45 +952,76 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   int result = 0xDE;
 
+  UnicodeMsg =
+    "Приступить к выбранной операции? Остановить операцию будет невозможно!\n\n"
+    "Операция:\t" + String(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
+    "Алгоритм:\t" + String(ALGORITM_NAME[cipher_number]) + "\n"
+    "Длина ключа:\t" + IntToStr(key_len * 8).c_str() + " бит" + (24 == key_len ? "а" : "ов");
+
+  if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
+
+    Button4->Enabled = false;
+    result = filecrypt(Edit1->Text.c_str(), Edit2->Text.c_str(), vector, block_size, cipher_number, operation);
+  }
+
+  UnicodeMsg = "";
+  
+/*
   if (MessageDlg("Приступить к выбранной операции? Отменить операцию будет невозможно!\n\n"
-                 "Операция: " + AnsiString(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
-                 "Алгоритм: " + AnsiString(ALGORITM_NAME[cipher_number]) + "\n"
-                 "Длина ключа: " + IntToStr(key_len * 8) + " бит" + (key_len == 24 ? "а" : "ов"), mtCustom, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
+                 "Операция:\t" + AnsiString(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
+                 "Алгоритм:\t" + AnsiString(ALGORITM_NAME[cipher_number]) + "\n"
+                 "Длина ключа:\t" + IntToStr(key_len * 8) + " бит" + (24 == key_len ? "а" : "ов"), mtInformation, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
 
       Button4->Enabled = false;
       result = filecrypt(Edit1->Text.c_str(), Edit2->Text.c_str(), vector, block_size, cipher_number, operation);
   }
+*/
 
   switch (result) {
-    case  0xDE: ShowMessage("Операция была отменена!");
+    case  0xDE: MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                               "Операция была отменена!");
                 break;
 
-    case  0:    ShowMessage("Файл успешно обработан!");
+    case  0:    MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                               "Файл успешно обработан!");
                 break;
-    case -1:    ShowMessage("Файл для обработки не был открыт!");
+    case -1:    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                               "Файл для обработки не был открыт!");
                 break;
-    case -2:    ShowMessage("Файл назначения не был открыт!");
+    case -2:    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                               "Файл назначения не был открыт!");
                 break;
-    case -3:    ShowMessage("Файл для обработки пуст или его размер превышает 2 ГиБ!");
+    case -3:    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                               "Файл для обработки пуст или его размер"
+                               " превышает 2 ГиБ!");
                 break;
-    case -4:    ShowMessage(MEMORY_BLOCKED); /* Cannot allocate memory! */
+    case -4:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
                 break;
-    case -5:    ShowMessage("Ошибка записи в файл!");
+    case -5:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                               "Ошибка записи в файл!");
                 break;
-    case -6:    ShowMessage("Ошибка чтения из файла!");
+    case -6:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                               "Ошибка чтения из файла!");
                 break;
   }
 
   if ((result == 0) && (CheckBox1->Checked == True)) {
-    if (MessageDlg("Вы уверены что хотите уничтожить файл для обработки?\n"
-                   "Стертые данные невозможно будет восстановить!", mtWarning, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
+    UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
+                  "Стертые данные невозможно будет восстановить!";
 
-      if ((erasedfile(Edit1->Text.c_str()) == 0) && (DeleteFile(Edit1->Text) == True)) { /* WTF ??? */
-        ShowMessage("Файл был уничтожен!");
+    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
+                       UnicodeMsg.c_str()) == IDYES) {
+      Button4->Enabled = false;
+
+      if ((erasedfile(Edit1->Text.c_str()) == 0) && (DeleteFile(Edit1->Text) == True)) {
+        MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                       "Файл был уничтожен!");
       }
       else
-        ShowMessage("Ошибка уничтожения файла!");
+        MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                       "Ошибка уничтожения файла!");
     }
+    UnicodeMsg = "";
   }
 
   Form1->Shape4->Width = 0;
@@ -968,7 +1060,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     free((void *)vector);
     vector = NULL;
   }
-
   Button4->Enabled = true;
 }
 
@@ -993,7 +1084,8 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   int len = atoi(Edit3->Text.c_str());
 
   if ((len < 8) || (len > 256)) {
-    ShowMessage("Введите число от 8 до 256!");
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Введите число от 8 до 256!!");
     return;
   }
 
@@ -1014,7 +1106,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
       arc4_ctx = NULL;
     }
 
-    ShowMessage(MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
 

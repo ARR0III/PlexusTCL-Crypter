@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 286
-  Top = 236
+  Left = 130
+  Top = 353
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -303,11 +303,11 @@ object Form1: TForm1
     OnClick = Button4Click
   end
   object OpenDialog1: TOpenDialog
-    Left = 296
+    Left = 344
     Top = 32
   end
   object SaveDialog1: TSaveDialog
-    Left = 328
+    Left = 376
     Top = 32
   end
 end
