@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 130
-  Top = 353
+  Left = 162
+  Top = 184
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -151,6 +151,7 @@ object Form1: TForm1
     Top = 48
     Width = 137
     Height = 21
+    Style = csDropDownList
     Ctl3D = False
     ItemHeight = 13
     MaxLength = 20
@@ -164,6 +165,7 @@ object Form1: TForm1
     Top = 96
     Width = 137
     Height = 21
+    Style = csDropDownList
     Ctl3D = False
     ItemHeight = 13
     MaxLength = 20
