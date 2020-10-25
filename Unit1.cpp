@@ -8,6 +8,8 @@
 #include <string.h>
 #include <windows.h>
 
+#include "src/crc32.h"
+
 #include "src/arc4.h"
 #include "src/base64.h"
 #include "src/sha256.h"
@@ -81,7 +83,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-512-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.72 09OKT20 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.74 25OKT20 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -185,12 +187,12 @@ void cursorpos(uint8_t * data) {
 
   data[0] ^= (uint8_t)(position.x);
   data[1] ^= (uint8_t)(position.y);
-
+/*
+  position->x = 0;
+  position->y = 0;
+  function meminit this is analog system memset function!
+*/
   meminit((void *)&position, 0x00, sizeof(TPoint));
-  /*
-    position->x = 0;
-    position->y = 0;
-  */
 }
 
 void centreal(short * real_percent) {
@@ -203,23 +205,39 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
                     uint8_t * key,      const size_t key_len) {
 
-  size_t i, j, k, count = 0;
+  uint32_t i, j, k;
+  uint32_t temp, count = 0;
+  uint8_t  hash[SHA256_BLOCK_SIZE];
 
   short real = 0;
   short past = 0;
 
-  uint8_t hash[SHA256_BLOCK_SIZE];
-
   float div = (float)(key_len) / 100.0;
 
-  for (i = 0; i < password_len; ++i) {
-    count += (((size_t)password[i] + (i + 1)) * CLOMUL_CONST);
-    count += (((password_len * CLOMUL_CONST) + key_len) << 1);
-    count += CLOMUL_CONST;
+  temp = CRC32(password, password_len);
+  for (i = 0; i < password_len; ++i) {  /* dynamic generate count */
+    count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
+    count -= (password_len + key_len + CLOMUL_CONST + i);
   }
-
-  count *= CLOMUL_CONST;
-
+  count &= temp;
+  /*  
+      FOR STATIC
+      250,000 = 0x0003D090;
+      500,000 = 0x0007A120;
+    1,000,000 = 0x000F4240;
+    5,000,000 = 0x004C4B40;
+  */
+  count >>= 18; /* MAX == 16383 */
+  count  |= ((uint32_t)1 << 14);
+  count  *= CLOMUL_CONST;
+  /*
+    MAX == 32,767 == 0x0000FFFF;
+    14 bit always 1;
+  */
+  /*
+    printf("Count = %d\n", count);
+    exit(0);
+  */
   sha256_init(sha256_ctx);
 
   i = k = 0;
@@ -257,7 +275,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
     }
   }
 
-  (void *)meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
 
   return key;
 }
@@ -265,10 +283,6 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 int size_check(uint32_t size) {
   int result = 0;
 
-  if (size < INT_SIZE_DATA[0]) {
-    result = 0;
-  }
-  else
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
     result = 1;
   }
@@ -349,8 +363,9 @@ int erasedfile(const char * filename) {
         data = NULL;
         return -1;
       }
-      else
+      else {
         fflush(f);
+      }
 
       position += (long int)realread;
     }
@@ -385,8 +400,9 @@ int erasedfile(const char * filename) {
   if (check != 0) {
     return -1;
   }
-  else
+  else {
     return 0;
+  }
 }
 
 int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
@@ -559,8 +575,9 @@ size_t vector_init(uint8_t * data, size_t size) {
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
   for (i = 0; i < size; i++) {
-    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2])
+    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2]) {
       break;
+    }
   }
 
   return i;
