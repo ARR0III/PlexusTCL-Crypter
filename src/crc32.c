@@ -68,8 +68,9 @@ uint32_t Crc32Table[256] = {
 uint32_t CRC32(const uint8_t * buffer, uint64_t len) {
   uint32_t crc = 0xFFFFFFFF;
 
-  while (len--)
+  while (len--) {
     crc = (crc >> 8) ^ Crc32Table[(crc ^ *buffer++) & 0xFF];
+  }
 
-  return crc ^ 0xFFFFFFFF;
+  return (crc ^ 0xFFFFFFFF);
 }

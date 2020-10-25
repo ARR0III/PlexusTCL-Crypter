@@ -78,11 +78,11 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
     return output;
   }
 
-  uint8_t temp;
+  const uint8_t * temp;
 
   for (size_t i = 0; i < length; ++i) {
-    temp  = input[i];
-    output[i] ^= temp;
+    temp       = &(input[i]);
+    output[i] ^=  (*temp);
   }
   return output;
 }
