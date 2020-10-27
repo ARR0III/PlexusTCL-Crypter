@@ -137,8 +137,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
     count -= (password_len + key_len + CLOMUL_CONST + i);
   }
   count &= temp;
-  /*
-      FOR STATIC
+  /*  FOR STATIC
       250,000 = 0x0003D090;
       500,000 = 0x0007A120;
     1,000,000 = 0x000F4240;
@@ -781,9 +780,6 @@ int main (int argc, char * argv[]) {
   printf("[#] Operation %s file \"%s\" started!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
 
   result = filecrypt(argv[argc - 3], argv[argc - 2], vector, block_size, cipher_number, operation);
-
-  if (result < 0)
-    perror("[!] ERROR");
 
   switch (result) {
     case  0:    printf("[#] %s file \"%s\" complete!\n", OPERATION_NAME[operation_variant(cipher_number, operation)], argv[argc - 3]);
