@@ -206,7 +206,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
                     uint8_t * key,      const size_t key_len) {
 
   uint32_t i, j, k;
-  uint32_t temp, count = 0;
+  uint32_t count = 0;
   uint8_t  hash[SHA256_BLOCK_SIZE];
 
   short real = 0;
@@ -214,30 +214,16 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 
   float div = (float)(key_len) / 100.0;
 
-  temp = CRC32(password, password_len);
   for (i = 0; i < password_len; ++i) {  /* dynamic generate count */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
     count -= (password_len + key_len + CLOMUL_CONST + i);
   }
-  count &= temp;
-  /*  
-      FOR STATIC
-      250,000 = 0x0003D090;
-      500,000 = 0x0007A120;
-    1,000,000 = 0x000F4240;
-    5,000,000 = 0x004C4B40;
-  */
-  count >>= 18; /* MAX == 16383 */
+
+  count  &= CRC32(password, password_len);;
+  count >>= 18;
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
-  /*
-    MAX == 32,767 == 0x0000FFFF;
-    14 bit always 1;
-  */
-  /*
-    printf("Count = %d\n", count);
-    exit(0);
-  */
+
   sha256_init(sha256_ctx);
 
   i = k = 0;
