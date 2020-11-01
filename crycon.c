@@ -111,49 +111,27 @@ float sizetofloatprint(const int status, const float size) {
   return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
 }
 
-void clear_end_string(int print_count) {
-  if ((print_count > 0) && (print_count < 80)) {
-    print_count -= 79;
-    for (int i = 0; i < print_count; i++) {
-      putc((int)0x20, stdout); /* PROBEL */
-    }
-  }
-}
-
 void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
                     uint8_t * key,      const size_t key_len) {
 
   uint32_t i, j, k;
-  uint32_t temp, count = 0;
+  uint32_t count = 0;
   uint8_t  hash[SHA256_BLOCK_SIZE];
 /*
   srand(time(0));
   clock_t min = clock();
 */
-  temp = CRC32(password, password_len);
-  for (i = 0; i < password_len; ++i) {  /* dynamic generation count */
+  for (i = 0; i < password_len; ++i) {
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
     count -= (password_len + key_len + CLOMUL_CONST + i);
   }
-  count &= temp;
-  /*  FOR STATIC
-      250,000 = 0x0003D090;
-      500,000 = 0x0007A120;
-    1,000,000 = 0x000F4240;
-    5,000,000 = 0x004C4B40;
-  */
-  count >>= 18; /* MAX == 16383 */
+
+  count  &= CRC32(password, password_len);
+  count >>= 18;
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
-  /*
-    MAX == 32,767 == 0x0000FFFF;
-    14 bit always 1;
-  */
-  /*
-    printf("Count = %d\n", count);
-    exit(0);
-  */
+
   sha256_init(sha256_ctx);
 
   for (i = k = 0; i < key_len; ++i, ++k) {
@@ -167,7 +145,6 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
       k = 0;
     }
 
-/* !!! generate crypt key !!! */
     key[i] = hash[k];
   }
 /*
@@ -349,7 +326,7 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
         real_check = size_check(position);
 
-        print_real = printf(" >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
+        print_real = 79 - printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
           OPERATION_NAME[operation_variant(cipher, operation)],
           progress_bar,
           sizetofloatprint(real_check, (float)position),
@@ -358,9 +335,11 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
           CHAR_SIZE_DATA[fsize_check],
           real_percent);
 
-        clear_end_string(print_real);
-        putc('\r', stdout);
+        for (char i = 0; i < print_real; i++) {
+          putc(' ', stdout);
+        }
 
+        putc('\r', stdout);
         fflush(stdout);
       }
 
