@@ -83,7 +83,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-512-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.74 25OKT20 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.74 15JAN21 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
