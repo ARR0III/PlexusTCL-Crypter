@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "src/sha256.h"
-#include "src/xtalw.h"
+#include "src/myfunctions.h"
 
 int sha256(const int tumbler, SHA256_CTX * ctx, const uint8_t * data, uint8_t * hash, const int data_length) {
 
