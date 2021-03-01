@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
-#include <memory.h>
+#include <string.h>
 
 #define SHA256_BLOCK_SIZE 32
 
@@ -88,7 +88,9 @@ void sha256_init(SHA256_CTX *ctx) {
 }
 
 void sha256_update(SHA256_CTX *ctx, const uint8_t * data, const size_t len) {
-  for (uint32_t i = 0; i < len; ++i) {
+  uint32_t i;
+  
+  for (i = 0; i < len; ++i) {
     ctx->data[ctx->datalen] = data[i];
     ctx->datalen++;
 
