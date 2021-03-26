@@ -14,16 +14,16 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "src/arc4.h"
-#include "src/crc32.h"
-#include "src/sha256.h"
-#include "src/serpent.h"
-#include "src/rijndael.h"
-#include "src/blowfish.h"
-#include "src/threefish-512.h"
+#include "new_src/arc4.h"
+#include "new_src/crc32.h"
+#include "new_src/sha256.h"
+#include "new_src/serpent.h"
+#include "new_src/rijndael.h"
+#include "new_src/blowfish.h"
+#include "new_src/threefish-512.h"
 
-#include "src/xtalw.h"
-#include "src/clomul.h"
+#include "new_src/xtalw.h"
+#include "new_src/clomul.h"
 
 #define OK                      0
 
