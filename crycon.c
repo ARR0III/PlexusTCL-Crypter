@@ -223,15 +223,15 @@ void cipher_free(void * ctx, size_t ctx_length) {
 
 size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
-	if (ctx->vector_length > 0) {
-	  meminit((void *)ctx->vector, 0x00, ctx->vector_length);
-	}
+    if (ctx->vector_length > 0) {
+      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+    }
     free(ctx->vector);
   }
 
   if (NULL != ctx->temp_buffer) {
-	if (ctx->temp_buffer_length > 0) {
-	  meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+    if (ctx->temp_buffer_length > 0) {
+      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
     free(ctx->temp_buffer);
   }
@@ -492,7 +492,7 @@ int main (int argc, char * argv[]) {
   ctx->finput  = argv[argc - 3];
 
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
     printf("[!] Names input and output files equal!\n");
     return (-1);
   }
@@ -504,7 +504,7 @@ int main (int argc, char * argv[]) {
   }
   else
   if (strcmp(ctx->finput, ctx->keyfile) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
   }
@@ -524,7 +524,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--serpent") == 0)
     ctx->cipher_number = SERPENT;
   else {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
   }
@@ -572,7 +572,7 @@ int main (int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-	  free_global_memory(ctx, ctx_length);
+      free_global_memory(ctx, ctx_length);
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
     }
@@ -648,8 +648,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-	case ARC4:
-	  cipher_ctx_len = sizeof(ARC4_CTX);
+    case ARC4:
+      cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
@@ -774,10 +774,10 @@ int main (int argc, char * argv[]) {
       printf("[!] File for %s \"%s\" not opened!\n",
         OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)], ctx->finput);
       break;
-    WRITE_FILE_NOT_OPEN:
+    case WRITE_FILE_NOT_OPEN:
       printf("[!] Output file \"%s\" not opened!\n", ctx->output);
       break;
-    SIZE_FILE_ERROR:
+    case SIZE_FILE_ERROR:
       printf("[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
