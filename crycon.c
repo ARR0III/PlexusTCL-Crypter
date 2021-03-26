@@ -766,24 +766,24 @@ int main (int argc, char * argv[]) {
   int result = filecrypt(ctx);
 
   switch (result) {
-    case  0:
+    case OK:
       printf("[#] %s file \"%s\" complete!\n",
         OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)], ctx->finput);
       break;
-    case (-1):
+    case READ_FILE_NOT_OPEN:
       printf("[!] File for %s \"%s\" not opened!\n",
         OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)], ctx->finput);
       break;
-    case (-2):
+    WRITE_FILE_NOT_OPEN:
       printf("[!] Output file \"%s\" not opened!\n", ctx->output);
       break;
-    case (-3):
+    SIZE_FILE_ERROR:
       printf("[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
       break;
-    case (-4):
+    case WRITE_FILE_ERROR:
       printf("[!] Error write in file \"%s\" !\n", ctx->foutput);
       break;
-    case (-5):
+    case READ_FILE_ERROR:
       printf("[!] Error read form file \"%s\" !\n", ctx->finput);
       break;
   }
