@@ -3,7 +3,7 @@
   Console Cryptography Software v4.80;
 
   Make date:    26 March 2020;
-  Modification: Testing version (not original);
+  Modification: None (Original);
   Language:     English;
 */
 
@@ -14,25 +14,34 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "new_src/arc4.h"
-#include "new_src/crc32.h"
-#include "new_src/sha256.h"
-#include "new_src/serpent.h"
-#include "new_src/rijndael.h"
-#include "new_src/blowfish.h"
-#include "new_src/threefish-512.h"
+#include "src/arc4.h"
+#include "src/crc32.h"
+#include "src/sha256.h"
+#include "src/serpent.h"
+#include "src/rijndael.h"
+#include "src/blowfish.h"
+#include "src/threefish-512.h"
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
-#define ENCRYPT             0x00
-#define DECRYPT             0xDE
+#define OK                      0
 
-#define TERMINAL_STD_LEN      80
-#define PROGRESS_BAR_LENGTH 25+1
+#define READ_FILE_NOT_OPEN     -1
+#define WRITE_FILE_NOT_OPEN    -2
 
-#define BOUNDARY            2048
-#define DATA_SIZE         1024*4
+#define SIZE_FILE_ERROR        -3
+#define WRITE_FILE_ERROR       -4
+#define READ_FILE_ERROR        -5
+
+#define ENCRYPT              0x00
+#define DECRYPT              0xDE
+
+#define TERMINAL_STD_LEN       80
+#define PROGRESS_BAR_LENGTH (25+1)
+
+#define BOUNDARY             2048
+#define DATA_SIZE         (1024*4)
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
@@ -248,14 +257,14 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
 
   if (fi == NULL) {
-    return (-1);
+    return READ_FILE_NOT_OPEN;
   }
 
   FILE * fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
 
   if (fo == NULL) {
     fclose(fi);
-    return (-2);
+    return WRITE_FILE_NOT_OPEN;
   }
 
   register int32_t fsize    = size_of_file(fi);
@@ -264,7 +273,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   if ((fsize == (-1)) || (fsize == 0)) {
     fclose(fi);
     fclose(fo);
-    return (-3);
+    return SIZE_FILE_ERROR;
   }
 
   float div         = (float)((float)fsize / 100.0);
@@ -315,7 +324,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             fclose(fi);
             fclose(fo);
 
-            return (-4);
+            return WRITE_FILE_ERROR;
           }
           else {
             fflush(fo);
@@ -327,7 +336,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             fclose(fi);
             fclose(fo);
 
-            return (-5);
+            return READ_FILE_ERROR;
           }
           position += (int32_t)ctx->vector_length;
           break;
@@ -366,7 +375,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       fclose(fi);
       fclose(fo);
 
-      return (-4);
+      return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
@@ -411,7 +420,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   fclose(fi);
   fclose(fo);
 
-  return 0;
+  return OK;
 }
 
 size_t vector_init(uint8_t * data, size_t size) {
@@ -748,8 +757,7 @@ int main (int argc, char * argv[]) {
     threefish_init(threefish_ctx, (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
   }
 
-  printf("[#] Algoritm %s initialized!\n",
-    ALGORITM_NAME[(ctx->cipher_number)]);
+  printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[(ctx->cipher_number)]);
 
   printf("[#] Operation %s file \"%s\" started!\n",
     OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
