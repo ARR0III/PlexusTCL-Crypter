@@ -33,13 +33,15 @@ static const uint32_t k[64] = {
 };
 
 void sha256_transform(SHA256_CTX * ctx, const uint8_t * data) {
-  uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
+  uint32_t a, b, c, d, e, f, g, h, i, j, m[64];
 
-  for (i = 0, j = 0; i < 16; ++i, j += 4)
+  for (i = 0, j = 0; i < 16; ++i, j += 4) {
     m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
+  }
 
-  for ( ; i < 64; ++i)
+  for ( ; i < 64; ++i) {
     m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
+  }
 
   a = ctx->state[0];
   b = ctx->state[1];
@@ -51,8 +53,9 @@ void sha256_transform(SHA256_CTX * ctx, const uint8_t * data) {
   h = ctx->state[7];
 
   for (i = 0; i < 64; ++i) {
-    t1 = h + EP1(e) + CH(e,f,g) + k[i] + m[i];
-    t2 = EP0(a) + MAJ(a,b,c);
+    uint32_t t1 = h + EP1(e) + CH(e,f,g) + k[i] + m[i];
+    uint32_t t2 = EP0(a) + MAJ(a,b,c);
+    
     h = g;
     g = f;
     f = e;
@@ -75,7 +78,7 @@ void sha256_transform(SHA256_CTX * ctx, const uint8_t * data) {
 
 void sha256_init(SHA256_CTX *ctx) {
   ctx->datalen = 0;
-  ctx->bitlen = 0;
+  ctx->bitlen  = 0;
 
   ctx->state[0] = 0x6a09e667;
   ctx->state[1] = 0xbb67ae85;
@@ -108,14 +111,16 @@ void sha256_final(SHA256_CTX *ctx, uint8_t * hash) {
   if (ctx->datalen < 56) {
     ctx->data[i++] = 0x80;
 
-    while (i < 56)
+    while (i < 56) {
       ctx->data[i++] = 0x00;
+    }
   }
   else {
     ctx->data[i++] = 0x80;
 
-    while (i < 64)
+    while (i < 64) {
       ctx->data[i++] = 0x00;
+    }
 
     sha256_transform(ctx, ctx->data);
     memset((void*)(ctx->data), 0, 56);

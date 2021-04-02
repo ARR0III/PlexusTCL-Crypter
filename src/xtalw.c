@@ -1,7 +1,7 @@
 /*
   Plexus Technology Cybernetic Laboratories;
 
-  Some functions of this library are functional analogs of Windows system
+  Some functions of this library are functional analogs of system
   functions, so their replacement with the original functions should not
   affect the operation of the program in any way.
 */
@@ -20,7 +20,7 @@ int genrand(const int min, const int max) {
 void * meminit(void * data, const uint8_t simbol, size_t length) {
   volatile uint8_t * temp = (uint8_t *)data;
 
-  if (NULL == data || 0 == length) {
+  if (NULL == data) {
     return data;
   }
 
@@ -36,15 +36,20 @@ size_t __strnlen(const char * string, size_t length) {
 
   size_t result = 0;
 
-  if (NULL == string) {
-    return result;
+  if (NULL != string) {
+    while (0 != length) {
+      if ('\0' == string[result] || '\n' == string[result] ||
+          '\t' == string[result] || '\r' == string[result] ||
+          '\v' == string[result] || '\a' == string[result] ||
+          '\?' == string[result] || '\\' == string[result] ||
+          '\'' == string[result] || '\"' == string[result] ) {
+      
+        break;
+      }
+      result++;
+      length--;
+    }
   }
-
-  while (length && ('\0' != (string[result]))) {
-    ++result;
-    --length;
-  }
-
   return result;
 }
 

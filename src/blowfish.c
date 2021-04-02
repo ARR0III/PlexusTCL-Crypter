@@ -1,11 +1,11 @@
 typedef struct {
-  unsigned long P[18];
-  unsigned long S[4][256];
+  uint32_t P[18];
+  uint32_t S[4][256];
 } BLOWFISH_CTX;
 
 #define N 16
 
-static const unsigned long ORIG_P[N + 2] = {
+static const uint32_t ORIG_P[N + 2] = {
         0x243F6A88L, 0x85A308D3L, 0x13198A2EL, 0x03707344L,
         0xA4093822L, 0x299F31D0L, 0x082EFA98L, 0xEC4E6C89L,
         0x452821E6L, 0x38D01377L, 0xBE5466CFL, 0x34E90C6CL,
@@ -13,7 +13,7 @@ static const unsigned long ORIG_P[N + 2] = {
         0x9216D5D9L, 0x8979FB1BL
 };
 
-static const unsigned long ORIG_S[4][256] = {
+static const uint32_t ORIG_S[4][256] = {
     {   0xD1310BA6L, 0x98DFB5ACL, 0x2FFD72DBL, 0xD01ADFB7L,
         0xB8E1AFEDL, 0x6A267E96L, 0xBA7C9045L, 0xF12C7F99L,
         0x24A19947L, 0xB3916CF7L, 0x0801F2E2L, 0x858EFC16L,
@@ -272,17 +272,18 @@ static const unsigned long ORIG_S[4][256] = {
         0xB74E6132L, 0xCE77E25BL, 0x578FDFE3L, 0x3AC372E6L  }
 };
 
-static unsigned long F(const BLOWFISH_CTX * ctx, unsigned long x) {
-   unsigned short a, b, c, d;
-   unsigned long  y;
+static unsigned long F(const BLOWFISH_CTX * ctx, uint32_t x) {
+   uint16_t a, b, c, d;
+   uint32_t  y;
 
-   d = (unsigned short)(x & 0xFF);
+   d = (uint16_t)(x & 0xFF);
    x >>= 8;
-   c = (unsigned short)(x & 0xFF);
+   c = (uint16_t)(x & 0xFF);
    x >>= 8;
-   b = (unsigned short)(x & 0xFF);
+   b = (uint16_t)(x & 0xFF);
    x >>= 8;
-   a = (unsigned short)(x & 0xFF);
+   a = (uint16_t)(x & 0xFF);
+
    y = ctx->S[0][a] + ctx->S[1][b];
    y = y ^ ctx->S[2][c];
    y = y + ctx->S[3][d];
@@ -290,10 +291,11 @@ static unsigned long F(const BLOWFISH_CTX * ctx, unsigned long x) {
    return y;
 }
 
-void blowfish_encrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
-  unsigned long  temp;
+void blowfish_encrypt(const BLOWFISH_CTX *ctx, uint32_t * xl, uint32_t * xr){
+  uint32_t Xl;
+  uint32_t Xr;
+  uint32_t temp;
+
   short i;
 
   Xl = *xl;
@@ -319,10 +321,10 @@ void blowfish_encrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long 
   *xr = Xr;
 }
 
-void blowfish_decrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long *xr){
-  unsigned long  Xl;
-  unsigned long  Xr;
-  unsigned long  temp;
+void blowfish_decrypt(const BLOWFISH_CTX *ctx, uint32_t * xl, uint32_t * xr){
+  uint32_t Xl;
+  uint32_t Xr;
+  uint32_t temp;
   short       i;
 
   Xl = *xl;
@@ -350,9 +352,9 @@ void blowfish_decrypt(const BLOWFISH_CTX *ctx, unsigned long *xl, unsigned long 
   *xr = Xr;
 }
 
-void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char *key, const int keyLen) {
+void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char * key, const int keyLen) {
   int i, j, k;
-  unsigned long data, datal, datar;
+  uint32_t datal, datar;
 
   for (i = 0; i < 4; i++) {
     for (j = 0; j < 256; j++)
@@ -361,7 +363,7 @@ void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char *key, const int keyLen
 
   j = 0;
   for (i = 0; i < N + 2; ++i) {
-    data = 0x00000000;
+    uint32_t data = 0x00000000;
     for (k = 0; k < 4; ++k) {
       data = (data << 8) | key[j];
       j = j + 1;
