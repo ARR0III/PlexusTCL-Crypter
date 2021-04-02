@@ -3,7 +3,7 @@
   Console Cryptography Software v4.80;
 
   Developer:    ARR0III;
-  Make date:    2 Apr 2020;
+  Make date:    02 Apr 2021;
   Modification: Testing version (Not original);
   Language:     English;
 */
@@ -221,15 +221,15 @@ void cipher_free(void * ctx, size_t ctx_length) {
 
 size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
-	if (ctx->vector_length > 0) {
-	  meminit((void *)ctx->vector, 0x00, ctx->vector_length);
-	}
+    if (ctx->vector_length > 0) {
+      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+    }
     free((void *)ctx->vector);
   }
 
   if (NULL != ctx->temp_buffer) {
-	if (ctx->temp_buffer_length > 0) {
-	  meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+    if (ctx->temp_buffer_length > 0) {
+      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
     free((void *)ctx->temp_buffer);
   }
@@ -536,9 +536,9 @@ int main (int argc, char * argv[]) {
   ctx->finput  = argv[argc - 3];
 
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
-	printf("[!] Names input and output files equal!\n");
+    printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
@@ -550,7 +550,7 @@ int main (int argc, char * argv[]) {
   }
   else
   if (strcmp(ctx->finput, ctx->keyfile) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -571,7 +571,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--serpent") == 0)
     ctx->cipher_number = SERPENT;
   else {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -704,8 +704,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-	case ARC4:
-	  cipher_ctx_len = sizeof(ARC4_CTX);
+    case ARC4:
+      cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
