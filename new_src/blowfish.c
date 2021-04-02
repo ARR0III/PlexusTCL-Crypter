@@ -354,7 +354,7 @@ void blowfish_decrypt(const BLOWFISH_CTX *ctx, uint32_t * xl, uint32_t * xr){
 
 void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char * key, const int keyLen) {
   int i, j, k;
-  uint32_t data, datal, datar;
+  uint32_t datal, datar;
 
   for (i = 0; i < 4; i++) {
     for (j = 0; j < 256; j++)
@@ -363,7 +363,7 @@ void blowfish_init(BLOWFISH_CTX *ctx, const unsigned char * key, const int keyLe
 
   j = 0;
   for (i = 0; i < N + 2; ++i) {
-    data = 0x00000000;
+    uint32_t data = 0x00000000;
     for (k = 0; k < 4; ++k) {
       data = (data << 8) | key[j];
       j = j + 1;

@@ -1,14 +1,14 @@
 #include <stdint.h>
 
 uint8_t gmult(uint8_t a, uint8_t b) {
-  uint8_t hbs, p = 0;
+  uint8_t p = 0;
 
   for (int i = 0; i < 8; i++) {
     if (b & 1) {
       p ^= a;
     }
 
-    hbs = a & 0x80;
+    uint8_t hbs = a & 0x80;
     a <<= 1;
 
     if (hbs) {
@@ -139,12 +139,11 @@ void inv_mix_columns(uint8_t *state) {
 }
 
 void shift_rows(uint8_t *state) {
-  uint8_t s, tmp;
-
   for (uint8_t i = 1; i < 4; i++) {
-    s = 0;
+    uint8_t s = 0;
+    
     while (s < i) {
-      tmp = state[Nb * i + 0];
+      uint8_t tmp = state[Nb * i + 0];
 
       for (uint8_t k = 1; k < Nb; k++) {
         state[Nb * i + k - 1] = state[Nb * i + k];

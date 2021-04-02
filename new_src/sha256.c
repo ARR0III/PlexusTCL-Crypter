@@ -33,7 +33,7 @@ static const uint32_t k[64] = {
 };
 
 void sha256_transform(SHA256_CTX * ctx, const uint8_t * data) {
-  uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
+  uint32_t a, b, c, d, e, f, g, h, i, j, m[64];
 
   for (i = 0, j = 0; i < 16; ++i, j += 4) {
     m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
@@ -53,8 +53,9 @@ void sha256_transform(SHA256_CTX * ctx, const uint8_t * data) {
   h = ctx->state[7];
 
   for (i = 0; i < 64; ++i) {
-    t1 = h + EP1(e) + CH(e,f,g) + k[i] + m[i];
-    t2 = EP0(a) + MAJ(a,b,c);
+    uint32_t t1 = h + EP1(e) + CH(e,f,g) + k[i] + m[i];
+    uint32_t t2 = EP0(a) + MAJ(a,b,c);
+    
     h = g;
     g = f;
     f = e;
