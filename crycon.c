@@ -2,11 +2,11 @@
   Plexus Technology Cybernetic Laboratories;
   Console Cryptography Software v4.80;
 
-  Make date:    26 March 2020;
-  Modification: None (Original);
+  Developer:    ARR0III;
+  Make date:    2 Apr 2020;
+  Modification: Testing version (Not original);
   Language:     English;
 */
-
 #include <time.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -14,16 +14,16 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "new_src/arc4.h"
-#include "new_src/crc32.h"
-#include "new_src/sha256.h"
-#include "new_src/serpent.h"
-#include "new_src/rijndael.h"
-#include "new_src/blowfish.h"
-#include "new_src/threefish-512.h"
+#include "src/arc4.h"
+#include "src/crc32.h"
+#include "src/sha256.h"
+#include "src/serpent.h"
+#include "src/rijndael.h"
+#include "src/blowfish.h"
+#include "src/threefish-512.h"
 
-#include "new_src/xtalw.h"
-#include "new_src/clomul.h"
+#include "src/xtalw.h"
+#include "src/clomul.h"
 
 #define OK                      0
 
@@ -37,7 +37,6 @@
 #define ENCRYPT              0x00
 #define DECRYPT              0xDE
 
-#define TERMINAL_STD_LEN       80
 #define PROGRESS_BAR_LENGTH (25+1)
 
 #define BOUNDARY             2048
@@ -45,7 +44,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.80 26MAR20 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.80 31MAR20 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -91,24 +90,23 @@ const char * ALGORITM_NAME[]  = {
 /* Global struct for data */
 typedef struct {
 /* pointers for */
-  char * finput;  /* path crypt file */
-  char * foutput; /* path write file */
-  char * keyfile; /* path keyfile */
+  char    * finput;  /* path crypt file */
+  char    * foutput; /* path write file */
+  char    * keyfile; /* path keyfile */
 
   uint8_t * vector;  /* initialized vector for crypt data */
+  size_t    vector_length; /* block size cipher execution */
+
   uint8_t * temp_buffer;  /* temp_buffer for temp key data */
+  size_t    temp_buffer_length;
 
-  uint8_t input  [DATA_SIZE]; /* memory for read */
-  uint8_t output [DATA_SIZE]; /* memory for write */
+  uint8_t   input  [DATA_SIZE]; /* memory for read */
+  uint8_t   output [DATA_SIZE]; /* memory for write */
 
-  /*uint8_t progress_bar[PROGRESS_BAR_LENGTH];*/
-
-  size_t  vector_length; /* block size cipher execution */
-
-  int temp_buffer_length;
-  int operation;
-  int cipher_number;
-
+  char      progress_bar[PROGRESS_BAR_LENGTH];
+  
+  int       operation;
+  int       cipher_number;
 } GLOBAL_MEMORY;
 
 void NAME_CIPHER_ERROR(const char * name) {
@@ -144,7 +142,7 @@ float sizetofloatprint(const int status, const float size) {
 
 void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
-                    uint8_t * key,      const size_t temp_buffer_length) {
+                    uint8_t * key,      const size_t key_length) {
 
   uint32_t i, j, k;
   uint32_t count = 0;
@@ -155,7 +153,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 */
   for (i = 0; i < password_len; ++i) {  /* dynamic generation count */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
-    count -= (password_len + temp_buffer_length + CLOMUL_CONST + i);
+    count -= (password_len + key_length + CLOMUL_CONST + i);
   }
 
   count  &= CRC32(password, password_len);
@@ -168,7 +166,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 */
   sha256_init(sha256_ctx);
 
-  for (i = k = 0; i < temp_buffer_length; ++i, ++k) {
+  for (i = k = 0; i < key_length; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(sha256_ctx, password, password_len);
     }
@@ -223,28 +221,33 @@ void cipher_free(void * ctx, size_t ctx_length) {
 
 size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
-    if (ctx->vector_length > 0) {
-      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
-    }
-    free(ctx->vector);
+	if (ctx->vector_length > 0) {
+	  meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+	}
+    free((void *)ctx->vector);
   }
 
   if (NULL != ctx->temp_buffer) {
-    if (ctx->temp_buffer_length > 0) {
-      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+	if (ctx->temp_buffer_length > 0) {
+	  meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
-    free(ctx->temp_buffer);
+    free((void *)ctx->temp_buffer);
   }
 
+  /* clear all memory and all pointers */
   meminit((void *)ctx, 0x00, ctx_length);
+  
+  free((void *)ctx);
+  ctx = NULL;
+  
   return ctx_length;
 }
 
 void pmemory(GLOBAL_MEMORY * ctx) {
-    printf("CTX:\t\t %p\n"
-           "vector: \t %p\n"
-           "input:  \t %p\n"
-           "output: \t %p\n", 
+    printf("CTX:    %p\n"
+           "vector: %p\n"
+           "input:  %p\n"
+           "output: %p\n", 
 
            ctx,
            ctx->vector,
@@ -281,17 +284,14 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   int   fsize_check = size_check(fsize);
   float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
 
-  int print_real;
-
   size_t nblock;
-  size_t realread = 0;
 
+  size_t realread = 0;
+  
   short real_percent = 0;
   short past_percent = 0;
 
-  char progress_bar[PROGRESS_BAR_LENGTH] = {0};
-
-  meminit((void *)progress_bar, '.', 25);
+  meminit((void *)ctx->progress_bar, '.', 25);
   
 /*
   control pointers allocated memory !!!
@@ -388,32 +388,33 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     if (real_percent > past_percent) {
       if ((real_percent % 4) == 0) {
-        memset((void *)progress_bar, '#', (real_percent / 4));
+        meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
-        print_real = TERMINAL_STD_LEN - 1 - printf("\r >  %s [%s] (%4.1f %s/%4.1f %s) %3d %%",
+        printf(" >  %s [%s] (%4.1f %s/%4.1f %s) %3d %%",
           OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
-          progress_bar, /*ctx->progress_bar*/
+          ctx->progress_bar,
           sizetofloatprint(real_check, (float)position),
           CHAR_SIZE_DATA[real_check],
           fsize_float,
           CHAR_SIZE_DATA[fsize_check],
           real_percent);
-
-        for (int i = 0; i < print_real; i++) {
-          putc(' ', stdout);
-        }
-
-        putc('\r', stdout);
+          
+          /* '\r' not read printf function */
+          putc(' ',  stdout);
+          putc('\r', stdout);
 
         fflush(stdout);
       }
       past_percent = real_percent;
     }
   }
-/* control pointers allocated memory !!!
-  pmemory(ctx); */
+  
+/*
+  control pointers allocated memory !!!
+  pmemory(ctx);
+*/
 
   putc('\n', stdout);
 
@@ -464,7 +465,7 @@ int main (int argc, char * argv[]) {
       printf("Algoritms:\n\t-a/--arc4\n\t-r/--aes\n\t-s/--serpent\n\t-b/--blowfish\n\t-t/--threefish\n");
       printf("Operations:\n\t-e/--encrypt\n\t-d/--decrypt\n");
       printf("Lengths key:\n\t-a/--128\n\t-b/--192\n\t-c/--256\n\n");
-      printf("Enter:\n\t[%s] [algoritm] [operation]"
+      printf("Enter: %s [algoritm] [operation]"
       	     " [key length] [input filename] [output filename] [key filename or string key]\n", argv[0]);
       return 0;
     }
@@ -486,29 +487,75 @@ int main (int argc, char * argv[]) {
     MEMORY_ERROR();
     return (-1);
   }
-
+/*
+  char c;
+  
+  if (*argv[1] == '-') {
+    for (int i = 1; (c = *(argv[1] + i)) != '\0'; i++) {
+      switch (c) {
+        case 'x': ctx->temp_buffer_length = 128;
+                  break;
+        case 'y': ctx->temp_buffer_length = 192;
+                  break;
+        case 'z': ctx->temp_buffer_length = 256;
+                  break;
+                  
+        case 'e': ctx->operation = ENCRYPT;
+                  break;
+        case 'd': ctx->operation = DECRYPT;
+                  break;
+                  
+        case 'a': ctx->cipher_number = ARC4;
+                  break;
+        case 'b': ctx->cipher_number = BLOWFISH;
+                  break;
+        case 't': ctx->cipher_number = THREEFISH;
+                  break;
+        case 'r': ctx->cipher_number = AES;
+                  break;
+        case 's': ctx->cipher_number = SERPENT;
+                  break;
+        
+        default:  free_global_memory(ctx, ctx_length);
+                  printf("[!] Operand \"%c\" not correct!\n", c);
+                  return -1;
+      }
+    }
+    printf("\ncipher:%d\nkey:%d\nop:%d\n", ctx->cipher_number, ctx->temp_buffer_length, ctx->operation);
+    free_global_memory(ctx, ctx_length);
+    exit(0);
+  }
+  else {
+    free_global_memory(ctx, ctx_length);
+    printf("[!] Error: simbol \"-\" not enter!\n");
+    exit(0);
+  }
+  */
   ctx->keyfile = argv[argc - 1];
   ctx->foutput = argv[argc - 2];
   ctx->finput  = argv[argc - 3];
 
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
-    printf("[!] Names input and output files equal!\n");
+	free_global_memory(ctx, ctx_length);
+	
+	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
   if (strcmp(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
+    
     printf("[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
   if (strcmp(ctx->finput, ctx->keyfile) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
+	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
   }
-
+  
   if (strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "--arc4") == 0)
     ctx->cipher_number = ARC4;
   else
@@ -524,7 +571,8 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--serpent") == 0)
     ctx->cipher_number = SERPENT;
   else {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
+	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
   }
@@ -539,6 +587,7 @@ int main (int argc, char * argv[]) {
     }
     else {
       free_global_memory(ctx, ctx_length);
+      
       printf("[!] Operation \"%s\" incorrect!\n", argv[2]);
       return (-1);
     }
@@ -572,7 +621,8 @@ int main (int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-      free_global_memory(ctx, ctx_length);
+	  free_global_memory(ctx, ctx_length);
+	  
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
     }
@@ -586,6 +636,8 @@ int main (int argc, char * argv[]) {
     ctx->temp_buffer_length = 512;
   }
 
+  ctx->temp_buffer_length /= 8;
+
   /*
     ARC4      = (temp_buffer_length = 256);
     AES       = (temp_buffer_length = 16 or 24 or 32;
@@ -594,11 +646,12 @@ int main (int argc, char * argv[]) {
     THREEFISH = (temp_buffer_length = 64);
   */
 
-  ctx->temp_buffer_length /= 8;
   ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
 
   if (ctx->temp_buffer == NULL) {
     free_global_memory(ctx, ctx_length);
+    
+    MEMORY_ERROR();
     return (-1);
   }
 
@@ -607,8 +660,9 @@ int main (int argc, char * argv[]) {
   if (real_read == ctx->temp_buffer_length)
     printf("[#] Crypt key read from file \"%s\"!\n", ctx->keyfile);
   else
-  if ((real_read > 0) && (real_read < ctx->temp_buffer_length)) {
-    printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, ctx->temp_buffer_length);
+  if ((real_read > 0) && (real_read < (ctx->temp_buffer_length))) {
+    printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, (int32_t)ctx->temp_buffer_length);
+    
     free_global_memory(ctx, ctx_length);
     return (-1);
   }
@@ -631,25 +685,27 @@ int main (int argc, char * argv[]) {
         printf("[#] Crypt key read from command line!\n");
       }
       else {
-        MEMORY_ERROR();
         free_global_memory(ctx, ctx_length);
+        
+        MEMORY_ERROR();
         return (-1);
       }
     }
     else {
-      printf("[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
       free_global_memory(ctx, ctx_length);
+      
+      printf("[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
       return (-1);
     }
   }
 
-  printf("[#] Key length %d-bits initialized!\n", ctx->temp_buffer_length * 8);
+  printf("[#] Key length %d-bits initialized!\n", (int32_t)ctx->temp_buffer_length * 8);
 
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-    case ARC4:
-      cipher_ctx_len = sizeof(ARC4_CTX);
+	case ARC4:
+	  cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
@@ -676,6 +732,7 @@ int main (int argc, char * argv[]) {
 
     if (ctx->vector == NULL) {
       free_global_memory(ctx, ctx_length);
+      
       MEMORY_ERROR();
       return (-1);
     }
@@ -685,8 +742,9 @@ int main (int argc, char * argv[]) {
     srand((unsigned int)time(NULL));
 
     if (vector_init(ctx->vector, ctx->vector_length) < (ctx->vector_length - 2)) {
-      printf("[X] Critical error! System time stopped?\n");
       free_global_memory(ctx, ctx_length);
+      
+      printf("[X] Critical error! System time stopped?\n");
       return (-1);
     }
   }
@@ -698,8 +756,9 @@ int main (int argc, char * argv[]) {
     cipher_pointer = (void *)arc4_ctx;
 
     if (arc4_ctx == NULL) {
-      MEMORY_ERROR();
       free_global_memory(ctx, ctx_length);
+      
+      MEMORY_ERROR();
       return (-1);
     }
 
@@ -711,8 +770,9 @@ int main (int argc, char * argv[]) {
     cipher_pointer = (void *)rijndael_ctx;
 
     if (rijndael_ctx == NULL) {
-      MEMORY_ERROR();
       free_global_memory(ctx, ctx_length);
+      
+      MEMORY_ERROR();
       return (-1);
     }
     rijndael_init(ctx->temp_buffer, rijndael_ctx);
@@ -723,8 +783,9 @@ int main (int argc, char * argv[]) {
     cipher_pointer = (void *)serpent_ctx;
 
     if (serpent_ctx == NULL) {
-      MEMORY_ERROR();
       free_global_memory(ctx, ctx_length);
+      
+      MEMORY_ERROR();
       return (-1);
     }
 
@@ -736,8 +797,9 @@ int main (int argc, char * argv[]) {
     cipher_pointer = (void *)blowfish_ctx;
 
     if (blowfish_ctx == NULL) {
-      MEMORY_ERROR();
       free_global_memory(ctx, ctx_length);
+      
+      MEMORY_ERROR();
       return (-1);
     }
 
@@ -749,15 +811,17 @@ int main (int argc, char * argv[]) {
     cipher_pointer = (void *)threefish_ctx;
 
     if (threefish_ctx == NULL) {
-      MEMORY_ERROR();
       free_global_memory(ctx, ctx_length);
+      
+      MEMORY_ERROR();
       return (-1);
     }
 
     threefish_init(threefish_ctx, (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
   }
 
-  printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[(ctx->cipher_number)]);
+  printf("[#] Algoritm %s initialized!\n",
+    ALGORITM_NAME[(ctx->cipher_number)]);
 
   printf("[#] Operation %s file \"%s\" started!\n",
     OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
