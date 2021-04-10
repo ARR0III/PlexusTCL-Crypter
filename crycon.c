@@ -310,7 +310,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
               serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
               break;
             case TWOFISH:
-              twofish_crypt(twofish_ctx, ctx->vector, ctx->output, ENCRYPT); /*ctx->operation*/
+              twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
               break;
             case BLOWFISH:
               memmove(ctx->output, ctx->vector, ctx->vector_length);
@@ -361,7 +361,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->output + nblock));
             break;
           case TWOFISH:
-            twofish_crypt(twofish_ctx, ctx->vector, ctx->output + nblock, ENCRYPT); /*ctx->operation*/
+            twofish_encrypt(twofish_ctx, ctx->vector, ctx->output + nblock);
             break;
           case BLOWFISH:
             blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->vector + 4));
@@ -502,76 +502,7 @@ int main (int argc, char * argv[]) {
     MEMORY_ERROR();
     return (-1);
   }
-/*
-  char c;
-  int argv_len = strlen(argv[1]);
-  
-  if (*argv[1] == '-' && argv_len < 5) {
-    for (int i = 1; (c = *(argv[1] + i)) != '\0'; i++) {
-      switch (c) {
-        case '1':
-          ctx->temp_buffer_length = 128;
-          if (ctx->cipher_number == AES) {
-            Nk = 4;
-            Nr = 10;
-          }
-          break;
-        case '2':
-          ctx->temp_buffer_length = 192;
-          if (ctx->cipher_number == AES) {
-            Nk = 6;
-            Nr = 12;
-          }
-          break;
-        case '3':
-          ctx->temp_buffer_length = 256;
-          if (ctx->cipher_number == AES) {
-            Nk = 8;
-            Nr = 14;
-          }
-          break;
-                  
-        case 'e':
-          ctx->operation = ENCRYPT;
-          break;
-        case 'd':
-          ctx->operation = DECRYPT;
-          break;
-                  
-        case 'a':
-          ctx->cipher_number = ARC4;
-          break;
-        case 'b':
-          ctx->cipher_number = BLOWFISH;
-          ctx->temp_buffer_length = 448;
-          break;
-        case 't':
-          ctx->cipher_number = THREEFISH;
-          ctx->temp_buffer_length = 512;
-          break;
-        case 'r':
-          ctx->cipher_number = AES;
-          break;
-        case 's':
-          ctx->cipher_number = SERPENT;
-          break;
-        
-        default:
-          free_global_memory(ctx, ctx_length);
-          printf("[!] Operand \"%c\" not correct!\n", c);
-          return -1;
-      }
-    }
-    printf("\ncipher:%d\nkey:%d\nop:%d\n", ctx->cipher_number, ctx->temp_buffer_length, ctx->operation);
-    free_global_memory(ctx, ctx_length);
-    exit(0);
-  }
-  else {
-    free_global_memory(ctx, ctx_length);
-    printf("[!] Error: simbol \"-\" not enter or argument incorrect!\n");
-    exit(0);
-  }
-*/
+
   ctx->keyfile = argv[argc - 1];
   ctx->foutput = argv[argc - 2];
   ctx->finput  = argv[argc - 3];
