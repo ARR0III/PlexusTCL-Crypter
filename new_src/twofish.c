@@ -8,7 +8,7 @@
 #ifndef _TWOFISH_TABLES_H_
   #define _TWOFISH_TABLES_H_
 
-unsigned char q[2][256] = {
+uint8_t q[2][256] = {
 {
     169, 103, 179, 232, 4, 253, 163, 118, 154, 146, 128, 120, 228, 221, 209,
     56, 13, 198, 53, 152, 24, 247, 236, 108, 67, 117, 55, 38, 250, 19, 148, 72,
@@ -274,7 +274,7 @@ uint32_t m[4][256] = {
 
 #endif
 
-#define byte(x,n)   ((unsigned char)((x) >> (8 * (n))))
+#define byte(x,n)   ((uint8_t)((x) >> (8 * (n))))
 
 #define ror(x,n)    (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
 
@@ -284,23 +284,23 @@ uint32_t m[4][256] = {
 
 #define nltostr(l, s) \
     do {                                    \
-        *(s  )=(unsigned char)((l)      );  \
-        *(s+1)=(unsigned char)((l) >>  8);  \
-        *(s+2)=(unsigned char)((l) >> 16);  \
-        *(s+3)=(unsigned char)((l) >> 24);  \
+        *(s  )=(uint8_t)((l)      );  \
+        *(s+1)=(uint8_t)((l) >>  8);  \
+        *(s+2)=(uint8_t)((l) >> 16);  \
+        *(s+3)=(uint8_t)((l) >> 24);  \
     } while (0)
 
 uint32_t mds_rem(uint32_t a, uint32_t b);
-uint32_t h(int len, const int x, unsigned char *key, int odd);
+uint32_t h(int len, const int x, uint8_t *key, int odd);
 
 /* The key schedule takes a 128, 192, or 256-bit key, and provides 40
    32-bit words of expanded key K0,...,K39 and the 4 key-dependent
    S-boxes used in the g function. */
 
-void twofish_init(TWOFISH_CTX * ctx, unsigned char *key, int len) {
+void twofish_init(TWOFISH_CTX * ctx, uint8_t * key, int len) {
     int i;
     uint32_t a, b, x;
-    unsigned char *s, skey[16];
+    uint8_t * s, skey[16];
 
     /* The key consists of k=len/8 (2, 3 or 4) 64-bit units. */
     ctx->len = len /= 8;
@@ -325,7 +325,7 @@ void twofish_init(TWOFISH_CTX * ctx, unsigned char *key, int len) {
     switch(len) {
     case 2:
         for (i = 0; i < 256; i++) {
-            x = (unsigned char)i;
+            x = (uint8_t)i;
             ctx->S[0][i] = m[0][q[0][q[0][x]^s[4]]^s[0]];
             ctx->S[1][i] = m[1][q[0][q[1][x]^s[5]]^s[1]];
             ctx->S[2][i] = m[2][q[1][q[0][x]^s[6]]^s[2]];
@@ -334,7 +334,7 @@ void twofish_init(TWOFISH_CTX * ctx, unsigned char *key, int len) {
         break;
     case 3:
         for (i = 0; i < 256; i++) {
-            x = (unsigned char)i;
+            x = (uint8_t)i;
             ctx->S[0][i] = m[0][q[0][q[0][q[1][x]^s[ 8]]^s[4]]^s[0]];
             ctx->S[1][i] = m[1][q[0][q[1][q[1][x]^s[ 9]]^s[5]]^s[1]];
             ctx->S[2][i] = m[2][q[1][q[0][q[0][x]^s[10]]^s[6]]^s[2]];
@@ -344,7 +344,7 @@ void twofish_init(TWOFISH_CTX * ctx, unsigned char *key, int len) {
         break;
     case 4:
         for (i = 0; i < 256; i++) {
-            x = (unsigned char)i;
+            x = (uint8_t)i;
             ctx->S[0][i] = m[0][q[0][q[0][q[1][q[1][x]^s[12]]^s[ 8]]^s[4]]^s[0]];
             ctx->S[1][i] = m[1][q[0][q[1][q[1][q[0][x]^s[13]]^s[ 9]]^s[5]]^s[1]];
             ctx->S[2][i] = m[2][q[1][q[0][q[0][q[0][x]^s[14]]^s[10]]^s[6]]^s[2]];
@@ -381,39 +381,49 @@ void twofish_init(TWOFISH_CTX * ctx, unsigned char *key, int len) {
     R[1] = ror(R[1] ^ (t0 + 2*t1 + ctx->K[4*i+9]), 1)
 
 
-void twofish_crypt(TWOFISH_CTX * ctx,
-                   unsigned char *input,
-                   unsigned char *output, int crypt) {
+void twofish_decrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output) {
+  uint32_t t0, t1, R[4], out[4];
+
+  R[0] = ctx->K[4] ^ strtonl(input);
+  R[1] = ctx->K[5] ^ strtonl(input+4);
+  R[2] = ctx->K[6] ^ strtonl(input+8);
+  R[3] = ctx->K[7] ^ strtonl(input+12);
+
+  i_2rounds(7);  i_2rounds(6);
+  i_2rounds(5);  i_2rounds(4);
+  i_2rounds(3);  i_2rounds(2);
+  i_2rounds(1);  i_2rounds(0);
+
+  out[0] = ctx->K[0] ^ R[2];
+  out[1] = ctx->K[1] ^ R[3];
+  out[2] = ctx->K[2] ^ R[0];
+  out[3] = ctx->K[3] ^ R[1];
+
+  nltostr(out[0], output);
+  nltostr(out[1], output+4);
+  nltostr(out[2], output+8);
+  nltostr(out[3], output+12);
+}
+
+void twofish_encrypt(TWOFISH_CTX * ctx,
+                   uint8_t * input,
+                   uint8_t * output) {
     uint32_t t0, t1, R[4], out[4];
 
-    if (0 == crypt) {
-        R[0] = ctx->K[0] ^ strtonl(input);
-        R[1] = ctx->K[1] ^ strtonl(input+4);
-        R[2] = ctx->K[2] ^ strtonl(input+8);
-        R[3] = ctx->K[3] ^ strtonl(input+12);
+    R[0] = ctx->K[0] ^ strtonl(input);
+    R[1] = ctx->K[1] ^ strtonl(input+4);
+    R[2] = ctx->K[2] ^ strtonl(input+8);
+    R[3] = ctx->K[3] ^ strtonl(input+12);
 
-        f_2rounds(0); f_2rounds(1); f_2rounds(2); f_2rounds(3);
-        f_2rounds(4); f_2rounds(5); f_2rounds(6); f_2rounds(7);
+    f_2rounds(0); f_2rounds(1);
+    f_2rounds(2); f_2rounds(3);
+    f_2rounds(4); f_2rounds(5);
+    f_2rounds(6); f_2rounds(7);
 
-        out[0] = ctx->K[4] ^ R[2];
-        out[1] = ctx->K[5] ^ R[3];
-        out[2] = ctx->K[6] ^ R[0];
-        out[3] = ctx->K[7] ^ R[1];
-    }
-    else {
-        R[0] = ctx->K[4] ^ strtonl(input);
-        R[1] = ctx->K[5] ^ strtonl(input+4);
-        R[2] = ctx->K[6] ^ strtonl(input+8);
-        R[3] = ctx->K[7] ^ strtonl(input+12);
-
-        i_2rounds(7); i_2rounds(6); i_2rounds(5); i_2rounds(4);
-        i_2rounds(3); i_2rounds(2); i_2rounds(1); i_2rounds(0);
-
-        out[0] = ctx->K[0] ^ R[2];
-        out[1] = ctx->K[1] ^ R[3];
-        out[2] = ctx->K[2] ^ R[0];
-        out[3] = ctx->K[3] ^ R[1];
-    }
+    out[0] = ctx->K[4] ^ R[2];
+    out[1] = ctx->K[5] ^ R[3];
+    out[2] = ctx->K[6] ^ R[0];
+    out[3] = ctx->K[7] ^ R[1];
 
     nltostr(out[0], output);
     nltostr(out[1], output+4);
@@ -423,10 +433,10 @@ void twofish_crypt(TWOFISH_CTX * ctx,
 
 #define Lbyte(w, b) L[4*(2*w+odd)+b]
 
-uint32_t h(int len, const int X, unsigned char *L, int odd) {
-    unsigned char b0, b1, b2, b3;
+uint32_t h(int len, const int X, uint8_t *L, int odd) {
+    uint8_t b0, b1, b2, b3;
 
-    b0 = b1 = b2 = b3 = (unsigned char)X;
+    b0 = b1 = b2 = b3 = (uint8_t)X;
 
     switch (len) {
     case 4:
