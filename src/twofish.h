@@ -1,5 +1,4 @@
 /*
-  $Id: twofish.h,v 2.12 2001/05/21 17:38:01 ams Exp $
   Copyright 2001 Abhijit Menon-Sen <ams@wiw.org>
   
   correct {
@@ -37,15 +36,17 @@
     
     return 0;
   };
- */
+*/
+
 #include <stdlib.h>
 
 #include "twofish.c"
 
 #ifndef _PLATFORM_H_
-#define _PLATFORM_H_
+  #define _PLATFORM_H_
   #include <inttypes.h>
 #endif
 
 void twofish_init(TWOFISH_CTX * ctx, uint8_t * key, int len);
-void twofish_crypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output, int crypt);
+void twofish_encrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output);
+void twofish_decrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output);
