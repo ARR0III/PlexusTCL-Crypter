@@ -225,15 +225,15 @@ void cipher_free(void * ctx, size_t ctx_length) {
 
 size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
-	if (ctx->vector_length > 0) {
-	  meminit((void *)ctx->vector, 0x00, ctx->vector_length);
-	}
+    if (ctx->vector_length > 0) {
+      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+    }
     free((void *)ctx->vector);
   }
 
   if (NULL != ctx->temp_buffer) {
-	if (ctx->temp_buffer_length > 0) {
-	  meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+    if (ctx->temp_buffer_length > 0) {
+      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
     free((void *)ctx->temp_buffer);
   }
