@@ -1,4 +1,7 @@
-#include <stdint.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
 
 uint8_t gmult(uint8_t a, uint8_t b) {
   uint8_t p = 0;
@@ -311,3 +314,4 @@ void rijndael_decrypt(uint8_t *w, const uint8_t *in, uint8_t *out) {
     }
   }
 }
+

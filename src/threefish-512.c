@@ -1,4 +1,7 @@
-#include <stdint.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
 
 typedef struct {
   uint64_t SUBKEYS[19][8];
@@ -142,3 +145,4 @@ void threefish_init(THREEFISH_CTX * ctx, const uint64_t * keydata, const uint64_
     }
   }
 }
+

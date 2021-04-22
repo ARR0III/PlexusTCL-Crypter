@@ -1,6 +1,8 @@
-#include <stdint.h>
-#include <stddef.h>
-
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+  
 size_t arc4_i, arc4_j;
 
 typedef struct {

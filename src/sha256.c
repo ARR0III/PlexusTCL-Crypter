@@ -1,6 +1,17 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+
+#ifndef _C_STDLIB_H_
+#define _C_STDLIB_H_
+  #include <stdlib.h>
+#endif
+
+#ifndef _C_STRING_H_
+#define _C_STRING_H_
+  #include <string.h>
+#endif
 
 #define SHA256_BLOCK_SIZE 32
 
@@ -150,3 +161,4 @@ void sha256_final(SHA256_CTX *ctx, uint8_t * hash) {
     hash[i + 28] = (ctx->state[7] >> (24 - i * 8)) & 0x000000ff;
   }
 }
+

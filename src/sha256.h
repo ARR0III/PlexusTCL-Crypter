@@ -1,4 +1,9 @@
-#include <stdint.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+
+
 #include "sha256.c"
 
 void sha256_init(SHA256_CTX *ctx);

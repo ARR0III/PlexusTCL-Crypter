@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "serpent.c"
 
 void serpent_init(SERPENT_CTX * key, const int keylen, const uint8_t * keymaterial);

@@ -1,7 +1,11 @@
 /*
-  Developer: D. J. Bernstein;
+  Developer:    D. J. Bernstein;
+  Modification: ARR0III;
 */
-#include <stdint.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
 
 typedef struct {
   uint32_t key[32];
@@ -124,3 +128,4 @@ void chacha20_crypt(CHACHA20_CTX * ctx,
     out += BLOCK_LEN;
   }
 }
+

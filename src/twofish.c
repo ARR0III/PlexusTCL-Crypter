@@ -1,14 +1,27 @@
 /*
- * $Id: _twofish.c,v 2.12 2001/05/21 17:38:01 ams Exp $
  * Copyright 1999 Dr. Brian Gladman <brian.gladman@btinternet.com>
  * Copyright 2001 Abhijit Menon-Sen <ams@wiw.org>
  */
-#include <stdint.h>
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+
+#ifndef _TWOFISH_H_
+  #define _TWOFISH_H_
+  
+  typedef struct {
+    int len;                    /* Key length in 64-bit units: 2, 3 or 4 */
+    uint32_t K[40];             /* Expanded key                          */
+    uint32_t S[4][256];         /* Key-dependent S-boxes                 */
+  } TWOFISH_CTX;
+
+#endif
 
 #ifndef _TWOFISH_TABLES_H_
   #define _TWOFISH_TABLES_H_
 
-uint8_t q[2][256] = {
+const uint8_t q[2][256] = {
 {
     169, 103, 179, 232, 4, 253, 163, 118, 154, 146, 128, 120, 228, 221, 209,
     56, 13, 198, 53, 152, 24, 247, 236, 108, 67, 117, 55, 38, 250, 19, 148, 72,
@@ -46,7 +59,7 @@ uint8_t q[2][256] = {
 }
 };
 
-uint32_t m[4][256] = {
+const uint32_t m[4][256] = {
 {
     3166450293UL, 3974898163UL, 538985414UL, 3014904308UL, 3671720923UL,
     33721211UL, 3806473211UL, 2661219016UL, 3385453642UL, 3570665939UL,
@@ -263,31 +276,19 @@ uint32_t m[4][256] = {
 
 #endif
 
-#ifndef _TWOFISH_H_
-  #define _TWOFISH_H_
+#define byte(x,n)  ((uint8_t)((x) >> (8 * (n))))
 
-  typedef struct {
-    int len;                    /* Key length in 64-bit units: 2, 3 or 4 */
-    uint32_t K[40];             /* Expanded key                          */
-    uint32_t S[4][256];         /* Key-dependent S-boxes                 */
-  } TWOFISH_CTX;
-
-#endif
-
-#define byte(x,n)   ((uint8_t)((x) >> (8 * (n))))
-
-#define ror(x,n)    (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
-
-#define rol(x,n)    (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
+#define ror(x,n)   (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
+#define rol(x,n)   (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
 
 #define strtonl(s) (uint32_t)(*(s) | *((s) + 1) << 8 | *((s) + 2) << 16 | *((s) + 3) << 24)
 
-#define nltostr(l, s) \
-    do {                                    \
-        *(s  )=(uint8_t)((l)      );  \
-        *(s+1)=(uint8_t)((l) >>  8);  \
-        *(s+2)=(uint8_t)((l) >> 16);  \
-        *(s+3)=(uint8_t)((l) >> 24);  \
+#define nltostr(l, s)                \
+    do {                             \
+        *(s  )=(uint8_t)((l)      ); \
+        *(s+1)=(uint8_t)((l) >>  8); \
+        *(s+2)=(uint8_t)((l) >> 16); \
+        *(s+3)=(uint8_t)((l) >> 24); \
     } while (0)
 
 uint32_t mds_rem(uint32_t a, uint32_t b);
@@ -405,15 +406,13 @@ void twofish_decrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output) {
   nltostr(out[3], output+12);
 }
 
-void twofish_encrypt(TWOFISH_CTX * ctx,
-                   uint8_t * input,
-                   uint8_t * output) {
+void twofish_encrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output) {
     uint32_t t0, t1, R[4], out[4];
 
     R[0] = ctx->K[0] ^ strtonl(input);
-    R[1] = ctx->K[1] ^ strtonl(input+4);
-    R[2] = ctx->K[2] ^ strtonl(input+8);
-    R[3] = ctx->K[3] ^ strtonl(input+12);
+    R[1] = ctx->K[1] ^ strtonl(input +  4);
+    R[2] = ctx->K[2] ^ strtonl(input +  8);
+    R[3] = ctx->K[3] ^ strtonl(input + 12);
 
     f_2rounds(0); f_2rounds(1);
     f_2rounds(2); f_2rounds(3);
@@ -426,14 +425,14 @@ void twofish_encrypt(TWOFISH_CTX * ctx,
     out[3] = ctx->K[7] ^ R[1];
 
     nltostr(out[0], output);
-    nltostr(out[1], output+4);
-    nltostr(out[2], output+8);
-    nltostr(out[3], output+12);
+    nltostr(out[1], output +  4);
+    nltostr(out[2], output +  8);
+    nltostr(out[3], output + 12);
 }
 
 #define Lbyte(w, b) L[4*(2*w+odd)+b]
 
-uint32_t h(int len, const int X, uint8_t *L, int odd) {
+uint32_t h(int len, const int X, uint8_t * L, int odd) {
     uint8_t b0, b1, b2, b3;
 
     b0 = b1 = b2 = b3 = (uint8_t)X;
@@ -460,28 +459,29 @@ uint32_t h(int len, const int X, uint8_t *L, int odd) {
 }
 
 uint32_t mds_rem(uint32_t a, uint32_t b) {
-    uint32_t t, u;
-    uint32_t G_MOD = 0x0000014d;
+  uint32_t t, u;
+  uint32_t G_MOD = 0x0000014d;
 
-    for (int i = 0; i < 8; i++) {
-        t = b >> 24;
-        b = (b << 8) | (a >> 24);
-        a <<= 8;
-        u = t << 1;
+  for (int i = 0; i < 8; i++) {
+    t = b >> 24;
+    b = (b << 8) | (a >> 24);
+    a <<= 8;
+    u = t << 1;
         
-        if (t & 0x80) {
-            u ^= G_MOD;
-        }
-
-        b ^= t ^ (u << 16);
-        u ^= t >> 1;
-
-        if (t & 0x01) {
-            u ^= G_MOD >> 1;
-        }
-
-        b ^= (u << 24) | (u << 8);
+    if (t & 0x80) {
+      u ^= G_MOD;
     }
 
-    return b;
+    b ^= t ^ (u << 16);
+    u ^= t >> 1;
+
+    if (t & 0x01) {
+      u ^= G_MOD >> 1;
+    }
+
+    b ^= (u << 24) | (u << 8);
+  }
+
+  return b;
 }
+
