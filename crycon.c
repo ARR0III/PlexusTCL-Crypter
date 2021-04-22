@@ -7,6 +7,7 @@
   Modification: Testing version (Not original);
   Language:     English;
 */
+
 #include <time.h>
 
 #include "src/arc4.h"
@@ -46,6 +47,9 @@
   #include <stddef.h>
 #endif
 
+#define TRUE                 0x01
+#define FALSE                0x00
+
 #define OK                      0
 
 #define READ_FILE_NOT_OPEN     -1
@@ -62,6 +66,8 @@
 
 #define BOUNDARY             2048
 #define DATA_SIZE         (1024*4)
+
+#define _DEBUG_INFORMATION_ FALSE
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
@@ -392,7 +398,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             break;
         
         }
-        
+
         strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
         memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
       }
@@ -524,6 +530,11 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
+  printf("[DEBUG] global memory pointer:   %p\n", ctx);
+#endif
+  
   /*
   
   int argv_len = strlen(argv[1]);
@@ -591,6 +602,12 @@ int main (int argc, char * argv[]) {
   ctx->foutput = argv[argc - 2];
   ctx->finput  = argv[argc - 3];
 
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] input filename: %s\n", ctx->finput);
+  printf("[DEBUG] output filename: %s\n", ctx->foutput);
+  printf("[DEBUG] keyfile filename: %s\n", ctx->keyfile);
+#endif
+  
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
 	free_global_memory(ctx, ctx_length);
 	
@@ -698,6 +715,12 @@ int main (int argc, char * argv[]) {
     ctx->temp_buffer_length = 512;
   }
 
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
+  printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
+  printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation]);
+#endif
+  
   ctx->temp_buffer_length /= 8;
   
   /*
@@ -717,6 +740,11 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] temp memory allocated: %ld byte\n", ctx->temp_buffer_length);
+  printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
+#endif
+  
   int real_read = readfromfile(ctx->keyfile, ctx->temp_buffer, ctx->temp_buffer_length);
 
   if (real_read == ctx->temp_buffer_length)
@@ -768,6 +796,14 @@ int main (int argc, char * argv[]) {
 
   printf("[#] Key length %d-bits initialized!\n", (int32_t)ctx->temp_buffer_length * 8);
 
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] key or password length: %d byte\n", real_read);
+  printf("[DEBUG] key generator write data in pointer: %p\n", ctx->temp_buffer);
+  printf("[DEBUG] REAL CRYPT KEY DATA:\n");
+  
+  printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
+#endif
+  
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
@@ -807,6 +843,12 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
       return (-1);
     }
+    
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] vector memory allocated: %ld byte\n", ctx->vector_length);
+  printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
+#endif
+    
   }
 
   if ((ARC4 != ctx->cipher_number) && (ENCRYPT == ctx->operation)) {
@@ -818,6 +860,13 @@ int main (int argc, char * argv[]) {
       printf("[X] Critical error! System time stopped?\n");
       return (-1);
     }
+    
+#if _DEBUG_INFORMATION_ == TRUE
+  printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
+  printf("[DEBUG] VECTOR REAL DATA:\n");
+  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
+#endif
+    
   }
 
   void * cipher_pointer = NULL;
