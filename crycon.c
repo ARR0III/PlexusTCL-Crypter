@@ -1,6 +1,6 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.81;
+  Console Cryptography Software v4.82;
 
   Developer:    ARR0III;
   Make date:    23 April 2021;
@@ -71,7 +71,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.81 10APR21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.82 23APR21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
