@@ -3,16 +3,11 @@
   Console Cryptography Software v4.81;
 
   Developer:    ARR0III;
-  Make date:    10 April 2021;
+  Make date:    23 April 2021;
   Modification: Testing version (Not original);
   Language:     English;
 */
 #include <time.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stddef.h>
 
 #include "src/arc4.h"
 #include "src/crc32.h"
@@ -25,6 +20,31 @@
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
+
+#ifndef _C_STDIO_H_
+#define _C_STDIO_H_
+  #include <stdio.h>
+#endif
+
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+
+#ifndef _C_STDLIB_H_
+#define _C_STDLIB_H_
+  #include <stdlib.h>
+#endif
+
+#ifndef _C_STRING_H_
+#define _C_STRING_H_
+  #include <string.h>
+#endif
+
+#ifndef _C_STDDEF_H_
+#define _C_STDDEF_H_
+  #include <stddef.h>
+#endif
 
 #define OK                      0
 
@@ -177,7 +197,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 
     sha256_final(sha256_ctx, hash);
 
-    if (k == SHA256_BLOCK_SIZE) {
+    if (k >= SHA256_BLOCK_SIZE) {
       k = 0;
     }
 
@@ -261,21 +281,21 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
   
-  if (fi == NULL) {
+  if (NULL == fi) {
     return READ_FILE_NOT_OPEN;
   }
-  
+
   FILE * fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
   
-  if (fo == NULL) {
+  if (NULL == fo) {
     fclose(fi);
     return WRITE_FILE_NOT_OPEN;
   }
-
+  
   register int32_t fsize    = size_of_file(fi);
   register int32_t position = 0;
 
-  if ((fsize == (-1)) || (fsize == 0)) {
+  if (((-1) == fsize) || (0 == fsize)) {
     fclose(fi);
     fclose(fo);
     return SIZE_FILE_ERROR;
@@ -299,7 +319,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   pmemory(ctx);
 */
   while (position < fsize) {
-    if ((ctx->cipher_number != ARC4) && (position == 0)) {
+    if ((ARC4 != ctx->cipher_number) && (0 == position)) {
       switch (ctx->operation) {
         case ENCRYPT:
           switch (ctx->cipher_number) {
@@ -348,7 +368,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     realread = fread((void *)ctx->input, 1, DATA_SIZE, fi);
 
-    if (ctx->cipher_number == ARC4) {
+    if (ARC4 == ctx->cipher_number) {
       arc4(arc4_ctx, ctx->input, ctx->output, realread);
     }
     else {
@@ -370,8 +390,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           case THREEFISH:
             threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
             break;
+        
         }
-
+        
         strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
         memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
       }
@@ -457,12 +478,12 @@ int main (int argc, char * argv[]) {
     }
   }
   else
-  if (argc == 1 || argc >= 8) {
+  if (1 == argc || argc >= 8) {
     printf("[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
     return 0;
   }
 
-  if (argc == 2) {
+  if (2 == argc) {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
       printf("%s\n", PROGRAMM_NAME);
       printf("This is software for encrypt/decrypt files.\n\n");
@@ -498,10 +519,73 @@ int main (int argc, char * argv[]) {
   size_t ctx_length = sizeof(GLOBAL_MEMORY);
   GLOBAL_MEMORY * ctx = (GLOBAL_MEMORY *)calloc(ctx_length, 1);
 
-  if (ctx == NULL) {
+  if (NULL == ctx) {
     MEMORY_ERROR();
     return (-1);
   }
+
+  /*
+  
+  int argv_len = strlen(argv[1]);
+  char symbol;
+  
+  if (argv_len >= 2 && (*argv[1] == '-')) {
+    for (int i = 1; i < argv_len; i++) {
+      symbol = *(argv[1] + i);
+      
+      switch(symbol) {
+       case '1': ctx->temp_buffer_length = 128;
+                 break;
+       case '2': ctx->temp_buffer_length = 192;
+                 break;
+       case '3': ctx->temp_buffer_length = 256;
+                 break;
+       
+       case 'e': ctx->operation = ENCRYPT;
+                 break;
+       case 'd': ctx->operation = DECRYPT;
+                 break;
+                 
+       case 'r': ctx->cipher_number = AES;
+                 break;
+       case 's': ctx->cipher_number = SERPENT;
+                 break;
+       case 'a': ctx->cipher_number = ARC4;
+                 ctx->temp_buffer_length = 2048;
+                 break;
+       case 'w': ctx->cipher_number = TWOFISH;
+                 break;
+       case 't': ctx->cipher_number = THREEFISH;
+                 ctx->temp_buffer_length = 512;
+                 break;
+       case 'b': ctx->cipher_number = BLOWFISH;
+                 ctx->temp_buffer_length = 448;
+                 break;
+                 
+       default: free_global_memory(ctx, ctx_length);
+                printf("[!] Symbol \'%c\' not correct!\n", symbol);
+                return 0;
+      }
+    }
+  }
+  else {
+    free_global_memory(ctx, ctx_length);
+      
+    printf("[!] String \"%s\" not correct!\n", argv[1]);
+    return 0;
+  }
+
+    printf("cipher:     %d\n"
+           "operation:  %d\n"
+           "key_length: %ld\n",
+           ctx->cipher_number,
+           ctx->operation,
+           ctx->temp_buffer_length);
+    
+    free_global_memory(ctx, ctx_length);
+    exit(0);
+  
+  */
 
   ctx->keyfile = argv[argc - 1];
   ctx->foutput = argv[argc - 2];
@@ -552,7 +636,7 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
-  if (ctx->cipher_number != ARC4) {
+  if (ARC4 != ctx->cipher_number) {
     if (strcmp(argv[2], "-e") == 0 || strcmp(argv[2], "--encrypt") == 0) {
       ctx->operation = ENCRYPT;
     }
@@ -568,15 +652,15 @@ int main (int argc, char * argv[]) {
     }
   }
   
-  if (ctx->cipher_number == ARC4)
+  if (ARC4 == ctx->cipher_number)
     ctx->temp_buffer_length = 2048;
   else
-  if (ctx->cipher_number == AES     || 
-      ctx->cipher_number == SERPENT ||
-      ctx->cipher_number == TWOFISH) { // AES, SERPENT, TWOFISH
+  if (AES     == ctx->cipher_number || 
+      SERPENT == ctx->cipher_number ||
+      TWOFISH == ctx->cipher_number) { // AES, SERPENT, TWOFISH
     
     if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--128") == 0) {
-      if (ctx->cipher_number == AES) {
+      if (AES == ctx->cipher_number) {
         Nk = 4;
         Nr = 10;
       }
@@ -584,7 +668,7 @@ int main (int argc, char * argv[]) {
     }
     else
     if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--192") == 0) {
-      if (ctx->cipher_number == AES) {
+      if (AES == ctx->cipher_number) {
         Nk = 6;
         Nr = 12;
       }
@@ -592,7 +676,7 @@ int main (int argc, char * argv[]) {
     }
     else
     if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--256") == 0) {
-      if (ctx->cipher_number == AES) {
+      if (AES == ctx->cipher_number) {
         Nk = 8;
         Nr = 14;
       }
@@ -606,16 +690,16 @@ int main (int argc, char * argv[]) {
     }
   }
   else
-  if (ctx->cipher_number == BLOWFISH) {
+  if (BLOWFISH  == ctx->cipher_number) {
     ctx->temp_buffer_length = 448;
   }
   else
-  if (ctx->cipher_number == THREEFISH) {
+  if (THREEFISH == ctx->cipher_number) {
     ctx->temp_buffer_length = 512;
   }
 
   ctx->temp_buffer_length /= 8;
-
+  
   /*
     ARC4      = (temp_buffer_length = 256);
     AES       = (temp_buffer_length = 16 or 24 or 32;
@@ -623,10 +707,10 @@ int main (int argc, char * argv[]) {
     BLOWFISH  = (temp_buffer_length = 56);
     THREEFISH = (temp_buffer_length = 64);
   */
-
+  
   ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
 
-  if (ctx->temp_buffer == NULL) {
+  if (NULL == ctx->temp_buffer) {
     free_global_memory(ctx, ctx_length);
     
     MEMORY_ERROR();
@@ -639,13 +723,15 @@ int main (int argc, char * argv[]) {
     printf("[#] Crypt key read from file \"%s\"!\n", ctx->keyfile);
   else
   if ((real_read > 0) && (real_read < (ctx->temp_buffer_length))) {
-    printf("[!] Data in key file %d byte; necessary %d byte!\n", real_read, (int32_t)ctx->temp_buffer_length);
+  
+    printf("[!] Data in key file %d byte; necessary %d byte!\n",
+            real_read, (int32_t)ctx->temp_buffer_length);
     
     free_global_memory(ctx, ctx_length);
     return (-1);
   }
   else
-  if ((real_read == 0) || (real_read == (-1))) {
+  if ((0 == real_read) || ((-1) == real_read)) {
     real_read = (int)__strnlen(ctx->keyfile, 256);
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
@@ -654,7 +740,10 @@ int main (int argc, char * argv[]) {
 
       if (sha256_ctx != NULL) {
         /* Password -> crypt key; Pseudo PBKDF2 */
-        KDFCLOMUL(sha256_ctx, (uint8_t *)(ctx->keyfile), real_read, ctx->temp_buffer, ctx->temp_buffer_length);
+        KDFCLOMUL(sha256_ctx, (uint8_t *)(ctx->keyfile), 
+                    real_read, ctx->temp_buffer,
+                    ctx->temp_buffer_length);
+                  
         meminit((void *)sha256_ctx, 0x00, sha_ctx_len);
 
         free((void *)sha256_ctx);
@@ -709,10 +798,10 @@ int main (int argc, char * argv[]) {
 
   ctx->vector = NULL;
 
-  if (ctx->cipher_number != ARC4) {
+  if (ARC4 != ctx->cipher_number) {
     ctx->vector = (uint8_t*)calloc(ctx->vector_length, 1);
 
-    if (ctx->vector == NULL) {
+    if (NULL == ctx->vector) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -720,7 +809,7 @@ int main (int argc, char * argv[]) {
     }
   }
 
-  if ((ctx->cipher_number != ARC4) && (ctx->operation == ENCRYPT)) {
+  if ((ARC4 != ctx->cipher_number) && (ENCRYPT == ctx->operation)) {
     srand((unsigned int)time(NULL));
 
     if (vector_init(ctx->vector, ctx->vector_length) < (ctx->vector_length - 2)) {
@@ -733,11 +822,11 @@ int main (int argc, char * argv[]) {
 
   void * cipher_pointer = NULL;
 
-  if (ctx->cipher_number == ARC4) {
+  if (ARC4 == ctx->cipher_number) {
     arc4_ctx = (ARC4_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)arc4_ctx;
 
-    if (arc4_ctx == NULL) {
+    if (NULL == arc4_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -747,11 +836,11 @@ int main (int argc, char * argv[]) {
     arc4_init(arc4_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
   }
   else
-  if (ctx->cipher_number == AES) {
+  if (AES == ctx->cipher_number) {
     rijndael_ctx = (uint8_t *) calloc(cipher_ctx_len, 1);
     cipher_pointer = (void *)rijndael_ctx;
 
-    if (rijndael_ctx == NULL) {
+    if (NULL == rijndael_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -759,11 +848,11 @@ int main (int argc, char * argv[]) {
     }
     rijndael_init(ctx->temp_buffer, rijndael_ctx);
   }
-  if (ctx->cipher_number == TWOFISH) {
+  if (TWOFISH == ctx->cipher_number) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)twofish_ctx;
 
-    if (twofish_ctx == NULL) {
+    if (NULL == twofish_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -773,11 +862,11 @@ int main (int argc, char * argv[]) {
     twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
   }
   else
-  if (ctx->cipher_number == SERPENT) {
+  if (SERPENT == ctx->cipher_number) {
     serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)serpent_ctx;
 
-    if (serpent_ctx == NULL) {
+    if (NULL == serpent_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -787,11 +876,11 @@ int main (int argc, char * argv[]) {
     serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
   }
   else
-  if (ctx->cipher_number == BLOWFISH) {
+  if (BLOWFISH == ctx->cipher_number) {
     blowfish_ctx = (BLOWFISH_CTX *)calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)blowfish_ctx;
 
-    if (blowfish_ctx == NULL) {
+    if (NULL == blowfish_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -801,11 +890,11 @@ int main (int argc, char * argv[]) {
     blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
   }
   else
-  if (ctx->cipher_number == THREEFISH) {
+  if (THREEFISH == ctx->cipher_number) {
     threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)threefish_ctx;
 
-    if (threefish_ctx == NULL) {
+    if (NULL == threefish_ctx) {
       free_global_memory(ctx, ctx_length);
       
       MEMORY_ERROR();
@@ -878,3 +967,4 @@ int main (int argc, char * argv[]) {
 
   return 0;
 }
+
