@@ -191,7 +191,7 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
 /*
-  printf("Count = %d\n", count);
+  printf("Count = %ld\n", count);
   exit(0);
 */
   sha256_init(sha256_ctx);
@@ -535,8 +535,7 @@ int main (int argc, char * argv[]) {
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
   
-  /*
-  
+  /* [!!! TESTING !!!]
   int argv_len = strlen(argv[1]);
   char symbol;
   
@@ -595,7 +594,6 @@ int main (int argc, char * argv[]) {
     
     free_global_memory(ctx, ctx_length);
     exit(0);
-  
   */
 
   ctx->keyfile = argv[argc - 1];
