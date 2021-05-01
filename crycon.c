@@ -1,26 +1,13 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.82;
+  Console Cryptography Software v4.90;
 
   Developer:    ARR0III;
-  Make date:    23 April 2021;
-  Modification: Testing version (Not original);
+  Make date:    01 May 2021;
+  Modification: Release;
   Language:     English;
 */
-
 #include <time.h>
-
-#include "src/arc4.h"
-#include "src/crc32.h"
-#include "src/sha256.h"
-#include "src/serpent.h"
-#include "src/twofish.h"
-#include "src/rijndael.h"
-#include "src/blowfish.h"
-#include "src/threefish-512.h"
-
-#include "src/xtalw.h"
-#include "src/clomul.h"
 
 #ifndef _C_STDIO_H_
 #define _C_STDIO_H_
@@ -47,8 +34,20 @@
   #include <stddef.h>
 #endif
 
-#define TRUE                 0x01
-#define FALSE                0x00
+#include "src/arc4.h"
+#include "src/crc32.h"
+#include "src/sha256.h"
+#include "src/serpent.h"
+#include "src/twofish.h"
+#include "src/rijndael.h"
+#include "src/blowfish.h"
+#include "src/threefish-512.h"
+
+#include "src/xtalw.h"
+#include "src/clomul.h"
+
+#define ENABLED              0x01
+#define DISABLED             0x00
 
 #define OK                      0
 
@@ -67,11 +66,11 @@
 #define BOUNDARY             2048
 #define DATA_SIZE         (1024*4)
 
-#define _DEBUG_INFORMATION_ FALSE
+#define _DEBUG_INFORMATION_ DISABLED
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.82 23APR21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.90 01MAY21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -530,77 +529,16 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
-  
-  /* [!!! TESTING !!!]
-  int argv_len = strlen(argv[1]);
-  char symbol;
-  
-  if (argv_len >= 2 && (*argv[1] == '-')) {
-    for (int i = 1; i < argv_len; i++) {
-      symbol = *(argv[1] + i);
-      
-      switch(symbol) {
-       case '1': ctx->temp_buffer_length = 128;
-                 break;
-       case '2': ctx->temp_buffer_length = 192;
-                 break;
-       case '3': ctx->temp_buffer_length = 256;
-                 break;
-       
-       case 'e': ctx->operation = ENCRYPT;
-                 break;
-       case 'd': ctx->operation = DECRYPT;
-                 break;
-                 
-       case 'r': ctx->cipher_number = AES;
-                 break;
-       case 's': ctx->cipher_number = SERPENT;
-                 break;
-       case 'a': ctx->cipher_number = ARC4;
-                 ctx->temp_buffer_length = 2048;
-                 break;
-       case 'w': ctx->cipher_number = TWOFISH;
-                 break;
-       case 't': ctx->cipher_number = THREEFISH;
-                 ctx->temp_buffer_length = 512;
-                 break;
-       case 'b': ctx->cipher_number = BLOWFISH;
-                 ctx->temp_buffer_length = 448;
-                 break;
-                 
-       default: free_global_memory(ctx, ctx_length);
-                printf("[!] Symbol \'%c\' not correct!\n", symbol);
-                return 0;
-      }
-    }
-  }
-  else {
-    free_global_memory(ctx, ctx_length);
-      
-    printf("[!] String \"%s\" not correct!\n", argv[1]);
-    return 0;
-  }
-
-    printf("cipher:     %d\n"
-           "operation:  %d\n"
-           "key_length: %ld\n",
-           ctx->cipher_number,
-           ctx->operation,
-           ctx->temp_buffer_length);
-    
-    free_global_memory(ctx, ctx_length);
-    exit(0);
-  */
 
   ctx->keyfile = argv[argc - 1];
   ctx->foutput = argv[argc - 2];
   ctx->finput  = argv[argc - 3];
 
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] input filename: %s\n", ctx->finput);
   printf("[DEBUG] output filename: %s\n", ctx->foutput);
   printf("[DEBUG] keyfile filename: %s\n", ctx->keyfile);
@@ -713,7 +651,7 @@ int main (int argc, char * argv[]) {
     ctx->temp_buffer_length = 512;
   }
 
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation]);
@@ -738,7 +676,7 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] temp memory allocated: %ld byte\n", ctx->temp_buffer_length);
   printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
 #endif
@@ -794,7 +732,7 @@ int main (int argc, char * argv[]) {
 
   printf("[#] Key length %d-bits initialized!\n", (int32_t)ctx->temp_buffer_length * 8);
 
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] key or password length: %d byte\n", real_read);
   printf("[DEBUG] key generator write data in pointer: %p\n", ctx->temp_buffer);
   printf("[DEBUG] REAL CRYPT KEY DATA:\n");
@@ -842,7 +780,7 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] vector memory allocated: %ld byte\n", ctx->vector_length);
   printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
 #endif
@@ -859,7 +797,7 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-#if _DEBUG_INFORMATION_ == TRUE
+#if _DEBUG_INFORMATION_ == ENABLED
   printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
   printf("[DEBUG] VECTOR REAL DATA:\n");
   printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
