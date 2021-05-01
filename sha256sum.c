@@ -5,7 +5,8 @@
 #include "src/sha256.h"
 #include "src/myfunctions.h"
 
-int sha256(const int tumbler, SHA256_CTX * ctx, const uint8_t * data, uint8_t * hash, const int data_length) {
+int sha256(const int tumbler, SHA256_CTX * ctx, 
+           const uint8_t * data, uint8_t * hash, const int data_length) {
 
   sha256_init(ctx);
 
@@ -39,8 +40,8 @@ int sha256(const int tumbler, SHA256_CTX * ctx, const uint8_t * data, uint8_t * 
 
   float div = (float)filesize / 100.0;
 
-  short int real_procent = 0;
-  short int past_procent = 0;
+  short real_procent = 0;
+  short past_procent = 0;
 
   long int position = 0;
   long int realread = 0;
