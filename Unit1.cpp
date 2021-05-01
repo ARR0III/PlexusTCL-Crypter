@@ -1,26 +1,46 @@
 #include <io.h>
 #include <vcl.h>
 #include <time.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
 #include <windows.h>
 
-#include "src/crc32.h"
+#ifndef _C_STDIO_H_
+#define _C_STDIO_H_
+  #include <stdio.h>
+#endif
+
+#ifndef _C_STDINT_H_
+#define _C_STDINT_H_
+  #include <stdint.h>
+#endif  
+
+#ifndef _C_STDLIB_H_
+#define _C_STDLIB_H_
+  #include <stdlib.h>
+#endif
+
+#ifndef _C_STRING_H_
+#define _C_STRING_H_
+  #include <string.h>
+#endif
+
+#ifndef _C_STDDEF_H_
+#define _C_STDDEF_H_
+  #include <stddef.h>
+#endif
 
 #include "src/arc4.h"
-#include "src/base64.h"
+#include "src/crc32.h"
 #include "src/sha256.h"
 #include "src/serpent.h"
+#include "src/twofish.h"
 #include "src/rijndael.h"
 #include "src/blowfish.h"
 #include "src/threefish-512.h"
 
-#include "src/clomul.h"
+#include "src/base64.h"
 
 #include "src/xtalw.h"
+#include "src/clomul.h"
 
 #include "Unit1.h"
 #include "Unit2.h"
@@ -44,8 +64,9 @@ enum {
   ARC4      = 0,
   AES       = 1,
   SERPENT   = 2,
-  BLOWFISH  = 3,
-  THREEFISH = 4
+  TWOFISH   = 3,
+  BLOWFISH  = 4,
+  THREEFISH = 5
 };
 
 const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 ??? / 100) */
@@ -79,11 +100,12 @@ const char * ALGORITM_NAME[] = {
   "ARC4",
   "AES-CFB",
   "SERPENT-CFB",
+  "TWOFISH-CFB",
   "BLOWFISH-CFB",
   "THREEFISH-512-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.74 15JAN21 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.90 01MAY21 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -98,6 +120,7 @@ const char * KEY_FILENAME    = "Ключ шифрования";
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
+TWOFISH_CTX   * twofish_ctx   = NULL;
 BLOWFISH_CTX  * blowfish_ctx  = NULL;
 THREEFISH_CTX * threefish_ctx = NULL;
 
@@ -137,7 +160,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 
   srand((unsigned int)time(NULL));
 
-  for (char i = 0; i < 5; i++) {
+  for (char i = 0; i < 6; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
   }
 
@@ -163,8 +186,10 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     RadioButton2->Visible = False;
   }
   else
-  if ((AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) ||
-      (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ) {
+  if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))    ||
+       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
+       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ) {
+
     Label4->Visible = True;
     ComboBox2->Visible = True;
     RadioButton1->Visible = True;
@@ -442,42 +467,54 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   while (position < fsize) {
     if (cipher != ARC4 && position == 0) {
       switch (operation) {
-        case ENCRYPT: switch (cipher) {
-                        case AES:       rijndael_encrypt(rijndael_ctx, vector, memory->output);
-                                        break;
-                        case SERPENT:   serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)memory->output);
-                                        break;
-                        case BLOWFISH:  memmove(memory->output, vector, block_size);
-                                        blowfish_encrypt(blowfish_ctx, (unsigned long *)memory->output, (unsigned long *)(memory->output + 4));
-                                        break;
-                        case THREEFISH: threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)memory->output);
-                                        break;
-                      }
-                      memmove(vector, memory->output, block_size);
-                      if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
-                        fclose(fi);
-                        fclose(fo);
+        case ENCRYPT:
+	  switch (cipher) {
+            case AES:
+	      rijndael_encrypt(rijndael_ctx, vector, memory->output);
+              break;
+            case SERPENT:
+	      serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)memory->output);
+              break;
+	    case TWOFISH:
+	      twofish_encrypt(twofish_ctx, vector, memory->output);
+	      break;
+            case BLOWFISH:
+              memmove(memory->output, vector, block_size);
+              blowfish_encrypt(blowfish_ctx, (unsigned long *)memory->output, (unsigned long *)(memory->output + 4));
+              break;
+             case THREEFISH:
+               threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)memory->output);
+               break;
+	   }
+		  
+          memmove(vector, memory->output, block_size);
+          
+	  if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
+            fclose(fi);
+            fclose(fo);
 
-                        free((void *)memory);
-                        memory = NULL;
+            free((void *)memory);
+            memory = NULL;
 
-                        return -5;
-                      }
-                      else {
-                        fflush(fo);
-                      }
-                      break;
-        case DECRYPT: if (fread((void *)vector, 1, block_size, fi) != block_size) {
-                        fclose(fi);
-                        fclose(fo);
+            return -5;
+          }
+          else {
+            fflush(fo);
+          }
+          break;
+		   
+        case DECRYPT:
+	  if (fread((void *)vector, 1, block_size, fi) != block_size) {
+            fclose(fi);
+            fclose(fo);
 
-                        free((void *)memory);
-                        memory = NULL;
+            free((void *)memory);
+            memory = NULL;
 
-                        return -6;
-                      }
-                      position += (long int)block_size;
-                      break;
+            return -6;
+          }
+          position += (long int)block_size;
+          break;
       }
     }
 
@@ -489,15 +526,22 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
     else {
       for (nblock = 0; nblock < realread; nblock += block_size) {
         switch (cipher) {
-          case AES:       rijndael_encrypt(rijndael_ctx, vector, memory->output + nblock);
-                          break;
-          case SERPENT:   serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)(memory->output + nblock));
-                          break;
-          case BLOWFISH:  blowfish_encrypt(blowfish_ctx, (unsigned long *)vector, (unsigned long *)(vector + 4));
-                          memmove(memory->output + nblock, vector, block_size);
-                          break;
-          case THREEFISH: threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)(memory->output + nblock));
-                          break;
+          case AES:
+	    rijndael_encrypt(rijndael_ctx, vector, memory->output + nblock);
+            break;
+          case SERPENT:
+	    serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)(memory->output + nblock));
+            break;
+          case TWOFISH:
+	    twofish_encrypt(twofish_ctx, vector, memory->output + nblock);
+	    break;
+          case BLOWFISH:
+	    blowfish_encrypt(blowfish_ctx, (unsigned long *)vector, (unsigned long *)(vector + 4));
+            memmove(memory->output + nblock, vector, block_size);
+            break;
+          case THREEFISH:
+	    threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)(memory->output + nblock));
+            break;
         }
 
         strxor(memory->output + nblock, memory->input + nblock, block_size);
@@ -633,6 +677,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     cipher_number = SERPENT;
   }
   else
+  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) {
+    cipher_number = TWOFISH;
+  }
+  else
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) {
     cipher_number = BLOWFISH;
   }
@@ -652,7 +700,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     key_len = 2048;
   }
   else
-  if (cipher_number == AES || cipher_number == SERPENT) { // AES or SERPENT
+  if (cipher_number == AES ||
+      cipher_number == SERPENT ||
+	  cipher_number == TWOFISH) { // AES or SERPENT
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (cipher_number == AES) {
         Nk = 4;
@@ -807,6 +857,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                     break;
     case SERPENT:   block_size = 16;
                     break;
+	case TWOFISH:   block_size = 16;
+	                break;
     case BLOWFISH:  block_size =  8;
                     break;
     case THREEFISH: block_size = 64;
@@ -887,6 +939,28 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     rijndael_init(buffer, rijndael_ctx);
   }
+  if (cipher_number == TWOFISH) {
+    ctx_len = sizeof(TWOFISH_CTX);
+    twofish_ctx = (TWOFISH_CTX *) calloc(1, ctx_len);
+    if (twofish_ctx == NULL) {
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+
+      if (operation == ENCRYPT)
+        meminit((void *)vector, 0x00, block_size);
+
+      meminit((void *)buffer, 0x00, key_len);
+
+      free((void *)vector);
+      free((void *)buffer);
+
+      vector = NULL;
+      buffer = NULL;
+
+      return;
+    }
+    twofish_init(twofish_ctx, buffer, key_len);
+  }
+  else
   if (cipher_number == SERPENT) {
     ctx_len = sizeof(SERPENT_CTX);
     serpent_ctx = (SERPENT_CTX *) calloc(1, ctx_len);
@@ -1051,6 +1125,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     case SERPENT:   meminit((void *)serpent_ctx, 0x00, ctx_len);
                     free((void *)serpent_ctx);
                     serpent_ctx = NULL;
+                    break;
+
+    case TWOFISH:   meminit((void *)twofish_ctx, 0x00, ctx_len);
+                    free((void *)twofish_ctx);
+                    twofish_ctx = NULL;
                     break;
 
     case BLOWFISH:  meminit((void *)blowfish_ctx, 0x00, ctx_len);
