@@ -1,3 +1,7 @@
 # PlexusTCL Crypter
 
-"PlexusTCL Crypter" software is designed for PlexusTCL Crypter "is designed for cryptographic protection of information by encrypting files, up to 2 GB in size. Files can be processed by five cryptographic algorithms of the user's choice, namely ARC4, Rijndael (hereinafter AES), Serpent, Blowfish and Threefish, with using a key file or entered as a password strings.
+PlexusTCL Crypter is software designed for cryptographic protection of information by encrypting files up to 2 GB in size. The file can be encrypted with one of six user-selectable encryption algorithms. Algorithms are used: ARC4, Rijndael-128, Serpent, Blowfish, Twofish, Threefish.
+
+All implementations of cryptographic algorithms are verified using test vectors published by their developers, except for the ARC4, which corresponds to an example published anonymously in 1994.
+
+All block bins implemented in the program work in the CFB mode, since the author of the program is too lazy to implement the addition of the last incomplete block when using the CBC mode.
