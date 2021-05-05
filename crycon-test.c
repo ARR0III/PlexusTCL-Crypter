@@ -3,7 +3,7 @@
   Console Cryptography Software v4.91;
 
   Developer:    ARR0III;
-  Make date:    05 May 2021;
+  Make date:    06 May 2021;
   Modification: Testing version (Not original);
   Language:     English;
 */
@@ -34,17 +34,17 @@
   #include <stddef.h>
 #endif
 
-#include "test_src/arc4.h"
-#include "test_src/crc32.h"
-#include "test_src/sha256.h"
-#include "test_src/serpent.h"
-#include "test_src/twofish.h"
-#include "test_src/rijndael.h"
-#include "test_src/blowfish.h"
-#include "test_src/threefish.h"
+#include "src/arc4.h"
+#include "src/crc32.h"
+#include "src/sha256.h"
+#include "src/serpent.h"
+#include "src/twofish.h"
+#include "src/rijndael.h"
+#include "src/blowfish.h"
+#include "src/threefish.h"
 
-#include "test_src/xtalw.h"
-#include "test_src/clomul.h"
+#include "src/xtalw.h"
+#include "src/clomul.h"
 
 #define ENABLED              0x01
 #define DISABLED             0x00
@@ -68,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.91 05MAY21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.91 06MAY21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -129,8 +129,6 @@ typedef struct {
 
   uint8_t   input  [DATA_SIZE]; /* memory for read */
   uint8_t   output [DATA_SIZE]; /* memory for write */
-
-  char      progress_bar[PROGRESS_BAR_LENGTH];
   
   int       operation;
   int       cipher_number;
@@ -315,7 +313,9 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   short real_percent = 0;
   short past_percent = 0;
 
-  meminit((void *)ctx->progress_bar, '.', 25);
+  char  progress_bar[PROGRESS_BAR_LENGTH];
+
+  meminit((void *)progress_bar, '.', 25);
 /*
   control pointers allocated memory
   pmemory(ctx);
@@ -423,13 +423,13 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
     if (real_percent > past_percent) {
       if ((real_percent % 4) == 0) {
-        meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
+        meminit((void *)progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
         printf(" >  %s [%s] (%4.1f %s/%4.1f %s) %3d %%",
           OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
-          ctx->progress_bar,
+          progress_bar,
           sizetofloatprint(real_check, (float)position),
           CHAR_SIZE_DATA[real_check],
           fsize_float,
@@ -459,10 +459,13 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
 static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
+  size_t stack_trash; /* NOT initialized */
 
   for (i = 0; i < size; i++) {
-    data[i] = (uint8_t)genrand(0x00, 0xFF);
+    data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
+
+  data[0] = (uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF);
 
   size = size - 2;
 
