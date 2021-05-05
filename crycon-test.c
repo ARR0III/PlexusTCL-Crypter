@@ -342,7 +342,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
               threefish_encrypt( threefish_ctx,
                                  (uint64_t*)(ctx->vector),
                                  (uint64_t*)(ctx->output),
-                                 (threefishkeysize_t)(ctx->temp_buffer_length * 8) );
+                                 (threefishkeysize_t)(ctx->vector_length * 8) );
               break;
           }
 
@@ -396,7 +396,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
               threefish_encrypt( threefish_ctx,
                                  (uint64_t*)(ctx->vector),
                                  (uint64_t*)(ctx->output + nblock),
-                                 (threefishkeysize_t)(ctx->temp_buffer_length * 8) );
+                                 (threefishkeysize_t)(ctx->vector_length * 8) );
             break;
         
         }
