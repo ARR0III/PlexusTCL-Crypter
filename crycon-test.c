@@ -339,10 +339,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
               blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
               break;
             case THREEFISH:
-              threefish_encrypt( threefish_ctx,
-                                 (uint64_t*)(ctx->vector),
-                                 (uint64_t*)(ctx->output),
-                                 (threefishkeysize_t)(ctx->vector_length * 8) );
+              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
               break;
           }
 
@@ -393,10 +390,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
             memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
             break;
           case THREEFISH:
-              threefish_encrypt( threefish_ctx,
-                                 (uint64_t*)(ctx->vector),
-                                 (uint64_t*)(ctx->output + nblock),
-                                 (threefishkeysize_t)(ctx->vector_length * 8) );
+              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
             break;
         
         }
@@ -461,10 +455,6 @@ static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t stack_trash; /* NOT initialized */
 
-/* function genrand() - linear congruential generator
-   generate vector initialized - nornal
-   generate key for cipher - NOT normal */
-	
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
@@ -543,6 +533,67 @@ int main (int argc, char * argv[]) {
   printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
+  
+  /* [!!! TESTING !!!]
+  int argv_len = strlen(argv[1]);
+  char symbol;
+  
+  if (argv_len >= 2 && (*argv[1] == '-')) {
+    for (int i = 1; i < argv_len; i++) {
+      symbol = *(argv[1] + i);
+      
+      switch(symbol) {
+       case '1': ctx->temp_buffer_length = 128;
+                 break;
+       case '2': ctx->temp_buffer_length = 192;
+                 break;
+       case '3': ctx->temp_buffer_length = 256;
+                 break;
+       
+       case 'e': ctx->operation = ENCRYPT;
+                 break;
+       case 'd': ctx->operation = DECRYPT;
+                 break;
+                 
+       case 'r': ctx->cipher_number = AES;
+                 break;
+       case 's': ctx->cipher_number = SERPENT;
+                 break;
+       case 'a': ctx->cipher_number = ARC4;
+                 ctx->temp_buffer_length = 2048;
+                 break;
+       case 'w': ctx->cipher_number = TWOFISH;
+                 break;
+       case 't': ctx->cipher_number = THREEFISH;
+                 ctx->temp_buffer_length = 512;
+                 break;
+       case 'b': ctx->cipher_number = BLOWFISH;
+                 ctx->temp_buffer_length = 448;
+                 break;
+                 
+       default: free_global_memory(ctx, ctx_length);
+                printf("[!] Symbol \'%c\' not correct!\n", symbol);
+                return 0;
+      }
+    }
+  }
+  else {
+    free_global_memory(ctx, ctx_length);
+      
+    printf("[!] String \"%s\" not correct!\n", argv[1]);
+    return 0;
+  }
+
+    printf("cipher:     %d\n"
+           "operation:  %d\n"
+           "key_length: %ld\n",
+           ctx->cipher_number,
+           ctx->operation,
+           ctx->temp_buffer_length);
+    
+    free_global_memory(ctx, ctx_length);
+    exit(0);
+  */
 
   ctx->keyfile = argv[argc - 1];
   ctx->foutput = argv[argc - 2];
@@ -555,9 +606,9 @@ int main (int argc, char * argv[]) {
 #endif
   
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
-    printf("[!] Names input and output files equal!\n");
+	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
@@ -569,7 +620,7 @@ int main (int argc, char * argv[]) {
   }
   else
   if (strcmp(ctx->finput, ctx->keyfile) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -593,7 +644,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -672,6 +723,7 @@ int main (int argc, char * argv[]) {
   }
 
 #if _DEBUG_INFORMATION_ == ENABLED
+
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
@@ -763,8 +815,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-    case ARC4:
-      cipher_ctx_len = sizeof(ARC4_CTX);
+	case ARC4:
+	  cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
