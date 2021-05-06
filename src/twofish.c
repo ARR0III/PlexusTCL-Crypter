@@ -8,18 +8,16 @@
 #endif  
 
 #ifndef _TWOFISH_H_
-  #define _TWOFISH_H_
-  
+#define _TWOFISH_H_
   typedef struct {
     int len;                    /* Key length in 64-bit units: 2, 3 or 4 */
     uint32_t K[40];             /* Expanded key                          */
     uint32_t S[4][256];         /* Key-dependent S-boxes                 */
   } TWOFISH_CTX;
-
 #endif
 
 #ifndef _TWOFISH_TABLES_H_
-  #define _TWOFISH_TABLES_H_
+#define _TWOFISH_TABLES_H_
 
 const uint8_t q[2][256] = {
 {
