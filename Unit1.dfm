@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 382
-  Top = 327
+  Left = 257
+  Top = 274
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -173,10 +173,6 @@ object Form1: TForm1
     TabOrder = 1
     TabStop = False
     Visible = False
-    Items.Strings = (
-      '128'
-      '192'
-      '256')
   end
   object Edit2: TEdit
     Left = 168
@@ -237,7 +233,7 @@ object Form1: TForm1
   object RadioButton2: TRadioButton
     Left = 296
     Top = 130
-    Width = 97
+    Width = 113
     Height = 17
     Caption = #1056#1072#1089#1096#1080#1092#1088#1086#1074#1072#1090#1100
     TabOrder = 7

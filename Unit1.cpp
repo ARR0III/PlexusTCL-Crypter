@@ -35,7 +35,7 @@
 #include "src/twofish.h"
 #include "src/rijndael.h"
 #include "src/blowfish.h"
-#include "src/threefish-512.h"
+#include "src/threefish.h"
 
 #include "src/base64.h"
 
@@ -77,6 +77,18 @@ const char * PARAM_REWRITE_BYTE = "r+b";
 
 const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
+const char * CHAR_KEY_LENGTH_AES[] ={
+  "128",
+  "192",
+  "256"
+};
+
+const char * CHAR_KEY_LENGTH_THREEFISH[] ={
+  "256",
+  "512",
+  "1024"
+};
+
 const uint32_t INT_SIZE_DATA[] = {
   1024,
   1048576,
@@ -86,7 +98,7 @@ const uint32_t INT_SIZE_DATA[] = {
 const char * CHAR_SIZE_DATA[] = {
   "Бт",
   "КиБ",
-  "МиБ",
+  "МеБ",
   "ГиБ"
 };
 
@@ -102,10 +114,10 @@ const char * ALGORITM_NAME[] = {
   "SERPENT-CFB",
   "TWOFISH-CFB",
   "BLOWFISH-CFB",
-  "THREEFISH-512-CFB"
+  "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.90 01MAY21 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.91 07MAY21 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -137,22 +149,34 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
   if (OpenDialog1->Execute()) {
     Edit1->Clear();
     Edit1->Text = OpenDialog1->FileName;
+
+    if ((strlen(Form1->Edit2->Text.c_str()) > 0) &&
+        (Form1->Edit1->Text == Form1->Edit2->Text)) {
+
+      Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
+    }
   }
 }
 
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
   if (SaveDialog1->Execute()) {
-    Edit2->Clear();
-    Edit2->Text = SaveDialog1->FileName;
+    Form1->Edit2->Clear();
+    Form1->Edit2->Text = SaveDialog1->FileName;
+
+    if ((strlen(Form1->Edit1->Text.c_str()) > 0) &&
+        (Form1->Edit1->Text == Form1->Edit2->Text)) {
+
+      Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
+    }
   }
 }
 
 void __fastcall TForm1::Button3Click(TObject *Sender) {
   OpenDialog1->Title = KEY_FILENAME;
   if (OpenDialog1->Execute()) {
-    Memo1->Clear();
-    Memo1->Lines->Text = OpenDialog1->FileName;
+    Form1->Memo1->Clear();
+    Form1->Memo1->Lines->Text = OpenDialog1->FileName;
   }
 }
 
@@ -188,7 +212,21 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
   else
   if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))    ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
-       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ) {
+       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ||
+       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) ) {
+
+    ComboBox2->Items->Clear();
+
+    if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
+      for (char i = 0; i < 3; i++) {
+        ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
+      }
+    }
+    else {
+      for (char i = 0; i < 3; i++) {
+        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
+      }
+    }
 
     Label4->Visible = True;
     ComboBox2->Visible = True;
@@ -196,8 +234,7 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     RadioButton2->Visible = True;
   }
   else
-  if ((AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) ||
-      (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH]))) {
+  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) {
     Label4->Visible = False;
     ComboBox2->Visible = False;
     RadioButton1->Visible = True;
@@ -473,17 +510,17 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 	      rijndael_encrypt(rijndael_ctx, vector, memory->output);
               break;
             case SERPENT:
-	      serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)memory->output);
+	      serpent_encrypt(serpent_ctx, (uint32_t *)vector, (uint32_t *)memory->output);
               break;
 	    case TWOFISH:
 	      twofish_encrypt(twofish_ctx, vector, memory->output);
 	      break;
             case BLOWFISH:
               memmove(memory->output, vector, block_size);
-              blowfish_encrypt(blowfish_ctx, (unsigned long *)memory->output, (unsigned long *)(memory->output + 4));
+              blowfish_encrypt(blowfish_ctx, (uint32_t *)memory->output, (uint32_t *)(memory->output + 4));
               break;
              case THREEFISH:
-               threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)memory->output);
+               threefish_encrypt(threefish_ctx, (uint64_t*)vector, (uint64_t*)memory->output);
                break;
 	   }
 		  
@@ -530,17 +567,17 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 	    rijndael_encrypt(rijndael_ctx, vector, memory->output + nblock);
             break;
           case SERPENT:
-	    serpent_encrypt(serpent_ctx, (unsigned long *)vector, (unsigned long *)(memory->output + nblock));
+	    serpent_encrypt(serpent_ctx, (uint32_t *)vector, (uint32_t *)(memory->output + nblock));
             break;
           case TWOFISH:
 	    twofish_encrypt(twofish_ctx, vector, memory->output + nblock);
 	    break;
           case BLOWFISH:
-	    blowfish_encrypt(blowfish_ctx, (unsigned long *)vector, (unsigned long *)(vector + 4));
+	    blowfish_encrypt(blowfish_ctx, (uint32_t *)vector, (uint32_t *)(vector + 4));
             memmove(memory->output + nblock, vector, block_size);
             break;
           case THREEFISH:
-	    threefish_encrypt(threefish_ctx, (uint64_t*)(vector), (uint64_t*)(memory->output + nblock));
+	    threefish_encrypt(threefish_ctx, (uint64_t*)vector, (uint64_t*)(memory->output + nblock));
             break;
         }
 
@@ -595,17 +632,22 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
   return 0;
 }
 
-size_t vector_init(uint8_t * data, size_t size) {
+static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
-
-  for (i = 0; i < size; i++)
-    data[i] = (uint8_t)genrand(0x00, 0xFF);
-
-  size = size - 2;
-  cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
+  size_t stack_trash; /* NOT initialized */
 
   for (i = 0; i < size; i++) {
-    if (data[i] == data[i + 1] && data[i + 1] == data[i + 2]) {
+    data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
+  }
+
+  data[0] ^= (uint8_t)((uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF));
+
+  cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
+
+  size = size - 2;
+
+  for (i = 0; i < size; i++) {
+    if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2])) {
       break;
     }
   }
@@ -705,24 +747,24 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 	  cipher_number == TWOFISH) { // AES or SERPENT
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (cipher_number == AES) {
-        Nk = 4;
-        Nr = 10;
+        AES_Nk = 4;
+        AES_Nr = 10;
       }
       key_len = 128;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("192")) {
       if (cipher_number == AES) {
-        Nk = 6;
-        Nr = 12;
+        AES_Nk = 6;
+        AES_Nr = 12;
       }
       key_len = 192;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
       if (cipher_number == AES) {
-        Nk = 8;
-        Nr = 14;
+        AES_Nk = 8;
+        AES_Nr = 14;
       }
       key_len = 256;
     }
@@ -738,7 +780,22 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
   else
   if (cipher_number == THREEFISH) {
-    key_len = 512;
+    if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
+      key_len = 256;
+    }
+    else
+    if (AnsiString(ComboBox2->Text) == AnsiString("512")) {
+      key_len = 512;
+    }
+    else
+    if (AnsiString(ComboBox2->Text) == AnsiString("1024")) {
+      key_len = 1024;
+    }
+    else {
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Длина ключа шифрования не была выбрана!");
+      return;
+    }
   }
 
   key_len = (key_len / 8);
@@ -748,7 +805,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     AES       = (key_len = 16 or 24 or 32;
     SERPENT   = (key_len = 16 or 24 or 32);
     BLOWFISH  = (key_len = 56);
-    THREEFISH = (key_len = 64);
+    THREEFISH = (key_len = 32 or 64 or 128);
   */
 
   operation = ENCRYPT;
@@ -801,8 +858,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if ((real_read > 0) && (real_read < key_len)) {
     UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
-                  "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                  "Необходимо:\t" + IntToStr(key_len) + " Бт";
+                 "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+                 "Необходимо:\t" + IntToStr(key_len) + " Бт";
     Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
 
     UnicodeMsg = "";
@@ -853,16 +910,21 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 
   switch (cipher_number) {
-    case AES:       block_size = 16;
-                    break;
-    case SERPENT:   block_size = 16;
-                    break;
-	case TWOFISH:   block_size = 16;
-	                break;
-    case BLOWFISH:  block_size =  8;
-                    break;
-    case THREEFISH: block_size = 64;
-                    break;
+    case AES:
+      block_size = 16;
+      break;
+    case SERPENT:
+      block_size = 16;
+      break;
+    case TWOFISH:
+      block_size = 16;
+      break;
+    case BLOWFISH:
+      block_size =  8;
+      break;
+    case THREEFISH:
+      block_size = key_len;
+      break;
   }
 
   uint8_t * vector = NULL;
@@ -886,7 +948,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     if (vector_init(vector, block_size) < (block_size - 2)) {
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!");
+                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!"
+                     "\nСистемное время остановлено? Проверьте системные часы!");
 
       meminit((void *)vector, 0x00, block_size);
       meminit((void *)buffer, 0x00, key_len);
@@ -918,7 +981,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     arc4_init(arc4_ctx, buffer, key_len);
   }
   if (cipher_number == AES) {
-    ctx_len = Nb * (Nr + 1) * 4;
+    ctx_len = AES_Nb * (AES_Nr + 1) * 4;
     rijndael_ctx = (uint8_t *) calloc(ctx_len, 1);
     if (rijndael_ctx == NULL) {
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1024,7 +1087,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       return;
     }
-    threefish_init(threefish_ctx, (uint64_t *)buffer, (uint64_t *)buffer);
+    threefish_init(threefish_ctx, (threefishkeysize_t)(key_len * 8),
+                   (uint64_t *)buffer, (uint64_t *)buffer);
   }
 
   meminit((void *)buffer, 0x00, key_len);
@@ -1089,7 +1153,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if ((result == 0) && (CheckBox1->Checked == True)) {
     UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
-                 "Стертые данные невозможно будет восстановить!";
+                 "Стертые данные будет невозможно восстановить!";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
