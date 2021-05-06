@@ -39,7 +39,7 @@ void threefish_init(THREEFISH_CTX * ctx, threefishkeysize_t keysize,
     }
     
     ctx->key[i] = parity;
-    ctx->keysize = keysize;
+    ctx->keysize = keysize; 
 }
 
 void threefishEncrypt256(THREEFISH_CTX * ctx, uint64_t * input, uint64_t * output) {
