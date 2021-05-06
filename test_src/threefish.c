@@ -24,9 +24,9 @@ typedef struct ThreefishKey {
 } THREEFISH_CTX;
 
 void threefish_init(THREEFISH_CTX * ctx, threefishkeysize_t keysize,
-                     uint64_t * key, uint64_t * tweak) {
-    int keywords = keysize / 64;
+                     uint64_t * keydata, uint64_t * tweak) {
     int i;
+    int keywords  = (int)keysize / 64; 
     uint64_t parity = C240;
 
     ctx->tweak[0] = tweak[0];
@@ -34,8 +34,8 @@ void threefish_init(THREEFISH_CTX * ctx, threefishkeysize_t keysize,
     ctx->tweak[2] = tweak[0] ^ tweak[1];
 
     for (i = 0; i < keywords; i++) {
-        ctx->key[i] = key[i];
-        parity ^= key[i];
+        ctx->key[i] = keydata[i];
+        parity ^= keydata[i];
     }
     
     ctx->key[i] = parity;
