@@ -1,10 +1,10 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.90;
+  Console Cryptography Software v4.91;
 
   Developer:    ARR0III;
-  Make date:    01 May 2021;
-  Modification: Release;
+  Make date:    07 May 2021;
+  Modification: Release (Original);
   Language:     English;
 */
 #include <time.h>
@@ -41,7 +41,7 @@
 #include "src/twofish.h"
 #include "src/rijndael.h"
 #include "src/blowfish.h"
-#include "src/threefish-512.h"
+#include "src/threefish.h"
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
@@ -50,10 +50,8 @@
 #define DISABLED             0x00
 
 #define OK                      0
-
 #define READ_FILE_NOT_OPEN     -1
 #define WRITE_FILE_NOT_OPEN    -2
-
 #define SIZE_FILE_ERROR        -3
 #define WRITE_FILE_ERROR       -4
 #define READ_FILE_ERROR        -5
@@ -70,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.90 01MAY21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.91 07MAY21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint8_t       * rijndael_ctx  = NULL;
@@ -88,32 +86,32 @@ enum {
   THREEFISH = 5
 };
 
-const uint32_t INT_SIZE_DATA[] = {
+static const uint32_t INT_SIZE_DATA[] = {
   1024,      /* KiB */
   1048576,   /* MiB */
   1073741824 /* GiB */
 };
 
-const char * CHAR_SIZE_DATA[] = {
+static const char * CHAR_SIZE_DATA[] = {
   "Bt" ,
   "KiB",
   "MiB",
   "GiB"
 };
 
-const char * OPERATION_NAME[] = {
+static const char * OPERATION_NAME[] = {
   "Encrypt",
   "Decrypt",
   "Stream"
 };
 
-const char * ALGORITM_NAME[]  = {
+static const char * ALGORITM_NAME[]  = {
   "ARC4",
   "AES-CFB",
   "SERPENT-CFB",
   "TWOFISH-CFB",
   "BLOWFISH-CFB",
-  "THREEFISH-512-CFB"
+  "THREEFISH-CFB"
 };
 
 /* Global struct for data */
@@ -131,23 +129,23 @@ typedef struct {
 
   uint8_t   input  [DATA_SIZE]; /* memory for read */
   uint8_t   output [DATA_SIZE]; /* memory for write */
-
+  
   char      progress_bar[PROGRESS_BAR_LENGTH];
   
   int       operation;
   int       cipher_number;
 } GLOBAL_MEMORY;
 
-void NAME_CIPHER_ERROR(const char * name) {
+static void NAME_CIPHER_ERROR(const char * name) {
   printf("[!] Name cipher \"%s\" incorrect!\n", name);
 }
 
-void MEMORY_ERROR(void) {
+static void MEMORY_ERROR(void) {
   printf("[!] Cannot allocate memory!\n");
 }
 
 /* Function size_check checked size = Bt, Kb, Mb or Gb */
-int size_check(uint32_t size) {
+static int size_check(uint32_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
@@ -165,11 +163,11 @@ int size_check(uint32_t size) {
   return result;
 }
 
-float sizetofloatprint(const int status, const float size) {
+static float sizetofloatprint(const int status, const float size) {
   return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
 }
 
-void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
+static void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
                     uint8_t * key,      const size_t key_length) {
 
@@ -218,17 +216,17 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
   return key;
 }
 
-void cent(short * number) {
+static void cent(short * number) {
   if (*number > 100) {
     *number = 100;
   }
 }
 
-int operation_variant(const int cipher, const int operation) {
+static int operation_variant(const int cipher, const int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
-long int size_of_file(FILE * f) {
+static long int size_of_file(FILE * f) {
 
   if (fseek(f, 0, SEEK_END) != 0) {
     return (-1);
@@ -243,12 +241,12 @@ long int size_of_file(FILE * f) {
   return result;
 }
 
-void cipher_free(void * ctx, size_t ctx_length) {
+static void cipher_free(void * ctx, size_t ctx_length) {
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
 }
 
-size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+static size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
@@ -282,7 +280,7 @@ void pmemory(GLOBAL_MEMORY * ctx) {
            ctx->output);
 }
 */
-int filecrypt(GLOBAL_MEMORY * ctx) {
+static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
   
@@ -312,13 +310,12 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
 
   size_t nblock;
-
   size_t realread;
   
   short real_percent = 0;
   short past_percent = 0;
 
-  meminit((void *)ctx->progress_bar, '.', 25);
+  meminit((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 /*
   control pointers allocated memory
   pmemory(ctx);
@@ -342,7 +339,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
               blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
               break;
             case THREEFISH:
-              threefish_encrypt(threefish_ctx, (uint64_t*)(ctx->vector), (uint64_t*)ctx->output);
+              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
               break;
           }
 
@@ -376,7 +373,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     if (ARC4 == ctx->cipher_number) {
       arc4(arc4_ctx, ctx->input, ctx->output, realread);
     }
-    else {
+    else { /* if block ciphers */
       for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
         switch (ctx->cipher_number) {
           case AES:
@@ -393,7 +390,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
             break;
           case THREEFISH:
-            threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
+              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
             break;
         
         }
@@ -454,12 +451,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   return OK;
 }
 
-size_t vector_init(uint8_t * data, size_t size) {
+static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
+  size_t stack_trash; /* NOT initialized */
 
   for (i = 0; i < size; i++) {
-    data[i] = (uint8_t)genrand(0x00, 0xFF);
+    data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
+
+  data[0] ^= (uint8_t)((uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF));
 
   size = size - 2;
 
@@ -614,24 +614,24 @@ int main (int argc, char * argv[]) {
     
     if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--128") == 0) {
       if (AES == ctx->cipher_number) {
-        Nk = 4;
-        Nr = 10;
+        AES_Nk = 4;
+        AES_Nr = 10;
       }
       ctx->temp_buffer_length = 128;
     }
     else
     if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--192") == 0) {
       if (AES == ctx->cipher_number) {
-        Nk = 6;
-        Nr = 12;
+        AES_Nk = 6;
+        AES_Nr = 12;
       }
       ctx->temp_buffer_length = 192;
     }
     else
     if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--256") == 0) {
       if (AES == ctx->cipher_number) {
-        Nk = 8;
-        Nr = 14;
+        AES_Nk = 8;
+        AES_Nr = 14;
       }
       ctx->temp_buffer_length = 256;
     }
@@ -648,23 +648,34 @@ int main (int argc, char * argv[]) {
   }
   else
   if (THREEFISH == ctx->cipher_number) {
-    ctx->temp_buffer_length = 512;
+    if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--256") == 0) {
+      ctx->temp_buffer_length = 256;
+    }
+    else
+    if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--512") == 0) {
+      ctx->temp_buffer_length = 512;
+    }
+    else
+    if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--1024") == 0) {
+      ctx->temp_buffer_length = 1024;
+    }
   }
 
 #if _DEBUG_INFORMATION_ == ENABLED
+
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
-  printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation]);
+  printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
 #endif
   
-  ctx->temp_buffer_length /= 8;
+  ctx->temp_buffer_length /= 8; /* for allocate memory */
   
   /*
     ARC4      = (temp_buffer_length = 256);
     AES       = (temp_buffer_length = 16 or 24 or 32;
     SERPENT   = (temp_buffer_length = 16 or 24 or 32);
     BLOWFISH  = (temp_buffer_length = 56);
-    THREEFISH = (temp_buffer_length = 64);
+    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
   */
   
   ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
@@ -748,7 +759,7 @@ int main (int argc, char * argv[]) {
       break;
     case AES:
       ctx->vector_length = 16;
-      cipher_ctx_len = Nb * (Nr + 1) * 4;
+      cipher_ctx_len = AES_Nb * (AES_Nr + 1) * 4;
       break;
     case SERPENT:
       ctx->vector_length = 16;
@@ -763,7 +774,7 @@ int main (int argc, char * argv[]) {
       cipher_ctx_len = sizeof(BLOWFISH_CTX);
       break;
     case THREEFISH:
-      ctx->vector_length = 64;
+      ctx->vector_length = ctx->temp_buffer_length;
       cipher_ctx_len = sizeof(THREEFISH_CTX);
       break;
   }
@@ -886,11 +897,18 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
 
-    threefish_init(threefish_ctx, (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
+    threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                   (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
   }
 
   printf("[#] Algoritm %s initialized!\n",
     ALGORITM_NAME[(ctx->cipher_number)]);
+
+#if _DEBUG_INFORMATION_ == ENABLED
+  printf("[DEBUG] allocate byte for cipher struct: %ld\n", cipher_ctx_len);
+  printf("[DEBUG] REAL DATA CIPHER STRUCT:\n");
+  printhex(HEX_TABLE, cipher_pointer, cipher_ctx_len);
+#endif
 
   printf("[#] Operation %s file \"%s\" started!\n",
     OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
