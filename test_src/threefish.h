@@ -1,5 +1,5 @@
-#ifndef THREEFISHAPI_H
-  #define THREEFISHAPI_H
+#ifndef _THREEFISH_H_
+  #define _THREEFISH_H_
 
   #ifndef _C_STDINT_H_
   #define _C_STDINT_H_
@@ -26,10 +26,8 @@
                             uint64_t * input, uint64_t * output);
                             
   void threefish_encrypt(THREEFISH_CTX * ctx,
-                         uint64_t * in, uint64_t * out,
-                         threefishkeysize_t keysize);
+                         uint64_t * in, uint64_t * out);
                          
   void threefish_decrypt(THREEFISH_CTX * ctx,
-                         uint64_t * in, uint64_t * out,
-                         threefishkeysize_t keysize);
+                         uint64_t * in, uint64_t * out);
 #endif

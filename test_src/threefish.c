@@ -2421,8 +2421,8 @@ void threefishDecrypt1024(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
 }
 
 void threefish_encrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out, threefishkeysize_t keysize) {
-  switch (keysize) {
+                       uint64_t * in, uint64_t * out) {
+  switch (ctx->keysize) {
     case Threefish256 :
       threefishEncrypt256(ctx, in, out);
       break;
@@ -2436,8 +2436,8 @@ void threefish_encrypt(THREEFISH_CTX * ctx,
 }
 
 void threefish_decrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out, threefishkeysize_t keysize) {
-  switch (keysize) {
+                       uint64_t * in, uint64_t * out) {
+  switch (ctx->keysize) {
     case Threefish256 :
       threefishDecrypt256(ctx, in, out);
       break;
