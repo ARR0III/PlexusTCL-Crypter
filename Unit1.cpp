@@ -744,7 +744,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   else
   if (cipher_number == AES ||
       cipher_number == SERPENT ||
-	  cipher_number == TWOFISH) { // AES or SERPENT
+      cipher_number == TWOFISH) { // AES or SERPENT
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (cipher_number == AES) {
         AES_Nk = 4;
@@ -1101,7 +1101,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     "Приступить к выбранной операции? Остановить операцию будет невозможно!\n\n"
     "Операция:\t" + String(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
     "Алгоритм:\t" + String(ALGORITM_NAME[cipher_number]) + "\n"
-    "Длина ключа:\t" + IntToStr(key_len * 8).c_str() + " бит" + (24 == key_len ? "а" : "ов");
+    "Длина ключа:\t" + IntToStr(key_len * 8).c_str() + " бит" +
+                       (24 == key_len || 128 == key_len ? "а" : "ов");
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
