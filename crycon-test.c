@@ -34,14 +34,14 @@
   #include <stddef.h>
 #endif
 
-#include "src/arc4.h"
-#include "src/crc32.h"
-#include "src/sha256.h"
-#include "src/serpent.h"
-#include "src/twofish.h"
-#include "src/rijndael.h"
-#include "src/blowfish.h"
-#include "src/threefish.h"
+#include "test_src/arc4.h"
+#include "test_src/crc32.h"
+#include "test_src/sha256.h"
+#include "test_src/serpent.h"
+#include "test_src/twofish.h"
+#include "test_src/rijndael.h"
+#include "test_src/blowfish.h"
+#include "test_src/threefish.h"
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
