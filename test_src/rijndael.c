@@ -8,6 +8,10 @@
   #include <stdlib.h>
 #endif
 
+/*
+ This variable stores the number of
+ rounds of encryption/decryption. 
+*/
 int AES_Rounds = 0;
 
 static const uint32_t Te0[256] = {
@@ -757,7 +761,7 @@ int rijndael_key_encrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
         (Te4[(temp >> 24)       ] & 0x000000ff) ^
         rcon[i];
         
-      table[9] = table[1] ^ table[8];
+      table[9]  = table[1] ^ table[8];
       table[10] = table[2] ^ table[9];
       table[11] = table[3] ^ table[10];
       
@@ -822,7 +826,7 @@ int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
   return Nr;
 }
 
-void rijndael_encrypt(const uint32_t * table, int Nr, const uint8_t * pt, uint8_t * ct) {
+void rijndael_encrypt(const uint32_t * table, const uint8_t * pt, uint8_t * ct) {
   uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 
   s0 = GETU32(pt     ) ^ table[0];
@@ -875,7 +879,7 @@ void rijndael_encrypt(const uint32_t * table, int Nr, const uint8_t * pt, uint8_
   t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >>  8) & 0xff] ^ Te3[s1 & 0xff] ^ table[38];
   t3 = Te0[s3 >> 24] ^ Te1[(s0 >> 16) & 0xff] ^ Te2[(s1 >>  8) & 0xff] ^ Te3[s2 & 0xff] ^ table[39];
   
-  if (Nr > 10) {
+  if (AES_Rounds > 10) {
 
     s0 = Te0[t0 >> 24] ^ Te1[(t1 >> 16) & 0xff] ^ Te2[(t2 >>  8) & 0xff] ^ Te3[t3 & 0xff] ^ table[40];
     s1 = Te0[t1 >> 24] ^ Te1[(t2 >> 16) & 0xff] ^ Te2[(t3 >>  8) & 0xff] ^ Te3[t0 & 0xff] ^ table[41];
@@ -887,7 +891,7 @@ void rijndael_encrypt(const uint32_t * table, int Nr, const uint8_t * pt, uint8_
     t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >>  8) & 0xff] ^ Te3[s1 & 0xff] ^ table[46];
     t3 = Te0[s3 >> 24] ^ Te1[(s0 >> 16) & 0xff] ^ Te2[(s1 >>  8) & 0xff] ^ Te3[s2 & 0xff] ^ table[47];
     
-    if (Nr > 12) {
+    if (AES_Rounds > 12) {
 
       s0 = Te0[t0 >> 24] ^ Te1[(t1 >> 16) & 0xff] ^ Te2[(t2 >>  8) & 0xff] ^ Te3[t3 & 0xff] ^ table[48];
       s1 = Te0[t1 >> 24] ^ Te1[(t2 >> 16) & 0xff] ^ Te2[(t3 >>  8) & 0xff] ^ Te3[t0 & 0xff] ^ table[49];
@@ -901,7 +905,7 @@ void rijndael_encrypt(const uint32_t * table, int Nr, const uint8_t * pt, uint8_
     }
   }
   
-  table += Nr << 2;
+  table += AES_Rounds << 2;
 
   s0 =
     (Te4[(t0 >> 24)       ] & 0xff000000) ^
@@ -940,7 +944,7 @@ void rijndael_encrypt(const uint32_t * table, int Nr, const uint8_t * pt, uint8_
   PUTU32(ct + 12, s3);
 }
 
-void rijndael_decrypt(const uint32_t * table, int Nr, const uint8_t * ct, uint8_t * pt) {
+void rijndael_decrypt(const uint32_t * table, const uint8_t * ct, uint8_t * pt) {
   uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 
   s0 = GETU32(ct     ) ^ table[0];
@@ -993,7 +997,7 @@ void rijndael_decrypt(const uint32_t * table, int Nr, const uint8_t * ct, uint8_
   t2 = Td0[s2 >> 24] ^ Td1[(s1 >> 16) & 0xff] ^ Td2[(s0 >>  8) & 0xff] ^ Td3[s3 & 0xff] ^ table[38];
   t3 = Td0[s3 >> 24] ^ Td1[(s2 >> 16) & 0xff] ^ Td2[(s1 >>  8) & 0xff] ^ Td3[s0 & 0xff] ^ table[39];
   
-  if (Nr > 10) {
+  if (AES_Rounds > 10) {
 
     s0 = Td0[t0 >> 24] ^ Td1[(t3 >> 16) & 0xff] ^ Td2[(t2 >>  8) & 0xff] ^ Td3[t1 & 0xff] ^ table[40];
     s1 = Td0[t1 >> 24] ^ Td1[(t0 >> 16) & 0xff] ^ Td2[(t3 >>  8) & 0xff] ^ Td3[t2 & 0xff] ^ table[41];
@@ -1005,7 +1009,7 @@ void rijndael_decrypt(const uint32_t * table, int Nr, const uint8_t * ct, uint8_
     t2 = Td0[s2 >> 24] ^ Td1[(s1 >> 16) & 0xff] ^ Td2[(s0 >>  8) & 0xff] ^ Td3[s3 & 0xff] ^ table[46];
     t3 = Td0[s3 >> 24] ^ Td1[(s2 >> 16) & 0xff] ^ Td2[(s1 >>  8) & 0xff] ^ Td3[s0 & 0xff] ^ table[47];
     
-    if (Nr > 12) {
+    if (AES_Rounds > 12) {
 
       s0 = Td0[t0 >> 24] ^ Td1[(t3 >> 16) & 0xff] ^ Td2[(t2 >>  8) & 0xff] ^ Td3[t1 & 0xff] ^ table[48];
       s1 = Td0[t1 >> 24] ^ Td1[(t0 >> 16) & 0xff] ^ Td2[(t3 >>  8) & 0xff] ^ Td3[t2 & 0xff] ^ table[49];
@@ -1019,7 +1023,7 @@ void rijndael_decrypt(const uint32_t * table, int Nr, const uint8_t * ct, uint8_
     }
   }
   
-  table += Nr << 2;
+  table += AES_Rounds << 2;
 
   s0 =
     (Td4[(t0 >> 24)       ] & 0xff000000) ^
