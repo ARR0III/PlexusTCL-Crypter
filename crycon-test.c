@@ -34,14 +34,14 @@
   #include <stddef.h>
 #endif
 
-#include "test_src/arc4.h"
-#include "test_src/crc32.h"
-#include "test_src/sha256.h"
-#include "test_src/serpent.h"
-#include "test_src/twofish.h"
-#include "test_src/rijndael.h"
-#include "test_src/blowfish.h"
-#include "test_src/threefish.h"
+#include "src/arc4.h"
+#include "src/crc32.h"
+#include "src/sha256.h"
+#include "src/serpent.h"
+#include "src/twofish.h"
+#include "src/rijndael.h"
+#include "src/blowfish.h"
+#include "src/threefish.h"
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
@@ -326,7 +326,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
         case ENCRYPT:
           switch (ctx->cipher_number) {
             case AES:
-              rijndael_encrypt(rijndael_ctx, AES_Rounds, ctx->vector, ctx->output);
+              rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
               break; 
             case SERPENT:
               serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
@@ -377,7 +377,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
         switch (ctx->cipher_number) {
           case AES:
-            rijndael_encrypt(rijndael_ctx, AES_Rounds, ctx->vector, ctx->output + nblock);
+            rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output + nblock);
             break;
           case SERPENT:
             serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->output + nblock));
@@ -838,7 +838,7 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-    rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
+    AES_Rounds = rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
   }
   if (TWOFISH == ctx->cipher_number) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
