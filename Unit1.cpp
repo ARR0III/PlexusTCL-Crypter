@@ -117,7 +117,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.91 07MAY21 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.92 10MAY21 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -130,7 +130,7 @@ const char * OUTPUT_FILENAME = "Файл назначения";
 const char * KEY_FILENAME    = "Ключ шифрования";
 
 ARC4_CTX      * arc4_ctx      = NULL;
-uint8_t       * rijndael_ctx  = NULL;
+uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
 TWOFISH_CTX   * twofish_ctx   = NULL;
 BLOWFISH_CTX  * blowfish_ctx  = NULL;
@@ -747,24 +747,21 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       cipher_number == TWOFISH) { // AES or SERPENT
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (cipher_number == AES) {
-        AES_Nk = 4;
-        AES_Nr = 10;
+        AES_Rounds = 10;
       }
       key_len = 128;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("192")) {
       if (cipher_number == AES) {
-        AES_Nk = 6;
-        AES_Nr = 12;
+        AES_Rounds = 12;
       }
       key_len = 192;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
       if (cipher_number == AES) {
-        AES_Nk = 8;
-        AES_Nr = 14;
+        AES_Rounds = 14;
       }
       key_len = 256;
     }
@@ -981,8 +978,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     arc4_init(arc4_ctx, buffer, key_len);
   }
   if (cipher_number == AES) {
-    ctx_len = AES_Nb * (AES_Nr + 1) * 4;
-    rijndael_ctx = (uint8_t *) calloc(ctx_len, 1);
+    ctx_len = 4 * (AES_Rounds + 1) * 4;
+    rijndael_ctx = (uint32_t *) calloc(ctx_len, 1);
     if (rijndael_ctx == NULL) {
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
@@ -1000,7 +997,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       return;
     }
 
-    rijndael_init(buffer, rijndael_ctx);
+    AES_Rounds =
+      rijndael_key_encrypt_init(rijndael_ctx, buffer, key_len * 8);
   }
   if (cipher_number == TWOFISH) {
     ctx_len = sizeof(TWOFISH_CTX);
