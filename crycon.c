@@ -1,9 +1,9 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.91;
+  Console Cryptography Software v4.92;
 
   Developer:    ARR0III;
-  Make date:    07 May 2021;
+  Make date:    10 May 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -49,6 +49,8 @@
 #define ENABLED              0x01
 #define DISABLED             0x00
 
+#define _DEBUG_INFORMATION_ DISABLED
+
 #define OK                      0
 #define READ_FILE_NOT_OPEN     -1
 #define WRITE_FILE_NOT_OPEN    -2
@@ -62,16 +64,14 @@
 #define PROGRESS_BAR_LENGTH (25+1)
 
 #define BOUNDARY             2048
-#define DATA_SIZE         (1024*4)
-
-#define _DEBUG_INFORMATION_ DISABLED
+#define DATA_SIZE         (1024*8) /* 8 KiB */
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.91 07MAY21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 10MAY21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
-uint8_t       * rijndael_ctx  = NULL;
+uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
 TWOFISH_CTX   * twofish_ctx   = NULL;
 BLOWFISH_CTX  * blowfish_ctx  = NULL;
@@ -125,7 +125,7 @@ typedef struct {
   size_t    vector_length;      /* block size cipher execution */
 
   uint8_t * temp_buffer;        /* temp_buffer for temp key data */
-  size_t    temp_buffer_length;
+  size_t    temp_buffer_length; /* size buffer for crypt key */
 
   uint8_t   input  [DATA_SIZE]; /* memory for read */
   uint8_t   output [DATA_SIZE]; /* memory for write */
@@ -327,7 +327,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
           switch (ctx->cipher_number) {
             case AES:
               rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
-              break;
+              break; 
             case SERPENT:
               serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
               break;
@@ -390,9 +390,8 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
             memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
             break;
           case THREEFISH:
-              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
+            threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
             break;
-        
         }
 
         strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
@@ -503,9 +502,9 @@ int main (int argc, char * argv[]) {
                "-e/--encrypt\n\t"
                "-d/--decrypt\n");
       printf("Lengths key:\n\t"
-               "-a/--128\n\t"
-               "-b/--192\n\t"
-               "-c/--256\n\n");
+               "-a/--128/--256\n\t"
+               "-b/--192/--512\n\t"
+               "-c/--256/--1024\n\n");
       printf("Enter: %s [algoritm] [operation]"
       	     " [key length] [input filename] [output filename] [key filename or string key]\n", argv[0]);
       return 0;
@@ -614,24 +613,21 @@ int main (int argc, char * argv[]) {
     
     if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--128") == 0) {
       if (AES == ctx->cipher_number) {
-        AES_Nk = 4;
-        AES_Nr = 10;
+        AES_Rounds = 10;
       }
       ctx->temp_buffer_length = 128;
     }
     else
     if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--192") == 0) {
       if (AES == ctx->cipher_number) {
-        AES_Nk = 6;
-        AES_Nr = 12;
+        AES_Rounds = 12;
       }
       ctx->temp_buffer_length = 192;
     }
     else
     if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--256") == 0) {
       if (AES == ctx->cipher_number) {
-        AES_Nk = 8;
-        AES_Nr = 14;
+        AES_Rounds = 14;
       }
       ctx->temp_buffer_length = 256;
     }
@@ -662,7 +658,6 @@ int main (int argc, char * argv[]) {
   }
 
 #if _DEBUG_INFORMATION_ == ENABLED
-
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
@@ -759,7 +754,7 @@ int main (int argc, char * argv[]) {
       break;
     case AES:
       ctx->vector_length = 16;
-      cipher_ctx_len = AES_Nb * (AES_Nr + 1) * 4;
+      cipher_ctx_len = 4 * (AES_Rounds + 1) * 4;
       break;
     case SERPENT:
       ctx->vector_length = 16;
@@ -833,7 +828,7 @@ int main (int argc, char * argv[]) {
   }
   else
   if (AES == ctx->cipher_number) {
-    rijndael_ctx = (uint8_t *) calloc(cipher_ctx_len, 1);
+    rijndael_ctx = (uint32_t *) calloc(cipher_ctx_len, 1);
     cipher_pointer = (void *)rijndael_ctx;
 
     if (NULL == rijndael_ctx) {
@@ -842,7 +837,9 @@ int main (int argc, char * argv[]) {
       MEMORY_ERROR();
       return (-1);
     }
-    rijndael_init(ctx->temp_buffer, rijndael_ctx);
+    
+    AES_Rounds =
+      rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
   }
   if (TWOFISH == ctx->cipher_number) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
