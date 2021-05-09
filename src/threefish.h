@@ -31,3 +31,4 @@
   void threefish_decrypt(THREEFISH_CTX * ctx,
                          uint64_t * in, uint64_t * out);
 #endif
+

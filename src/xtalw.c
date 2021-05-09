@@ -6,19 +6,12 @@
   affect the operation of the program in any way.
 */
 
-#ifndef _C_STDIO_H_
-#define _C_STDIO_H_
-  #include <stdio.h>
-#endif
+#include <stdio.h>
+#include <stdint.h>
 
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-  
 #define HEX_TABLE  1
 #define HEX_STRING 0
-  
+
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
@@ -44,8 +37,13 @@ size_t __strnlen(const char * string, size_t length) {
   size_t result = 0;
 
   if (NULL != string) {
-    while (length) {
-      if ('\0' == string[result]) {
+    while (0 != length) {
+      if ('\0' == string[result] || '\n' == string[result] ||
+          '\t' == string[result] || '\r' == string[result] ||
+          '\v' == string[result] || '\a' == string[result] ||
+          '\?' == string[result] || '\\' == string[result] ||
+          '\'' == string[result] || '\"' == string[result] ) {
+      
         break;
       }
       result++;
@@ -121,4 +119,3 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   putc('\n', stdout);
   return i;
 }
-

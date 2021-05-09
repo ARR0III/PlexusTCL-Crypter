@@ -1,5 +1,8 @@
 #include "rijndael.c"
 
-void rijndael_init(const uint8_t *key, uint8_t *w);
-void rijndael_encrypt(uint8_t *w, const uint8_t *in, uint8_t *out);
-void rijndael_decrypt(uint8_t *w, const uint8_t *in, uint8_t *out);
+int rijndael_key_encrypt_init(uint32_t * table, const uint8_t * cipher_key, int key_bits);
+int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipher_key, int key_bits);
+
+void rijndael_encrypt(const uint32_t * table, const uint8_t * pt, uint8_t * ct);
+void rijndael_decrypt(const uint32_t * table, const uint8_t * ct, uint8_t * pt);
+

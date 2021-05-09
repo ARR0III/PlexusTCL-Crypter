@@ -1,13 +1,5 @@
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
-#ifndef _C_STRING_H_
-#define _C_STRING_H_
-  #include <string.h>
-#endif
-
+#include <string.h>
+#include <stdint.h>
 #include "serpentsboxes.h"
 
 typedef struct {
@@ -98,7 +90,7 @@ void serpent_init(SERPENT_CTX * ctx, const int keylen, const uint8_t * keymateri
   }
 }
 
-void serpent_encrypt(SERPENT_CTX * ctx, uint32_t * plaintext, uint32_t * ciphertext) {
+void serpent_encrypt(SERPENT_CTX * ctx, const uint32_t * plaintext, uint32_t * ciphertext) {
   register uint32_t x0, x1, x2, x3;
   register uint32_t y0, y1, y2, y3;
 
@@ -211,7 +203,7 @@ void serpent_encrypt(SERPENT_CTX * ctx, uint32_t * plaintext, uint32_t * ciphert
   ciphertext[3] = x3;
 }
 
-void serpent_decrypt(SERPENT_CTX * ctx, uint32_t * ciphertext, uint32_t * plaintext) {
+void serpent_decrypt(SERPENT_CTX * ctx, const uint32_t * ciphertext, uint32_t * plaintext) {
   register uint32_t x0, x1, x2, x3;
   register uint32_t y0, y1, y2, y3;
 
@@ -328,4 +320,3 @@ void serpent_decrypt(SERPENT_CTX * ctx, uint32_t * ciphertext, uint32_t * plaint
   plaintext[2] = x2;
   plaintext[3] = x3;
 }
-

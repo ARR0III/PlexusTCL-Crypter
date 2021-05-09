@@ -1,8 +1,3 @@
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
 typedef struct {
   uint32_t P[18];
   uint32_t S[4][256];
