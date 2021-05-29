@@ -36,15 +36,11 @@ size_t __strnlen(const char * string, size_t length) {
 
   size_t result = 0;
 
-  if (NULL != string) {
-    while (0 != length) {
-      if ('\0' == string[result]) {
-        break;
-      }
-      result++;
-      length--;
-    }
+  while (length && string[result]) {
+    result++;
+    length--;
   }
+  
   return result;
 }
 
