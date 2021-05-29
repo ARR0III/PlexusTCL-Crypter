@@ -38,12 +38,7 @@ size_t __strnlen(const char * string, size_t length) {
 
   if (NULL != string) {
     while (0 != length) {
-      if ('\0' == string[result] || '\n' == string[result] ||
-          '\t' == string[result] || '\r' == string[result] ||
-          '\v' == string[result] || '\a' == string[result] ||
-          '\?' == string[result] || '\\' == string[result] ||
-          '\'' == string[result] || '\"' == string[result] ) {
-      
+      if ('\0' == string[result]) {
         break;
       }
       result++;
