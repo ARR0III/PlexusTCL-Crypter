@@ -31,6 +31,14 @@
 #define DEBUG_INFORMATION 1
 #endif
 
+/* if COMPILE_FOR_WINDOWS defined in command line */
+#ifdef COMPILE_FOR_WINDOWS
+#include <windows.h>
+#define __STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
+#else
+#define __STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
+#endif
+
 #define OK                      0
 #define READ_FILE_NOT_OPEN     -1
 #define WRITE_FILE_NOT_OPEN    -2
@@ -521,21 +529,21 @@ int main (int argc, char * argv[]) {
   printf("[DEBUG] keyfile filename: %s\n", ctx->keyfile);
 #endif
   
-  if (strcmp(ctx->finput, ctx->foutput) == 0) {
+  if (__STRCMP(ctx->finput, ctx->foutput) == 0) {
 	free_global_memory(ctx, ctx_length);
 	
 	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
-  if (strcmp(ctx->foutput, ctx->keyfile) == 0) {
+  if (__STRCMP(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
     
     printf("[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
-  if (strcmp(ctx->finput, ctx->keyfile) == 0) {
+  if (__STRCMP(ctx->finput, ctx->keyfile) == 0) {
 	free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
