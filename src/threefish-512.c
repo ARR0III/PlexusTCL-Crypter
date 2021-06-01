@@ -1,7 +1,4 @@
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
+#include <stdint.h>
 
 typedef struct {
   uint64_t SUBKEYS[19][8];

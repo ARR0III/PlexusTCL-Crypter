@@ -6,6 +6,9 @@
   affect the operation of the program in any way.
 */
 
+#ifndef XTALW_H
+#define XTALW_H
+
 #include "xtalw.c"
 
 int    genrand(const int min, const int max);
@@ -16,3 +19,5 @@ size_t __strnlen(const char * string, size_t length);
 
 void * meminit(void * data, const uint8_t simbol, size_t length);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
+
+#endif

@@ -1,8 +1,8 @@
 // sha3.h
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 
-#ifndef SHA3_H
-#define SHA3_H
+#ifndef KECCAK_H
+#define KECCAK_H
 
 #include <stddef.h>
 #include <stdint.h>

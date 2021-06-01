@@ -2,10 +2,7 @@
   Developer:    D. J. Bernstein;
   Modification: ARR0III;
 */
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
+#include <stdint.h>
 
 typedef struct {
   uint32_t key[32];

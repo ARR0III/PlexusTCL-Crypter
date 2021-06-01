@@ -5,8 +5,6 @@
   functions, so their replacement with the original functions should not
   affect the operation of the program in any way.
 */
-#ifndef _XTALW_SOURCE_CODE_
-#define _XTALW_SOURCE_CODE_
 
 #include <stdio.h>
 #include <stdint.h>
@@ -116,4 +114,3 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   return i;
 }
 
-#endif
