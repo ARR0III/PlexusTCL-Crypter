@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 const
   uint8_t * base64table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

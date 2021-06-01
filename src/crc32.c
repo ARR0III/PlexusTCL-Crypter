@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 uint32_t Crc32Table[256] = {
     0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
     0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
@@ -74,3 +76,4 @@ uint32_t CRC32(const uint8_t * buffer, uint64_t len) {
 
   return (crc ^ 0xFFFFFFFF);
 }
+

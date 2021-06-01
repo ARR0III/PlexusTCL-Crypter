@@ -2,10 +2,7 @@
  * Copyright 1999 Dr. Brian Gladman <brian.gladman@btinternet.com>
  * Copyright 2001 Abhijit Menon-Sen <ams@wiw.org>
  */
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
+#include <stdint.h>
 
 #ifndef _TWOFISH_H_
 #define _TWOFISH_H_

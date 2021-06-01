@@ -5,13 +5,15 @@
   functions, so their replacement with the original functions should not
   affect the operation of the program in any way.
 */
+#ifndef _XTALW_SOURCE_CODE_
+#define _XTALW_SOURCE_CODE_
 
 #include <stdio.h>
 #include <stdint.h>
 
 #define HEX_TABLE  1
 #define HEX_STRING 0
-
+  
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
@@ -32,13 +34,14 @@ void * meminit(void * data, const uint8_t simbol, size_t length) {
   return data;
 }
 
-size_t __strnlen(const char * string, size_t length) {
+
+size_t __strnlen(const char * string, size_t boundary) {
 
   size_t result = 0;
 
-  while (length && string[result]) {
+  while (boundary && string[result]) {
+    boundary--;
     result++;
-    length--;
   }
   
   return result;
@@ -68,7 +71,6 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
   const uint8_t * temp;
-  size_t i;
 
   if (NULL == input || NULL == output || 0 == length) {
     return output;
@@ -76,8 +78,11 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
   temp = input;
 
-  for (i = 0; i < length; ++i) {
-    output[i] ^= *temp;
+  while (length) {
+    *output ^= *temp;
+    
+    length--;
+    output++;
     temp++;
   }
   
@@ -95,13 +100,13 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
 
   temp = (uint8_t *)data;
 
-  if (tumbler == HEX_TABLE) {
+  if (HEX_TABLE == tumbler) {
     for (; i < length; ++i) {
       (void)printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
   else
-  if (tumbler == HEX_STRING) {
+  if (HEX_STRING == tumbler) {
     for (; i < length; ++i) {
       (void)printf("%02X",  temp[i]);
     }
@@ -110,3 +115,5 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   putc('\n', stdout);
   return i;
 }
+
+#endif

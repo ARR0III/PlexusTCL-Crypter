@@ -5,4 +5,3 @@ int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipher_key, int 
 
 void rijndael_encrypt(const uint32_t * table, const uint8_t * pt, uint8_t * ct);
 void rijndael_decrypt(const uint32_t * table, const uint8_t * ct, uint8_t * pt);
-

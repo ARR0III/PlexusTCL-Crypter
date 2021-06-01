@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 typedef struct {
   uint32_t P[18];
   uint32_t S[4][256];

@@ -1,12 +1,5 @@
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
-#ifndef _C_STDLIB_H_
-#define _C_STDLIB_H_
-  #include <stdlib.h>
-#endif
+#include <stdint.h>
+#include <stdlib.h>
 
 /* !!! do NOT change this is const !!! */
 uint64_t C240 = 0x1BD11BDAA9FC1A22;
