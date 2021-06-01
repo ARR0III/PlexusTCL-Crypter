@@ -8,31 +8,11 @@
   Language:     English;
 */
 #include <time.h>
-
-#ifndef _C_STDIO_H_
-#define _C_STDIO_H_
-  #include <stdio.h>
-#endif
-
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
-#ifndef _C_STDLIB_H_
-#define _C_STDLIB_H_
-  #include <stdlib.h>
-#endif
-
-#ifndef _C_STRING_H_
-#define _C_STRING_H_
-  #include <string.h>
-#endif
-
-#ifndef _C_STDDEF_H_
-#define _C_STDDEF_H_
-  #include <stddef.h>
-#endif
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
 
 #include "src/arc4.h"
 #include "src/crc32.h"
@@ -46,10 +26,10 @@
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
-#define ENABLED              0x01
-#define DISABLED             0x00
-
-#define _DEBUG_INFORMATION_ DISABLED
+/* if DEBUG_INFORMATION not defined */
+#ifdef DEBUG_INFORMATION
+#define DEBUG_INFORMATION 1
+#endif
 
 #define OK                      0
 #define READ_FILE_NOT_OPEN     -1
@@ -64,7 +44,7 @@
 #define PROGRESS_BAR_LENGTH (25+1)
 
 #define BOUNDARY             2048
-#define DATA_SIZE         (1024*8) /* 8 KiB */
+#define DATA_SIZE      (1024*1024) /* 1 MB */
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
@@ -78,12 +58,12 @@ BLOWFISH_CTX  * blowfish_ctx  = NULL;
 THREEFISH_CTX * threefish_ctx = NULL;
 
 enum {
-  ARC4      = 0,
-  AES       = 1,
-  SERPENT   = 2,
-  TWOFISH   = 3,
-  BLOWFISH  = 4,
-  THREEFISH = 5
+  ARC4      ,
+  AES       ,
+  SERPENT   ,
+  TWOFISH   ,
+  BLOWFISH  ,
+  THREEFISH
 };
 
 static const uint32_t INT_SIZE_DATA[] = {
@@ -163,11 +143,11 @@ static int size_check(uint32_t size) {
   return result;
 }
 
-static float sizetofloatprint(const int status, const float size) {
-  return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
+static double sizetodoubleprint(const int status, const double size) {
+  return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
 }
 
-static void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
+static void KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
                     uint8_t * key,      const size_t key_length) {
 
@@ -212,8 +192,6 @@ static void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
 */
   meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
-
-  return key;
 }
 
 static void cent(short * number) {
@@ -222,6 +200,7 @@ static void cent(short * number) {
   }
 }
 
+/* return encrypt, decrypt or stream */
 static int operation_variant(const int cipher, const int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
@@ -246,7 +225,7 @@ static void cipher_free(void * ctx, size_t ctx_length) {
   free(ctx);
 }
 
-static size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
@@ -264,8 +243,6 @@ static size_t free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   /* clear all memory and all pointers */
   meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
-  
-  return ctx_length;
 }
 /*
 void pmemory(GLOBAL_MEMORY * ctx) {
@@ -304,10 +281,10 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     return SIZE_FILE_ERROR;
   }
 
-  float div         = (float)((float)fsize / 100.0);
-  int   real_check  = 0;
-  int   fsize_check = size_check(fsize);
-  float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
+  double div          = (double)((double)fsize / 100.0);
+  int    real_check   = 0;
+  int    fsize_check  = size_check(fsize);
+  double fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
   size_t nblock;
   size_t realread;
@@ -322,49 +299,47 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 */
   while (position < fsize) {
     if ((ARC4 != ctx->cipher_number) && (0 == position)) {
-      switch (ctx->operation) {
-        case ENCRYPT:
-          switch (ctx->cipher_number) {
-            case AES:
-              rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
-              break; 
-            case SERPENT:
-              serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
-              break;
-            case TWOFISH:
-              twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
-              break;
-            case BLOWFISH:
-              memmove(ctx->output, ctx->vector, ctx->vector_length);
-              blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
-              break;
-            case THREEFISH:
-              threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
-              break;
-          }
+      if (ENCRYPT == ctx->operation) {
+        switch (ctx->cipher_number) {
+          case AES:
+            rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
+            break; 
+          case SERPENT:
+            serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
+            break;
+          case TWOFISH:
+            twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
+            break;
+          case BLOWFISH:
+            memmove(ctx->output, ctx->vector, ctx->vector_length);
+            blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
+            break;
+          case THREEFISH:
+            threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
+            break;
+        }
 
-          memmove(ctx->vector, ctx->output, ctx->vector_length);
+        memmove(ctx->vector, ctx->output, ctx->vector_length);
 
-          if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
-            fclose(fi);
-            fclose(fo);
+        if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
+          fclose(fi);
+          fclose(fo);
 
-            return WRITE_FILE_ERROR;
-          }
-          else {
-            fflush(fo);
-          }
-          break;
+          return WRITE_FILE_ERROR;
+        }
+        else {
+          fflush(fo);
+        }
+      }
+      else
+      if (DECRYPT == ctx->operation) {
+        if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
+          fclose(fi);
+          fclose(fo);
 
-        case DECRYPT:
-          if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
-            fclose(fi);
-            fclose(fo);
-
-            return READ_FILE_ERROR;
-          }
-          position += (int32_t)ctx->vector_length;
-          break;
+          return READ_FILE_ERROR;
+        }
+        position += (int32_t)ctx->vector_length;
       }
     }
 
@@ -410,23 +385,26 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     position += (int32_t)realread;
-    real_percent = (short)((float)position / div + 0.1);
+    real_percent = (short)((double)position / div + 0.1);
 
     cent(&real_percent);
-
+    
     if (real_percent > past_percent) {
       if ((real_percent % 4) == 0) {
         meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
-        printf(" >  %s [%s] (%4.1f %s/%4.1f %s) %3d %%",
+        printf(" >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
           OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
           ctx->progress_bar,
-          sizetofloatprint(real_check, (float)position),
+          
+          sizetodoubleprint(real_check, (double)position + 0.1),
           CHAR_SIZE_DATA[real_check],
-          fsize_float,
+          
+          fsize_double,
           CHAR_SIZE_DATA[fsize_check],
+          
           real_percent);
           
           /* '\r' not show printf function */
@@ -458,7 +436,7 @@ static size_t vector_init(uint8_t * data, size_t size) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
-  data[0] ^= (uint8_t)((uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF));
+  data[0] ^= (uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF);
 
   size = size - 2;
 
@@ -528,7 +506,7 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
@@ -537,7 +515,7 @@ int main (int argc, char * argv[]) {
   ctx->foutput = argv[argc - 2];
   ctx->finput  = argv[argc - 3];
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] input filename: %s\n", ctx->finput);
   printf("[DEBUG] output filename: %s\n", ctx->foutput);
   printf("[DEBUG] keyfile filename: %s\n", ctx->keyfile);
@@ -657,7 +635,7 @@ int main (int argc, char * argv[]) {
     }
   }
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
@@ -682,7 +660,7 @@ int main (int argc, char * argv[]) {
     return (-1);
   }
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] temp memory allocated: %ld byte\n", ctx->temp_buffer_length);
   printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
 #endif
@@ -738,7 +716,7 @@ int main (int argc, char * argv[]) {
 
   printf("[#] Key length %d-bits initialized!\n", (int32_t)ctx->temp_buffer_length * 8);
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] key or password length: %d byte\n", real_read);
   printf("[DEBUG] key generator write data in pointer: %p\n", ctx->temp_buffer);
   printf("[DEBUG] REAL CRYPT KEY DATA:\n");
@@ -786,7 +764,7 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] vector memory allocated: %ld byte\n", ctx->vector_length);
   printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
 #endif
@@ -803,7 +781,7 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
   printf("[DEBUG] VECTOR REAL DATA:\n");
   printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
@@ -901,7 +879,7 @@ int main (int argc, char * argv[]) {
   printf("[#] Algoritm %s initialized!\n",
     ALGORITM_NAME[(ctx->cipher_number)]);
 
-#if _DEBUG_INFORMATION_ == ENABLED
+#if DEBUG_INFORMATION
   printf("[DEBUG] allocate byte for cipher struct: %ld\n", cipher_ctx_len);
   printf("[DEBUG] REAL DATA CIPHER STRUCT:\n");
   printhex(HEX_TABLE, cipher_pointer, cipher_ctx_len);
