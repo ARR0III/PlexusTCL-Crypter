@@ -257,19 +257,7 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
 }
-/*
-void pmemory(GLOBAL_MEMORY * ctx) {
-    printf("CTX:    %p\n"
-           "vector: %p\n"
-           "input:  %p\n"
-           "output: %p\n", 
 
-           ctx,
-           ctx->vector,
-           ctx->input,
-           ctx->output);
-}
-*/
 static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
@@ -306,10 +294,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   short past_percent = 0;
 
   meminit((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
-/*
-  control pointers allocated memory
-  pmemory(ctx);
-*/
+
   while (position < fsize) {
     if ((ARC4 != ctx->cipher_number) && (0 == position)) {
       if (ENCRYPT == ctx->operation) {
@@ -429,10 +414,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       past_percent = real_percent;
     }
   }
-/*
-  control pointers allocated memory
-  pmemory(ctx);
-*/
+
   putc('\n', stdout);
 
   fclose(fi);
@@ -536,22 +518,19 @@ int main (int argc, char * argv[]) {
 #endif
   
   if (__STRCMP(ctx->finput, ctx->foutput) == 0) {
-	free_global_memory(ctx, ctx_length);
-	
-	printf("[!] Names input and output files equal!\n");
+    free_global_memory(ctx, ctx_length);
+    printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
   if (__STRCMP(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
-    
     printf("[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
   if (__STRCMP(ctx->finput, ctx->keyfile) == 0) {
-	free_global_memory(ctx, ctx_length);
-	
+    free_global_memory(ctx, ctx_length);
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
   }
@@ -574,7 +553,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -624,7 +603,7 @@ int main (int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-	  free_global_memory(ctx, ctx_length);
+      free_global_memory(ctx, ctx_length);
 	  
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
@@ -741,8 +720,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-	case ARC4:
-	  cipher_ctx_len = sizeof(ARC4_CTX);
+    case ARC4:
+      cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
