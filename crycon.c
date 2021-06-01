@@ -818,6 +818,7 @@ int main (int argc, char * argv[]) {
                                            ctx->temp_buffer,
                                            ctx->temp_buffer_length * 8);
   }
+  else
   if (TWOFISH == ctx->cipher_number) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)twofish_ctx;
