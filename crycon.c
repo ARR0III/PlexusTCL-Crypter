@@ -162,10 +162,13 @@ static void KDFCLOMUL(SHA256_CTX * sha256_ctx,
   uint32_t i, j, k;
   uint32_t count = 0;
   uint8_t  hash[SHA256_BLOCK_SIZE];
-/*
+  
+#if DEBUG_INFORMATION
+  printf("[DEBUG] make crypt key information\n");
   srand(time(0));
   clock_t min = clock();
-*/
+#endif
+
   for (i = 0; i < password_len; ++i) {  /* dynamic generation count */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
     count -= (password_len + key_length + CLOMUL_CONST + i);
@@ -175,10 +178,11 @@ static void KDFCLOMUL(SHA256_CTX * sha256_ctx,
   count >>= 18; /* MAX == 16383 */
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
-/*
-  printf("Count = %ld\n", count);
-  exit(0);
-*/
+  
+#if DEBUG_INFORMATION
+  printf("[DEBUG] count iteration = %ld\n", count);
+#endif
+
   sha256_init(sha256_ctx);
 
   for (i = k = 0; i < key_length; ++i, ++k) {
@@ -194,10 +198,11 @@ static void KDFCLOMUL(SHA256_CTX * sha256_ctx,
 
     key[i] = hash[k];
   }
-/*
-  printf("Execute time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
-  exit(0);
-*/
+  
+#if DEBUG_INFORMATION
+  printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
+#endif
+
   meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   count = i = j = k = 0;
 }
