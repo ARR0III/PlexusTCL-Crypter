@@ -124,16 +124,16 @@ typedef struct {
   int       cipher_number;
 } GLOBAL_MEMORY;
 
-static void NAME_CIPHER_ERROR(const char * name) {
+void NAME_CIPHER_ERROR(const char * name) {
   printf("[!] Name cipher \"%s\" incorrect!\n", name);
 }
 
-static void MEMORY_ERROR(void) {
+void MEMORY_ERROR(void) {
   printf("[!] Cannot allocate memory!\n");
 }
 
 /* Function size_check checked size = Bt, Kb, Mb or Gb */
-static int size_check(uint32_t size) {
+int size_check(uint32_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
@@ -151,11 +151,11 @@ static int size_check(uint32_t size) {
   return result;
 }
 
-static double sizetodoubleprint(const int status, const double size) {
+double sizetodoubleprint(const int status, const double size) {
   return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
 }
 
-static void KDFCLOMUL(SHA256_CTX * sha256_ctx,
+void KDFCLOMUL(SHA256_CTX * sha256_ctx,
               const uint8_t * password, const size_t password_len,
                     uint8_t * key,      const size_t key_length) {
 
@@ -214,11 +214,11 @@ static void cent(short * number) {
 }
 
 /* return encrypt, decrypt or stream */
-static int operation_variant(const int cipher, const int operation) {
+int operation_variant(const int cipher, const int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
-static long int size_of_file(FILE * f) {
+long int size_of_file(FILE * f) {
 
   if (fseek(f, 0, SEEK_END) != 0) {
     return (-1);
@@ -233,12 +233,12 @@ static long int size_of_file(FILE * f) {
   return result;
 }
 
-static void cipher_free(void * ctx, size_t ctx_length) {
+void cipher_free(void * ctx, size_t ctx_length) {
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
 }
 
-static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (NULL != ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
@@ -258,7 +258,7 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free((void *)ctx);
 }
 
-static int filecrypt(GLOBAL_MEMORY * ctx) {
+int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
   
@@ -518,19 +518,22 @@ int main (int argc, char * argv[]) {
 #endif
   
   if (__STRCMP(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
-    printf("[!] Names input and output files equal!\n");
+	free_global_memory(ctx, ctx_length);
+	
+	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
   if (__STRCMP(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
+    
     printf("[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
   if (__STRCMP(ctx->finput, ctx->keyfile) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
+	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
   }
@@ -553,7 +556,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -574,6 +577,8 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
   }
+  
+  extern int AES_Rounds;
   
   if (ARC4 == ctx->cipher_number)
     ctx->temp_buffer_length = 2048;
@@ -603,7 +608,7 @@ int main (int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-      free_global_memory(ctx, ctx_length);
+	  free_global_memory(ctx, ctx_length);
 	  
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
@@ -720,8 +725,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-    case ARC4:
-      cipher_ctx_len = sizeof(ARC4_CTX);
+	case ARC4:
+	  cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
@@ -809,8 +814,9 @@ int main (int argc, char * argv[]) {
       return (-1);
     }
     
-    AES_Rounds =
-      rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
+    AES_Rounds = rijndael_key_encrypt_init(rijndael_ctx,
+                                           ctx->temp_buffer,
+                                           ctx->temp_buffer_length * 8);
   }
   if (TWOFISH == ctx->cipher_number) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
