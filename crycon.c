@@ -58,12 +58,12 @@ const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
 const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 02JUN21 [EN]";
 
-ARC4_CTX      * arc4_ctx      = NULL;
-uint32_t      * rijndael_ctx  = NULL;
-SERPENT_CTX   * serpent_ctx   = NULL;
-TWOFISH_CTX   * twofish_ctx   = NULL;
-BLOWFISH_CTX  * blowfish_ctx  = NULL;
-THREEFISH_CTX * threefish_ctx = NULL;
+static ARC4_CTX      * arc4_ctx      = NULL;
+static uint32_t      * rijndael_ctx  = NULL;
+static SERPENT_CTX   * serpent_ctx   = NULL;
+static TWOFISH_CTX   * twofish_ctx   = NULL;
+static BLOWFISH_CTX  * blowfish_ctx  = NULL;
+static THREEFISH_CTX * threefish_ctx = NULL;
 
 enum {
   ARC4      ,
