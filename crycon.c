@@ -3,7 +3,7 @@
   Console Cryptography Software v4.92;
 
   Developer:    ARR0III;
-  Make date:    10 May 2021;
+  Make date:    02 June 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -56,7 +56,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 10MAY21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 02JUN21 [EN]";
 
 ARC4_CTX      * arc4_ctx      = NULL;
 uint32_t      * rijndael_ctx  = NULL;
@@ -515,6 +515,7 @@ int main (int argc, char * argv[]) {
   }
 
 #if DEBUG_INFORMATION
+  printf("[DEBUG] compile date and time:   %s, %s\n", __DATE__, __TIME__);
   printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
