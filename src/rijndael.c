@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <stdlib.h>
-
 /*
  This variable stores the number of
  rounds of encryption/decryption. 
@@ -669,6 +668,7 @@ static const uint32_t Td4[256] = {
   0xe1e1e1e1U, 0x69696969U, 0x14141414U, 0x63636363U,
   0x55555555U, 0x21212121U, 0x0c0c0c0cU, 0x7d7d7d7dU,
 };
+
 static const uint32_t rcon[] = {
   0x01000000, 0x02000000, 0x04000000, 0x08000000,
   0x10000000, 0x20000000, 0x40000000, 0x80000000,
@@ -781,19 +781,19 @@ int rijndael_key_encrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
 }
 
 int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipherKey, int keyBits) {
-  int Nr, i, j;
+  int i, j;
   uint32_t temp;
 
-  Nr = rijndael_key_encrypt_init(table, cipherKey, keyBits);
+  AES_Rounds = rijndael_key_encrypt_init(table, cipherKey, keyBits);
 
-  for (i = 0, j = 4*Nr; i < j; i += 4, j -= 4) {
+  for (i = 0, j = 4*AES_Rounds; i < j; i += 4, j -= 4) {
     temp = table[i    ]; table[i    ] = table[j    ]; table[j    ] = temp;
     temp = table[i + 1]; table[i + 1] = table[j + 1]; table[j + 1] = temp;
     temp = table[i + 2]; table[i + 2] = table[j + 2]; table[j + 2] = temp;
     temp = table[i + 3]; table[i + 3] = table[j + 3]; table[j + 3] = temp;
   }
 
-  for (i = 1; i < Nr; i++) {
+  for (i = 1; i < AES_Rounds; i++) {
     table += 4;
     table[0] =
       Td0[Te4[(table[0] >> 24)       ] & 0xff] ^
@@ -816,7 +816,7 @@ int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
       Td2[Te4[(table[3] >>  8) & 0xff] & 0xff] ^
       Td3[Te4[(table[3]      ) & 0xff] & 0xff];
   }
-  return Nr;
+  return AES_Rounds;
 }
 
 void rijndael_encrypt(const uint32_t * table, const uint8_t * pt, uint8_t * ct) {
