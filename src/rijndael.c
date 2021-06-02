@@ -781,19 +781,19 @@ int rijndael_key_encrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
 }
 
 int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipherKey, int keyBits) {
-  int i, j;
+  int Nr, i, j;
   uint32_t temp;
 
-  AES_Rounds = rijndael_key_encrypt_init(table, cipherKey, keyBits);
+  Nr = rijndael_key_encrypt_init(table, cipherKey, keyBits);
 
-  for (i = 0, j = 4*AES_Rounds; i < j; i += 4, j -= 4) {
+  for (i = 0, j = 4*Nr; i < j; i += 4, j -= 4) {
     temp = table[i    ]; table[i    ] = table[j    ]; table[j    ] = temp;
     temp = table[i + 1]; table[i + 1] = table[j + 1]; table[j + 1] = temp;
     temp = table[i + 2]; table[i + 2] = table[j + 2]; table[j + 2] = temp;
     temp = table[i + 3]; table[i + 3] = table[j + 3]; table[j + 3] = temp;
   }
 
-  for (i = 1; i < AES_Rounds; i++) {
+  for (i = 1; i < Nr; i++) {
     table += 4;
     table[0] =
       Td0[Te4[(table[0] >> 24)       ] & 0xff] ^
@@ -816,7 +816,7 @@ int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipherKey, int k
       Td2[Te4[(table[3] >>  8) & 0xff] & 0xff] ^
       Td3[Te4[(table[3]      ) & 0xff] & 0xff];
   }
-  return AES_Rounds;
+  return Nr;
 }
 
 void rijndael_encrypt(const uint32_t * table, const uint8_t * pt, uint8_t * ct) {
