@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #define HEX_TABLE  1
 #define HEX_STRING 0
@@ -33,7 +34,7 @@ void * meminit(void * data, const uint8_t simbol, size_t length) {
 }
 
 
-size_t __strnlen(const char * string, size_t boundary) {
+size_t xtalw_strnlen(const char * string, size_t boundary) {
 
   size_t result = 0;
 
@@ -113,4 +114,3 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   putc('\n', stdout);
   return i;
 }
-

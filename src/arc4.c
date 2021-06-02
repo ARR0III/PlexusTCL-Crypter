@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
   
 size_t arc4_i, arc4_j;
 

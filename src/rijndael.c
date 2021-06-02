@@ -1054,3 +1054,4 @@ void rijndael_decrypt(const uint32_t * table, const uint8_t * ct, uint8_t * pt) 
     
   PUTU32(pt + 12, s3);
 }
+
