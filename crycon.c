@@ -3,7 +3,7 @@
   Console Cryptography Software v4.92;
 
   Developer:    ARR0III;
-  Make date:    02 June 2021;
+  Make date:    04 June 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -34,9 +34,9 @@
 /* if COMPILE_FOR_WINDOWS defined */
 #ifdef COMPILE_FOR_WINDOWS
 #include <windows.h>
-#define __STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
+#define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
 #else
-#define __STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
+#define STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
 #endif
 
 #define OK                      0
@@ -56,7 +56,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 02JUN21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 04JUN21 [EN]";
 
 static ARC4_CTX      * arc4_ctx      = NULL;
 static uint32_t      * rijndael_ctx  = NULL;
@@ -76,7 +76,7 @@ enum {
 
 static const uint32_t INT_SIZE_DATA[] = {
   1024,      /* KiB */
-  1048576,   /* MiB */
+  1048576,   /* MeB */
   1073741824 /* GiB */
 };
 
@@ -180,7 +180,7 @@ void KDFCLOMUL(SHA256_CTX * sha256_ctx,
   count  *= CLOMUL_CONST;
   
 #if DEBUG_INFORMATION
-  printf("[DEBUG] count iteration = %ld\n", count);
+  printf("[DEBUG] count iteration: %u\n", count);
 #endif
 
   sha256_init(sha256_ctx);
@@ -301,7 +301,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         switch (ctx->cipher_number) {
           case AES:
             rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
-            break; 
+            break;
           case SERPENT:
             serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
             break;
@@ -425,7 +425,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
 size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
-  size_t stack_trash; /* NOT initialized */
+  size_t stack_trash; /* NOT initialized == ALL OK */
 
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
@@ -444,11 +444,11 @@ size_t vector_init(uint8_t * data, size_t size) {
   return i;
 }
 
-int main (int argc, char * argv[]) {
+int main(int argc, char * argv[]) {
 
   if (argc > 1 && argc < 8) {
     for (int i = 1; i < (argc - 1); i++) {
-      if (__strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* if length argument >= 2048 */
+      if (xtalw_strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* if length argument >= 2048 */
         printf("[!] Warning: argument \"%d\" length more \"%d\"!\n", i, BOUNDARY);
         return (-1);
       }
@@ -517,22 +517,22 @@ int main (int argc, char * argv[]) {
   printf("[DEBUG] keyfile filename: %s\n", ctx->keyfile);
 #endif
   
-  if (__STRCMP(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
+  if (STRCMP(ctx->finput, ctx->foutput) == 0) {
+	free_global_memory(ctx, ctx_length);
 	
-    printf("[!] Names input and output files equal!\n");
+	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
-  if (__STRCMP(ctx->foutput, ctx->keyfile) == 0) {
+  if (STRCMP(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
     
     printf("[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
-  if (__STRCMP(ctx->finput, ctx->keyfile) == 0) {
-    free_global_memory(ctx, ctx_length);
+  if (STRCMP(ctx->finput, ctx->keyfile) == 0) {
+	free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -556,7 +556,7 @@ int main (int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -578,7 +578,7 @@ int main (int argc, char * argv[]) {
     }
   }
   
-  extern int AES_Rounds;
+  extern int AES_Rounds; /* in rijndael.c source code file */
   
   if (ARC4 == ctx->cipher_number)
     ctx->temp_buffer_length = 2048;
@@ -608,7 +608,7 @@ int main (int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-      free_global_memory(ctx, ctx_length);
+	  free_global_memory(ctx, ctx_length);
 	  
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
@@ -678,7 +678,7 @@ int main (int argc, char * argv[]) {
   }
   else
   if ((0 == real_read) || ((-1) == real_read)) {
-    real_read = (int)__strnlen(ctx->keyfile, 256);
+    real_read = (int)xtalw_strnlen(ctx->keyfile, 256);
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       size_t sha_ctx_len = sizeof(SHA256_CTX);
@@ -725,8 +725,8 @@ int main (int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-    case ARC4:
-      cipher_ctx_len = sizeof(ARC4_CTX);
+	case ARC4:
+	  cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
