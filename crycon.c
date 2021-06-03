@@ -518,9 +518,9 @@ int main(int argc, char * argv[]) {
 #endif
   
   if (STRCMP(ctx->finput, ctx->foutput) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
-	printf("[!] Names input and output files equal!\n");
+    printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
@@ -532,7 +532,7 @@ int main(int argc, char * argv[]) {
   }
   else
   if (STRCMP(ctx->finput, ctx->keyfile) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -556,7 +556,7 @@ int main(int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -725,8 +725,8 @@ int main(int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-	case ARC4:
-	  cipher_ctx_len = sizeof(ARC4_CTX);
+    case ARC4:
+      cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
