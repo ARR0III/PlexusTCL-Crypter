@@ -7,6 +7,20 @@
   Modification: Release (Original);
   Language:     English;
 */
+
+/* if DEBUG_INFORMATION defined */
+#ifdef DEBUG_INFORMATION
+#define DEBUG_INFORMATION 1
+#endif
+
+/* if COMPILE_FOR_WINDOWS defined */
+#ifdef COMPILE_FOR_WINDOWS
+#include <windows.h>
+#define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
+#else
+#define STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
+#endif
+
 #include <time.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -25,19 +39,6 @@
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
-
-/* if DEBUG_INFORMATION defined */
-#ifdef DEBUG_INFORMATION
-#define DEBUG_INFORMATION 1
-#endif
-
-/* if COMPILE_FOR_WINDOWS defined */
-#ifdef COMPILE_FOR_WINDOWS
-#include <windows.h>
-#define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
-#else
-#define STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
-#endif
 
 #define OK                      0
 #define READ_FILE_NOT_OPEN     -1
