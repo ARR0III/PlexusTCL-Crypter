@@ -34,7 +34,7 @@ void * meminit(void * data, const uint8_t simbol, size_t length) {
 }
 
 
-size_t xtalw_strnlen(const char * string, size_t boundary) {
+size_t x_strnlen(const char * string, size_t boundary) {
 
   size_t result = 0;
 
