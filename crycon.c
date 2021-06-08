@@ -449,7 +449,7 @@ int main(int argc, char * argv[]) {
 
   if (argc > 1 && argc < 8) {
     for (int i = 1; i < (argc - 1); i++) {
-      if (xtalw_strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* if length argument >= 2048 */
+      if (x_strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* if length argument >= 2048 */
         printf("[!] Warning: argument \"%d\" length more \"%d\"!\n", i, BOUNDARY);
         return (-1);
       }
@@ -679,7 +679,7 @@ int main(int argc, char * argv[]) {
   }
   else
   if ((0 == real_read) || ((-1) == real_read)) {
-    real_read = (int)xtalw_strnlen(ctx->keyfile, 256);
+    real_read = (int)x_strnlen(ctx->keyfile, 256);
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       size_t sha_ctx_len = sizeof(SHA256_CTX);
