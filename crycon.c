@@ -1,9 +1,9 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.92;
+  Console Cryptography Software v4.93;
 
   Developer:    ARR0III;
-  Make date:    04 June 2021;
+  Make date:    09 June 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -14,7 +14,7 @@
 #endif
 
 /* if COMPILE_FOR_WINDOWS defined */
-#ifdef COMPILE_FOR_WINDOWS
+#ifdef COMPILE_FOR_MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
 #else
@@ -40,12 +40,14 @@
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
-#define OK                      0
-#define READ_FILE_NOT_OPEN     -1
-#define WRITE_FILE_NOT_OPEN    -2
-#define SIZE_FILE_ERROR        -3
-#define WRITE_FILE_ERROR       -4
-#define READ_FILE_ERROR        -5
+#define OK                         0
+#define READ_FILE_NOT_OPEN        -1
+#define WRITE_FILE_NOT_OPEN       -2
+#define SIZE_FILE_ERROR           -3
+#define WRITE_FILE_ERROR          -4
+#define READ_FILE_ERROR           -5
+#define STREAM_INPUT_CLOSE_ERROR  -6
+#define STREAM_OUTPUT_CLOSE_ERROR -7
 
 #define ENCRYPT              0x00
 #define DECRYPT              0xDE
@@ -57,7 +59,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.92 04JUN21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.93 09JUN21 [EN]";
 
 static ARC4_CTX      * arc4_ctx      = NULL;
 static uint32_t      * rijndael_ctx  = NULL;
@@ -208,7 +210,7 @@ void KDFCLOMUL(SHA256_CTX * sha256_ctx,
   count = i = j = k = 0;
 }
 
-static void cent(short * number) {
+static void cent(int * number) {
   if (*number > 100) {
     *number = 100;
   }
@@ -219,13 +221,13 @@ int operation_variant(const int cipher, const int operation) {
   return (cipher ? (operation ? 1 : 0) : 2);
 }
 
-long int size_of_file(FILE * f) {
+int32_t size_of_file(FILE * f) {
 
   if (fseek(f, 0, SEEK_END) != 0) {
     return (-1);
   }
 
-  long int result = ftell(f);
+  int32_t result = ftell(f);
 
   if (fseek(f, 0, SEEK_SET) != 0) {
     return (-1);
@@ -270,17 +272,23 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   FILE * fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
   
   if (NULL == fo) {
-    fclose(fi);
-    return WRITE_FILE_NOT_OPEN;
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+      return WRITE_FILE_NOT_OPEN;
   }
   
   register int32_t fsize    = size_of_file(fi);
   register int32_t position = 0;
 
   if (((-1) == fsize) || (0 == fsize)) {
-    fclose(fi);
-    fclose(fo);
-    return SIZE_FILE_ERROR;
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+    if (fclose(fo) == -1)
+      return STREAM_OUTPUT_CLOSE_ERROR;
+    else
+      return SIZE_FILE_ERROR;
   }
 
   double div          = (double)((double)fsize / 100.0);
@@ -291,8 +299,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   size_t nblock;
   size_t realread;
   
-  short real_percent = 0;
-  short past_percent = 0;
+  int real_percent = 0;
+  int past_percent = 0;
 
   meminit((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
@@ -321,10 +329,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         memmove(ctx->vector, ctx->output, ctx->vector_length);
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
-          fclose(fi);
-          fclose(fo);
-
-          return WRITE_FILE_ERROR;
+          if (fclose(fi) == -1)
+            return STREAM_INPUT_CLOSE_ERROR;
+          else
+          if (fclose(fo) == -1)
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          else
+            return WRITE_FILE_ERROR;
         }
         else {
           fflush(fo);
@@ -333,10 +344,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       else
       if (DECRYPT == ctx->operation) {
         if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
-          fclose(fi);
-          fclose(fo);
-
-          return READ_FILE_ERROR;
+          if (fclose(fi) == -1)
+            return STREAM_INPUT_CLOSE_ERROR;
+          else
+          if (fclose(fo) == -1)
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          else
+            return READ_FILE_ERROR;
         }
         position += (int32_t)ctx->vector_length;
       }
@@ -374,17 +388,20 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
-      fclose(fi);
-      fclose(fo);
-
-      return WRITE_FILE_ERROR;
+      if (fclose(fi) == -1)
+        return STREAM_INPUT_CLOSE_ERROR;
+      else
+      if (fclose(fo) == -1)
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      else
+        return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
     }
 
     position += (int32_t)realread;
-    real_percent = (short)((double)position / div + 0.1);
+    real_percent = (int)((double)position / div + 0.1);
 
     cent(&real_percent);
     
@@ -398,7 +415,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           OPERATION_NAME[operation_variant(ctx->cipher_number, ctx->operation)],
           ctx->progress_bar,
           
-          sizetodoubleprint(real_check, (double)position + 0.1),
+          sizetodoubleprint(real_check, (double)position),
           CHAR_SIZE_DATA[real_check],
           
           fsize_double,
@@ -418,10 +435,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   putc('\n', stdout);
 
-  fclose(fi);
-  fclose(fo);
-
-  return OK;
+  if (fclose(fi) == -1)
+    return STREAM_INPUT_CLOSE_ERROR;
+  else
+  if (fclose(fo) == -1)
+    return STREAM_OUTPUT_CLOSE_ERROR;
+  else
+    return OK;
 }
 
 size_t vector_init(uint8_t * data, size_t size) {
@@ -519,9 +539,9 @@ int main(int argc, char * argv[]) {
 #endif
   
   if (STRCMP(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
-    printf("[!] Names input and output files equal!\n");
+	printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
@@ -533,7 +553,7 @@ int main(int argc, char * argv[]) {
   }
   else
   if (STRCMP(ctx->finput, ctx->keyfile) == 0) {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -557,7 +577,7 @@ int main(int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-    free_global_memory(ctx, ctx_length);
+	free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -726,8 +746,8 @@ int main(int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-    case ARC4:
-      cipher_ctx_len = sizeof(ARC4_CTX);
+	case ARC4:
+	  cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
@@ -912,6 +932,12 @@ int main(int argc, char * argv[]) {
       break;
     case READ_FILE_ERROR:
       printf("[!] Error read form file \"%s\" !\n", ctx->finput);
+      break;
+    case STREAM_INPUT_CLOSE_ERROR:
+      printf("[!] Error close input stream!\n");
+      break;
+    case STREAM_OUTPUT_CLOSE_ERROR:
+      printf("[!] Error close output stream!\n");
       break;
   }
 
