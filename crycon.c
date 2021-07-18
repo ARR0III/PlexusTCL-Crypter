@@ -452,7 +452,7 @@ size_t vector_init(uint8_t * data, size_t size) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
-  data[0] ^= (uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF);
+  (*(uint32_t*)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x00, 0xFF);
 
   size = size - 2;
 
