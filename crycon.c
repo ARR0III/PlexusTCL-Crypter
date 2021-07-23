@@ -3,7 +3,7 @@
   Console Cryptography Software v4.94;
 
   Developer:    ARR0III;
-  Make date:    23 Jule 2021;
+  Make date:    24 July 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -59,7 +59,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.94 23JUL21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.94 24JUL21 [EN]";
 
 static ARC4_CTX      * arc4_ctx      = NULL;
 static uint32_t      * rijndael_ctx  = NULL;
