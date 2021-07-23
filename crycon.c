@@ -1,9 +1,9 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v4.93;
+  Console Cryptography Software v4.94;
 
   Developer:    ARR0III;
-  Make date:    09 June 2021;
+  Make date:    23 Jule 2021;
   Modification: Release (Original);
   Language:     English;
 */
@@ -59,7 +59,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.93 09JUN21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 4.94 23JUL21 [EN]";
 
 static ARC4_CTX      * arc4_ctx      = NULL;
 static uint32_t      * rijndael_ctx  = NULL;
@@ -358,6 +358,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     realread = fread((void *)ctx->input, 1, DATA_SIZE, fi);
 
+    /* if NOT block cipher == ARC4 */
     if (ARC4 == ctx->cipher_number) {
       arc4(arc4_ctx, ctx->input, ctx->output, realread);
     }
@@ -452,7 +453,7 @@ size_t vector_init(uint8_t * data, size_t size) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
-  (*(uint32_t*)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x00, 0xFF);
+  (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
 
   size = size - 2;
 
@@ -539,9 +540,9 @@ int main(int argc, char * argv[]) {
 #endif
   
   if (STRCMP(ctx->finput, ctx->foutput) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
-	printf("[!] Names input and output files equal!\n");
+    printf("[!] Names input and output files equal!\n");
     return (-1);
   }
   else
@@ -553,7 +554,7 @@ int main(int argc, char * argv[]) {
   }
   else
   if (STRCMP(ctx->finput, ctx->keyfile) == 0) {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     printf("[!] Names keyfile and input files equal!\n");
     return (-1);
@@ -577,7 +578,7 @@ int main(int argc, char * argv[]) {
   if (strcmp(argv[1], "-w") == 0 || strcmp(argv[1], "--twofish") == 0)
     ctx->cipher_number = TWOFISH;
   else {
-	free_global_memory(ctx, ctx_length);
+    free_global_memory(ctx, ctx_length);
 	
     NAME_CIPHER_ERROR(argv[1]);
     return (-1);
@@ -629,7 +630,7 @@ int main(int argc, char * argv[]) {
       ctx->temp_buffer_length = 256;
     }
     else {
-	  free_global_memory(ctx, ctx_length);
+      free_global_memory(ctx, ctx_length);
 	  
       printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
@@ -746,8 +747,8 @@ int main(int argc, char * argv[]) {
   size_t cipher_ctx_len = 0;
 
   switch (ctx->cipher_number) {
-	case ARC4:
-	  cipher_ctx_len = sizeof(ARC4_CTX);
+    case ARC4:
+      cipher_ctx_len = sizeof(ARC4_CTX);
       break;
     case AES:
       ctx->vector_length = 16;
@@ -834,7 +835,7 @@ int main(int argc, char * argv[]) {
       MEMORY_ERROR();
       return (-1);
     }
-    
+    /* This function return real iteration count encrypt operation */
     AES_Rounds = rijndael_key_encrypt_init(rijndael_ctx,
                                            ctx->temp_buffer,
                                            ctx->temp_buffer_length * 8);
