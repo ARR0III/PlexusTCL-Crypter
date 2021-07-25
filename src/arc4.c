@@ -28,15 +28,18 @@ void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {
 }
 
 /* MAX size data for encrypt = 4 GiB */
-void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, const size_t length) {
-  for (register uint32_t k = 0; k < length; k++) {
+void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, size_t length) {
+  register uint32_t position = 0;
+  
+  while (length--) {
     ctx->i = (ctx->i + 1) & 255;
     ctx->j = (ctx->j + ctx->secret_key[ctx->i]) & 255;
     
     swap(&ctx->secret_key[ctx->i], &ctx->secret_key[ctx->j]);
     
-    output[k] = 
-     input[k] ^ ctx->secret_key[(ctx->secret_key[ctx->i] +
-                                 ctx->secret_key[ctx->j]) & 255];
+    output[position] = 
+      input[position] ^ ctx->secret_key[(ctx->secret_key[ctx->i] +
+                                         ctx->secret_key[ctx->j]) & 255];
+    position++;
   }
 }
