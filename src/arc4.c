@@ -1,10 +1,9 @@
 #include <stdint.h>
 #include <stddef.h>
-  
-size_t arc4_i, arc4_j;
 
 typedef struct {
-  uint8_t secret_key[256];
+  uint32_t i, j;
+  uint8_t  secret_key[256];
 } ARC4_CTX;
 
 void swap (uint8_t * a, uint8_t * b) {
@@ -16,27 +15,28 @@ void swap (uint8_t * a, uint8_t * b) {
 
 void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {
 
-  for (arc4_i = 0; arc4_i < 256; arc4_i++) {
-    ctx->secret_key[arc4_i] = (uint8_t)arc4_i;
+  for (ctx->i = 0; ctx->i < 256; ctx->i++) {
+    ctx->secret_key[ctx->i] = (uint8_t)(ctx->i);
   }
 
-  for (arc4_i = arc4_j = 0; arc4_i < 256; arc4_i++) {
-    arc4_j = (arc4_j + key[arc4_i % length] + ctx->secret_key[arc4_i]) & 255;
-    swap(&ctx->secret_key[arc4_i], &ctx->secret_key[arc4_j]);
+  for (ctx->i = ctx->j = 0; ctx->i < 256; ctx->i++) {
+    ctx->j = (ctx->j + key[ctx->i % length] + ctx->secret_key[ctx->i]) & 255;
+    swap(&ctx->secret_key[ctx->i], &ctx->secret_key[ctx->j]);
   }
 
-  arc4_i = arc4_j = 0;
+  ctx->i = ctx->j = 0;
 }
 
+/* MAX size data for encrypt = 4 GiB */
 void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, const size_t length) {
-  for (register size_t k = 0; k < length; k++) {
-    arc4_i = (arc4_i + 1) & 255;
-    arc4_j = (arc4_j + ctx->secret_key[arc4_i]) & 255;
+  for (register uint32_t k = 0; k < length; k++) {
+    ctx->i = (ctx->i + 1) & 255;
+    ctx->j = (ctx->j + ctx->secret_key[ctx->i]) & 255;
     
-    swap(&ctx->secret_key[arc4_i], &ctx->secret_key[arc4_j]);
+    swap(&ctx->secret_key[ctx->i], &ctx->secret_key[ctx->j]);
     
     output[k] = 
-     input[k] ^ ctx->secret_key[(ctx->secret_key[arc4_i] +
-                                 ctx->secret_key[arc4_j]) & 255];
+     input[k] ^ ctx->secret_key[(ctx->secret_key[ctx->i] +
+                                 ctx->secret_key[ctx->j]) & 255];
   }
 }
