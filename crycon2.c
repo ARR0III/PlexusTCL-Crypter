@@ -117,7 +117,7 @@ typedef struct {
 /* pointers for */
   char       * finput;              /* path crypt file */
   char       * foutput;             /* path write file */
-  char       * keyfile;             /* path keyfile */
+  char       * keyfile;             /* path keyfile or string key */
 
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
   size_t       sha256sum_length;    /* size struct ctx->sha256sum */
@@ -134,7 +134,7 @@ typedef struct {
   char         progress_bar[PROGRESS_BAR_LENGTH];
   
   int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
-  cipher_t     cipher_number;       /* search type name cipher_number_enum*/
+  cipher_t     cipher_number;       /* search type name cipher_number_enum */
 } GLOBAL_MEMORY;
 
 void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
@@ -282,7 +282,6 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, size_t count) {
   size_t remains = count;
 
   while (i < count) {
-
     if (remains < LENGTH_DATA_FOR_CHECK) {
       sha256_update(ctx->sha256sum,
                     (ctx->operation ? ctx->output : ctx->input) + i,
@@ -735,8 +734,9 @@ int main(int argc, char * argv[]) {
   ctx->temp_buffer_length /= 8; /* for allocate memory */
   
   /*
-    AES       = (temp_buffer_length = 16 or 24 or 32;
+    AES       = (temp_buffer_length = 16 or 24 or 32);
     SERPENT   = (temp_buffer_length = 16 or 24 or 32);
+    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
     BLOWFISH  = (temp_buffer_length = 56);
     THREEFISH = (temp_buffer_length = 32 or 64 or 128);
   */
