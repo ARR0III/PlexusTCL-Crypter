@@ -74,7 +74,7 @@ typedef enum cipher_number_enum {
   TWOFISH   = 2,
   BLOWFISH  = 3,
   THREEFISH = 4
-} cipher_t;
+} cipher_t; 
 
 /*
 enum {
