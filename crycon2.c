@@ -2,10 +2,10 @@
   Plexus Technology Cybernetic Laboratories;
   Console Cryptography Software v5.00;
 
-  Developer:    ARR0III;
-  Make date:    01 AUG 2021;
-  Modification: Release (Original);
-  Language:     English;
+  Developer:         ARR0III;
+  Modification date: 02 AUG 2021;
+  Modification:      Testing (NOT original);
+  Language:          English;
 */
 
 /* if DEBUG_INFORMATION defined */
@@ -60,7 +60,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 01AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 02AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -223,7 +223,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   sha256_init(ctx->sha256sum);
 
-  for (i = k = 0; i < key_length; ++i, ++k) {
+  for (i = k = 0; i < ctx->temp_buffer_length; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(ctx->sha256sum, password, password_len);
     }
@@ -234,7 +234,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
       k = 0;
     }
 
-    key[i] = ctx->sha256sum->hash[k];
+    ctx->temp_buffer[i] = ctx->sha256sum->hash[k];
   }
   
 #if DEBUG_INFORMATION
@@ -258,7 +258,6 @@ int operation_variant(const int operation) {
 }
 
 int32_t size_of_file(FILE * f) {
-
   if (fseek(f, 0, SEEK_END) != 0) {
     return (-1);
   }
@@ -277,27 +276,27 @@ void cipher_free(void * ctx, size_t ctx_length) {
   free(ctx);
 }
 
-void control_sum_buffer(GLOBAL_MEMORY * ctx, size_t count) {
+void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   size_t       i = 0;
-  size_t remains = count;
+  size_t remnant = count;
 
   while (i < count) {
-    if (remains < LENGTH_DATA_FOR_CHECK) {
+    if (remnant < LENGTH_DATA_FOR_CHECK) {
       sha256_update(ctx->sha256sum,
                     (ctx->operation ? ctx->output : ctx->input) + i,
-                    remains);
+                    remnant);
     }
-    else { /* if remains >= LENGTH_DATA_FOR_CHECK */
+    else { /* if remnant >= LENGTH_DATA_FOR_CHECK */
       sha256_update(ctx->sha256sum,
                     (ctx->operation ? ctx->output : ctx->input) + i,
                     LENGTH_DATA_FOR_CHECK);
     }
 
           i += LENGTH_DATA_FOR_CHECK;
-    remains -= LENGTH_DATA_FOR_CHECK;
+    remnant -= LENGTH_DATA_FOR_CHECK;
   
   /*this is operation "shred" real hash data
-    control sum real key data + control sum plain text buffer*/
+    control sum real key data + control sum plain text buffer */
     sha256_update(ctx->sha256sum, ctx->temp_buffer, ctx->temp_buffer_length);
   }
 }
@@ -507,7 +506,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   }
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] real hmac for input filename: %s\n", ctx->finput);
+  printf("[DEBUG] real hmac input filename: %s\n", ctx->finput);
   printhex(HEX_TABLE, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 #endif
 
@@ -532,6 +531,7 @@ size_t vector_init(uint8_t * data, size_t size) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
+  /* random data from stack xor initialized vector */
   (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
 
   size = size - 2;
@@ -993,26 +993,7 @@ int main(int argc, char * argv[]) {
 /* Clear all allocated memory for programm */
 
   cipher_free((void *)cipher_pointer, cipher_ctx_len);
-
   cipher_pointer = NULL;
-
-  switch (ctx->cipher_number) {
-    case AES:
-      rijndael_ctx = NULL;
-      break;
-    case SERPENT:
-      serpent_ctx = NULL;
-      break;
-    case TWOFISH:
-      twofish_ctx = NULL;
-      break;
-    case BLOWFISH:
-      blowfish_ctx = NULL;
-      break;
-    case THREEFISH:
-      threefish_ctx = NULL;
-      break;
-  }
 
   free_global_memory(ctx, ctx_length);
 
