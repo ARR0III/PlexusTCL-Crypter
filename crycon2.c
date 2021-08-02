@@ -234,7 +234,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
       k = 0;
     }
 
-    ctx->temp_buffer[i] = ctx->sha256sum->hash[k];
+    key[i] = ctx->sha256sum->hash[k];
   }
   
 #if DEBUG_INFORMATION
