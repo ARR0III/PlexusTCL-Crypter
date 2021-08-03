@@ -3,7 +3,7 @@
   Console Cryptography Software v5.00;
 
   Developer:         ARR0III;
-  Modification date: 02 AUG 2021;
+  Modification date: 03 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -60,7 +60,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 02AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 03AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -120,7 +120,7 @@ typedef struct {
   char       * keyfile;             /* path keyfile or string key */
 
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
-  size_t       sha256sum_length;    /* size struct ctx->sha256sum */
+  size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
 
   uint8_t    * vector;              /* initialized vector for crypt data */
   size_t       vector_length;       /* block size cipher execution */
@@ -162,6 +162,7 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   /* clear all memory and all pointers */
   meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
+  ctx = NULL;
 }
 
 void NAME_CIPHER_ERROR(const char * name) {
@@ -223,7 +224,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   sha256_init(ctx->sha256sum);
 
-  for (i = k = 0; i < ctx->temp_buffer_length; ++i, ++k) {
+  for (i = k = 0; i < key_length; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(ctx->sha256sum, password, password_len);
     }
@@ -274,6 +275,7 @@ int32_t size_of_file(FILE * f) {
 void cipher_free(void * ctx, size_t ctx_length) {
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
+  ctx = NULL;
 }
 
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
@@ -433,7 +435,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       realread -= SHA256_BLOCK_SIZE;
     }
 
-    /* control sum all read 1 MB data for [en/de]crypt */
+    /* control sum all read 1 MB data for [en/de]crypt + crypt key */
     control_sum_buffer(ctx, realread);
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
@@ -675,7 +677,7 @@ int main(int argc, char * argv[]) {
   
   extern int AES_Rounds; /* in rijndael.c source code file */
   
-  if (AES     == ctx->cipher_number || 
+  if (AES     == ctx->cipher_number ||
       SERPENT == ctx->cipher_number ||
       TWOFISH == ctx->cipher_number) { // AES, SERPENT, TWOFISH
     
@@ -782,7 +784,7 @@ int main(int argc, char * argv[]) {
 #endif
 
       if (NULL != ctx->sha256sum) {
-        /* Password -> crypt key; Pseudo PBKDF2 */
+        /* password -> crypt key; Pseudo PBKDF2 */
         KDFCLOMUL(ctx, (uint8_t *)(ctx->keyfile), real_read,
                   ctx->temp_buffer,
                   ctx->temp_buffer_length);
@@ -993,7 +995,6 @@ int main(int argc, char * argv[]) {
 /* Clear all allocated memory for programm */
 
   cipher_free((void *)cipher_pointer, cipher_ctx_len);
-  cipher_pointer = NULL;
 
   free_global_memory(ctx, ctx_length);
 
