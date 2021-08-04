@@ -3,7 +3,7 @@
   Console Cryptography Software v5.00;
 
   Developer:         ARR0III;
-  Modification date: 04 AUG 2021;
+  Modification date: 05 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -60,7 +60,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 04AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 05AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -470,7 +470,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
         real_check = size_check(position);
 
-        printf(" >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%",
+        printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%  ",
           OPERATION_NAME[operation_variant(ctx->operation)],
           ctx->progress_bar,
           
@@ -481,10 +481,6 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           CHAR_SIZE_DATA[fsize_check],
           
           real_percent);
-          
-          /* '\r' not show printf function */
-          putc(' ',  stdout);
-          putc('\r', stdout);
 
         fflush(stdout);
       /* } */
