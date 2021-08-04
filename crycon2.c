@@ -3,7 +3,7 @@
   Console Cryptography Software v5.00;
 
   Developer:         ARR0III;
-  Modification date: 03 AUG 2021;
+  Modification date: 04 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -13,7 +13,7 @@
 #define DEBUG_INFORMATION 1
 #endif
 
-/* if COMPILE_FOR_WINDOWS defined */
+/* if COMPILE_FOR_MS_WINDOWS defined */
 #ifdef COMPILE_FOR_MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
@@ -60,7 +60,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 03AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 04AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -323,7 +323,12 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   register int32_t fsize    = size_of_file(fi);
   register int32_t position = 0;
 
-  if (((-1) == fsize) || (0 == fsize)) {
+#if DEBUG_INFORMATION
+  printf("[DEBUG] size of file: %d byte\n", fsize);
+#endif
+
+  /* break operation if fsize > 2 GB or fsize == 0 or fsize == -1 */
+  if (fsize <= 0L) {
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
     else
@@ -452,7 +457,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
     
     if (real_percent > past_percent) {
-      if ((real_percent % 4) == 0) {
+      /* if ((real_percent % 4) == 0) { */
         meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
@@ -474,7 +479,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           putc('\r', stdout);
 
         fflush(stdout);
-      }
+      /* } */
       past_percent = real_percent;
     }
   }
