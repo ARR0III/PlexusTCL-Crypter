@@ -327,7 +327,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   printf("[DEBUG] size of file: %d byte\n", fsize);
 #endif
 
-  /* break operation if fsize > 2 GB or fsize == 0 or fsize == -1 */
+  if (ENCRYPT == ctx->operation) { /* only for check fsize */
+    fsize += SHA256_BLOCK_SIZE;
+  }
+
+  /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
   if (fsize <= 0L) {
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
@@ -336,6 +340,10 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       return STREAM_OUTPUT_CLOSE_ERROR;
     else
       return SIZE_FILE_ERROR;
+  }
+
+  if (ENCRYPT == ctx->operation) { /* only for check fsize */
+    fsize -= SHA256_BLOCK_SIZE;
   }
 
   double div          = (double)((double)fsize / 100.0);
