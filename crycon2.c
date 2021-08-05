@@ -130,9 +130,9 @@ typedef struct {
 
   uint8_t      input  [DATA_SIZE];  /* memory for read */
   uint8_t      output [DATA_SIZE];  /* memory for write */
-  
+
   char         progress_bar[PROGRESS_BAR_LENGTH];
-  
+
   int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
 } GLOBAL_MEMORY;
@@ -278,6 +278,72 @@ void cipher_free(void * ctx, size_t ctx_length) {
   ctx = NULL;
 }
 
+/*
+  This is function HMAC-SHA-2-256-UF
+
+  HMAC = h((k ^ 0x55) || h((k ^ 0x66) || h(m)));
+
+  HMAC - hash-based message authentification code;
+  m    - message;
+  h    - hash function SHA-2-256;
+  k    - real secret key for block cipher;
+  0x55 - one secret const; bits == 01010101;
+  0x66 - two secret const; bits == 01100110;
+*/
+void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+  uint8_t hash[SHA256_BLOCK_SIZE];
+  
+  uint8_t K0[SHA256_BLOCK_SIZE];
+  uint8_t K1[SHA256_BLOCK_SIZE];
+
+  int i;
+
+  /* copy hash sum file in local buffer "hash" */
+  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+
+  if (ctx->temp_buffer_length < SHA256_BLOCK_SIZE) {
+    /* generate two secret const for hash update */
+    memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    
+    for (i = (SHA256_BLOCK_SIZE - ctx->temp_buffer_length); i < SHA256_BLOCK_SIZE; i++) {
+      K0[i] = 0x00;
+      K1[i] = 0x00;
+    }
+  }
+  else
+  if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
+    /* generate two secret const for hash update */
+    memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memcpy((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+  }
+
+  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+    K0[i] ^= 0x55; /* simbol 'U' */
+    K1[i] ^= 0x66; /* simbol 'f' */
+  }
+
+  /* clear sha256sum struct */
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+
+  sha256_init(ctx->sha256sum);
+  sha256_update(ctx->sha256sum, K0, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_final(ctx->sha256sum);
+
+  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+
+  /* clear sha256sum struct */
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+
+  sha256_init(ctx->sha256sum);
+  sha256_update(ctx->sha256sum, K1, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_final(ctx->sha256sum);
+
+  /* now control sum in buffer pointer ctx->sha256sum->hash */
+}
+
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   size_t       i = 0;
   size_t remnant = count;
@@ -299,7 +365,11 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   
   /*this is operation "shred" real hash data
     control sum real key data + control sum plain text buffer */
+    
+    /* WHAT IS THIS FUCKING SHIT ??? ALARM !!!
+    strinc(ctx->temp_buffer, ctx->temp_buffer_length);
     sha256_update(ctx->sha256sum, ctx->temp_buffer, ctx->temp_buffer_length);
+    */
   }
 }
 
@@ -491,6 +561,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   putc('\n', stdout);
 
   sha256_final(ctx->sha256sum);
+
+  /* generate HMAC for file and key */
+  hmac_sha256_uf(ctx);
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
