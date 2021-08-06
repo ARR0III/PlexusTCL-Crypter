@@ -3,7 +3,7 @@
   Console Cryptography Software v5.00;
 
   Developer:         ARR0III;
-  Modification date: 05 AUG 2021;
+  Modification date: 07 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -60,7 +60,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 05AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 07AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -278,18 +278,6 @@ void cipher_free(void * ctx, size_t ctx_length) {
   ctx = NULL;
 }
 
-/*
-  This is function HMAC-SHA-2-256-UF
-
-  HMAC = h((k ^ 0x55) || h((k ^ 0x66) || h(m)));
-
-  HMAC - hash-based message authentification code;
-  m    - message;
-  h    - hash function SHA-2-256;
-  k    - real secret key for block cipher;
-  0x55 - one secret const; bits == 01010101;
-  0x66 - two secret const; bits == 01100110;
-*/
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   uint8_t hash[SHA256_BLOCK_SIZE];
   
@@ -323,6 +311,14 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     K1[i] ^= 0x66; /* simbol 'f' */
   }
 
+#if DEBUG_INFORMATION
+  printf("[DEBUG] authentification key \'U\':\n");
+  printhex(HEX_TABLE, K0, SHA256_BLOCK_SIZE);
+  
+  printf("[DEBUG] authentification key \'f\':\n");
+  printhex(HEX_TABLE, K1, SHA256_BLOCK_SIZE);
+#endif
+  
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
@@ -341,6 +337,10 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
+  /* clear local buffers for security */
+  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  meminit((void *)K0,   0x00, SHA256_BLOCK_SIZE);
+  meminit((void *)K1,   0x00, SHA256_BLOCK_SIZE);
   /* now control sum in buffer pointer ctx->sha256sum->hash */
 }
 
@@ -362,14 +362,6 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
 
           i += LENGTH_DATA_FOR_CHECK;
     remnant -= LENGTH_DATA_FOR_CHECK;
-  
-  /*this is operation "shred" real hash data
-    control sum real key data + control sum plain text buffer */
-    
-    /* WHAT IS THIS FUCKING SHIT ??? ALARM !!!
-    strinc(ctx->temp_buffer, ctx->temp_buffer_length);
-    sha256_update(ctx->sha256sum, ctx->temp_buffer, ctx->temp_buffer_length);
-    */
   }
 }
 
@@ -398,7 +390,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 #endif
 
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize += SHA256_BLOCK_SIZE;
+    fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
   }
 
   /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
@@ -413,7 +405,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   }
 
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize -= SHA256_BLOCK_SIZE;
+    fsize -= (SHA256_BLOCK_SIZE + ctx->vector_length);
   }
 
   double div          = (double)((double)fsize / 100.0);
@@ -562,7 +554,12 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   sha256_final(ctx->sha256sum);
 
-  /* generate HMAC for file and key */
+#if DEBUG_INFORMATION
+  printf("[DEBUG] real sha-2-256 hash sum file: %s\n", ctx->finput);
+  printhex(HEX_TABLE, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+#endif
+  
+  /* generate HMAC for hash file and key */
   hmac_sha256_uf(ctx);
 
   if (ENCRYPT == ctx->operation) {
