@@ -1,6 +1,5 @@
 #include <io.h>
 #include <vcl.h>
-#include <time.h>
 #include <windows.h>
 
 #include <stdio.h>
@@ -9,14 +8,18 @@
 #include <string.h>
 #include <stddef.h>
 
-#include "src/arc4.h"
-#include "src/crc32.h"
-#include "src/sha256.h"
+#include <time.h>
+
+#include "src/arc4.h"      /* only for password generator */
+
 #include "src/serpent.h"
 #include "src/twofish.h"
 #include "src/rijndael.h"
 #include "src/blowfish.h"
 #include "src/threefish.h"
+
+#include "src/crc32.h"
+#include "src/sha256.h"
 
 #include "src/base64.h"
 
@@ -26,14 +29,27 @@
 #include "Unit1.h"
 #include "Unit2.h"
 
-#define ENCRYPT             0x00
-#define DECRYPT             0xDE
-                  
-#define PERIOD                 4
-#define SHA_256_HASH_LENGTH   32
+#define OK                           0
+#define READ_FILE_NOT_OPEN          -1
+#define WRITE_FILE_NOT_OPEN         -2
+#define SIZE_FILE_ERROR             -3
+#define WRITE_FILE_ERROR            -4
+#define READ_FILE_ERROR             -5
+#define STREAM_INPUT_CLOSE_ERROR    -6
+#define STREAM_OUTPUT_CLOSE_ERROR   -7
+#define ERROR_ALLOCATE_MEMORY       -8
+#define SIZE_DECRYPT_FILE_INCORRECT -9
 
-#define BLOCK_SIZE          1024
-#define DATA_SIZE           4096
+#define SIZE_PASSWORD_GENERATE     256
+
+#define LENGTH_DATA_FOR_CHECK     1024
+
+#define BLOCK_SIZE_FOR_ERASED      512
+
+#define ENCRYPT                   0x00
+#define DECRYPT                   0xDE
+
+#define DATA_SIZE           (1024*1024) /* 1 MiB */
 
 #pragma hdrstop
 #pragma package(smart_init)
@@ -41,14 +57,13 @@
 
 TForm1 *Form1;
 
-enum {
-  ARC4      = 0,
-  AES       = 1,
-  SERPENT   = 2,
-  TWOFISH   = 3,
-  BLOWFISH  = 4,
-  THREEFISH = 5
-};
+typedef enum cipher_number_enum {
+  AES       = 0,
+  SERPENT   = 1,
+  TWOFISH   = 2,
+  BLOWFISH  = 3,
+  THREEFISH = 4
+} cipher_t;
 
 const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 ??? / 100) */
 
@@ -77,20 +92,18 @@ const uint32_t INT_SIZE_DATA[] = {
 };
 
 const char * CHAR_SIZE_DATA[] = {
-  "ГЃГІ",
-  "ГЉГЁГЃ",
-  "ГЊГҐГЃ",
-  "ГѓГЁГЃ"
+  "Бт",
+  "КиБ",
+  "МеБ",
+  "ГиБ"
 };
 
 const char * OPERATION_NAME[] = {
-  "ГГЁГґГ°Г®ГўГ Г­ГЁГҐ",
-  "ГђГ Г±ГёГЁГґГ°Г®ГўГЄГ ",
-  "ГЏГ®ГІГ®ГЄГ®ГўГ Гї Г®ГЎГ°Г ГЎГ®ГІГЄГ "
+  "Шифрование",
+  "Расшифровка",
 };
 
 const char * ALGORITM_NAME[] = {
-  "ARC4",
   "AES-CFB",
   "SERPENT-CFB",
   "TWOFISH-CFB",
@@ -98,19 +111,18 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 4.92 10MAY21 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.00 08AUG21 [RU]";
 
-const char * MEMORY_BLOCKED  = "ГЋГёГЁГЎГЄГ  ГўГ»Г¤ГҐГ«ГҐГ­ГЁГї ГЇГ Г¬ГїГІГЁ!";
+const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
 const char * OK_MSG          = PROGRAMM_NAME;
-const char * WARNING_MSG     = "Г‚Г­ГЁГ¬Г Г­ГЁГҐ!";
-const char * ERROR_MSG       = "!!! ГЋГёГЁГЎГЄГ  !!!";
+const char * WARNING_MSG     = "Внимание!";
+const char * ERROR_MSG       = "!!! Ошибка !!!";
 
-const char * INPUT_FILENAME  = "Г”Г Г©Г« Г¤Г«Гї ГёГЁГґГ°Г®ГўГ Г­ГЁГї";
-const char * OUTPUT_FILENAME = "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї";
-const char * KEY_FILENAME    = "ГЉГ«ГѕГ· ГёГЁГґГ°Г®ГўГ Г­ГЁГї";
+const char * INPUT_FILENAME  = "Файл для шифрования";
+const char * OUTPUT_FILENAME = "Файл назначения";
+const char * KEY_FILENAME    = "Ключ шифрования";
 
-ARC4_CTX      * arc4_ctx      = NULL;
 uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
 TWOFISH_CTX   * twofish_ctx   = NULL;
@@ -118,20 +130,40 @@ BLOWFISH_CTX  * blowfish_ctx  = NULL;
 THREEFISH_CTX * threefish_ctx = NULL;
 
 typedef struct {
-  uint8_t input [DATA_SIZE];
-  uint8_t output[DATA_SIZE];
-} MEMORY_CTX;
+  uint8_t input  [SIZE_PASSWORD_GENERATE];
+  uint8_t output [SIZE_PASSWORD_GENERATE];
+} PASSWORD_MEMORY_CTX;
+
+typedef struct {
+/* pointers for */
+  SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
+  size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
+
+  uint8_t    * vector;              /* initialized vector for crypt data */
+  size_t       vector_length;       /* block size cipher execution */
+
+  uint8_t    * temp_buffer;         /* temp_buffer for temp key data */
+  size_t       temp_buffer_length;  /* size buffer for crypt key */
+
+  uint8_t      input  [DATA_SIZE];  /* memory for read */
+  uint8_t      output [DATA_SIZE];  /* memory for write */
+
+  int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
+  cipher_t     cipher_number;       /* search type name cipher_number_enum */
+} GLOBAL_MEMORY;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
+
   if (OpenDialog1->Execute()) {
     Edit1->Clear();
     Edit1->Text = OpenDialog1->FileName;
 
-    if ((strlen(Form1->Edit2->Text.c_str()) > 0) &&
+    if ((strlen(Form1->Edit1->Text.c_str()) > 0) &&
+        (strlen(Form1->Edit2->Text.c_str()) > 0) &&
         (Form1->Edit1->Text == Form1->Edit2->Text)) {
 
       Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
@@ -141,11 +173,13 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
+  
   if (SaveDialog1->Execute()) {
     Form1->Edit2->Clear();
     Form1->Edit2->Text = SaveDialog1->FileName;
 
     if ((strlen(Form1->Edit1->Text.c_str()) > 0) &&
+        (strlen(Form1->Edit2->Text.c_str()) > 0) &&
         (Form1->Edit1->Text == Form1->Edit2->Text)) {
 
       Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
@@ -153,8 +187,13 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
   }
 }
 
+int operation_variant(const int operation) {
+  return (operation ? 1 : 0);
+}
+
 void __fastcall TForm1::Button3Click(TObject *Sender) {
   OpenDialog1->Title = KEY_FILENAME;
+  
   if (OpenDialog1->Execute()) {
     Form1->Memo1->Clear();
     Form1->Memo1->Lines->Text = OpenDialog1->FileName;
@@ -165,7 +204,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 
   srand((unsigned int)time(NULL));
 
-  for (char i = 0; i < 6; i++) {
+  for (int i = 0; i < 5; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
   }
 
@@ -184,13 +223,6 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 }
 
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[ARC4])) {
-    Label4->Visible = False;
-    ComboBox2->Visible = False;
-    RadioButton1->Visible = False;
-    RadioButton2->Visible = False;
-  }
-  else
   if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))    ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ||
@@ -199,12 +231,12 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     ComboBox2->Items->Clear();
 
     if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
-      for (char i = 0; i < 3; i++) {
+      for (int i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
       }
     }
     else {
-      for (char i = 0; i < 3; i++) {
+      for (int i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
       }
     }
@@ -221,6 +253,33 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     RadioButton1->Visible = True;
     RadioButton2->Visible = True;
   }
+}
+
+void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+  if (NULL != ctx->sha256sum) {
+    if (ctx->sha256sum_length > 0) {
+      meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+    }
+    free((void *)ctx->sha256sum);
+  }
+
+  if (NULL != ctx->vector) {
+    if (ctx->vector_length > 0) {
+      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+    }
+    free((void *)ctx->vector);
+  }
+
+  if (NULL != ctx->temp_buffer) {
+    if (ctx->temp_buffer_length > 0) {
+      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+    }
+    free((void *)ctx->temp_buffer);
+  }
+
+  /* clear all memory and all pointers */
+  meminit((void *)ctx, 0x00, ctx_length);
+  free((void *)ctx);
 }
 
 void cursorpos(uint8_t * data) {
@@ -244,13 +303,12 @@ void centreal(short * real_percent) {
   }
 }
 
-void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
-              const uint8_t * password, const size_t password_len,
-                    uint8_t * key,      const size_t key_len) {
+void KDFCLOMUL(GLOBAL_MEMORY * ctx,
+               const uint8_t * password, const size_t password_len,
+                     uint8_t * key,      const size_t key_len) {
 
   uint32_t i, j, k;
   uint32_t count = 0;
-  uint8_t  hash[SHA256_BLOCK_SIZE];
 
   short real = 0;
   short past = 0;
@@ -267,46 +325,42 @@ void * KDFCLOMUL(SHA256_CTX * sha256_ctx,
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
 
-  sha256_init(sha256_ctx);
+  sha256_init(ctx->sha256sum);
 
   i = k = 0;
 
   while (i < key_len) {
     for (j = 0; j < count; ++j) {
-      sha256_update(sha256_ctx, password, password_len);
+      sha256_update(ctx->sha256sum, password, password_len);
     }
 
-    sha256_final(sha256_ctx, hash);
+    sha256_final(ctx->sha256sum);
 
     if (k == SHA256_BLOCK_SIZE) {
       k = 0;
     }
 
-    key[i] = hash[k];
+    key[i] = ctx->sha256sum->hash[k];
 
-    ++i;
-    ++k;
+    i++;
+    k++;
 
     real = (short)((float)i / div + 0.1);
 
     centreal(&real);
 
     if (real > past) {
-      if ((real % PERIOD) == 0) {
-        Form1->Shape4->Width   = (int)((float)real * cas) + 1;
-        Form1->Label9->Caption = "ГѓГҐГ­ГҐГ°Г Г¶ГЁГї "
-                               + IntToStr(key_len * 8)  + "-ГЎГЁГІГ­Г®ГЈГ® ГЄГ«ГѕГ·Г  ГЁГ§ "
-                               + IntToStr(password_len) + "-Г±ГЁГ¬ГўГ®Г«ГјГ­Г®ГЈГ® ГЇГ Г°Г®Г«Гї: "
-                               + IntToStr(real) + " %";
-        Application->ProcessMessages();
-      }
+      Form1->Shape4->Width   = (int)((float)real * cas) + 1;
+      Form1->Label9->Caption = "Генерация "
+                             + IntToStr(key_len * 8)  + "-битного ключа из "
+                             + IntToStr(password_len) + "-символьного пароля: "
+                             + IntToStr(real) + " %";
+      Application->ProcessMessages();
       past = real;
     }
   }
 
-  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
-
-  return key;
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 }
 
 int size_check(uint32_t size) {
@@ -349,21 +403,21 @@ float sizetofloatprint(const int status, const float size) {
 int erasedfile(const char * filename) {
   FILE * f = fopen(filename, PARAM_REWRITE_BYTE);
 
-  if (f == NULL) {
+  if (NULL == f) {
     return -1;
   }
 
   long int fsize    = size_of_file(f);
   long int position = 0;
 
-  if ((fsize == -1L) || (fsize == 0)) {
+  if (fsize <= 0L) {
     fclose(f);
     return -1;
   }
 
-  uint8_t * data = (uint8_t *)calloc(BLOCK_SIZE, 1);
+  uint8_t * data = (uint8_t *)malloc(BLOCK_SIZE_FOR_ERASED);
 
-  if (data == NULL) {
+  if (NULL == data) {
     fclose(f);
     return -1;
   }
@@ -380,48 +434,48 @@ int erasedfile(const char * filename) {
   size_t realread;
 
   while (position < fsize) {
-    realread = fread((void *)data, 1, BLOCK_SIZE, f);
+    realread = fread((void *)data, 1, BLOCK_SIZE_FOR_ERASED, f);
 
-    if (realread > 0) {
+    if (realread > 0L) {
       meminit((void *)data, 0x00, realread);
+      
       fseek(f, position, SEEK_SET);
 
       if (fwrite((void *)data, 1, realread, f) != realread) {
         fclose(f);
         free((void *)data);
-        data = NULL;
+
         return -1;
       }
       else {
         fflush(f);
       }
-
-      position += (long int)realread;
     }
+
+    position += (long int)realread;
 
     real_percent = (short)((float)position / div + 0.1);
 
     centreal(&real_percent);
 
     if (real_percent > past_percent) {
-      if ((real_percent % PERIOD) == 0) {
-        Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
-        check = size_check(position);
+      Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
 
-        Form1->Label9->Caption = "Г“Г­ГЁГ·ГІГ®Г¦ГҐГ­ГЁГҐ ГґГ Г©Г«Г ; ГЋГЎГ°Г ГЎГ®ГІГ Г­Г®: " +
-        (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
-                 IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " ГЁГ§ " +
-        (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) +
-                 " " + CHAR_SIZE_DATA[fsize_check] + "; ГЏГ°Г®ГЈГ°ГҐГ±Г±: " + IntToStr(real_percent) + " %" ;
+      check = size_check(position);
 
-        Application->ProcessMessages();
-      }
+      Form1->Label9->Caption = "Уничтожение файла; обработано: " +
+      (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
+               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
+      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) +
+               " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+
+      Application->ProcessMessages();
+
       past_percent = real_percent;
     }
   }
 
   free((void *)data);
-  data = NULL;
 
   check = chsize(fileno(f), 0);
   fclose(f);
@@ -434,37 +488,141 @@ int erasedfile(const char * filename) {
   }
 }
 
-int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
-              const size_t block_size, const int cipher, const int operation) {
+void cipher_free(void * ctx, size_t ctx_length) {
+  meminit(ctx, 0x00, ctx_length);
+  free(ctx);
+}
 
-  FILE * fi = fopen(finput, PARAM_READ_BYTE);
+void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+  uint8_t hash[SHA256_BLOCK_SIZE];
+  
+  uint8_t K0[SHA256_BLOCK_SIZE];
+  uint8_t K1[SHA256_BLOCK_SIZE];
+
+  int i;
+
+  /* copy hash sum file in local buffer "hash" */
+  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+
+  if (ctx->temp_buffer_length < SHA256_BLOCK_SIZE) {
+    /* generate two secret const for hash update */
+    memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    
+    for (i = (SHA256_BLOCK_SIZE - ctx->temp_buffer_length); i < SHA256_BLOCK_SIZE; i++) {
+      K0[i] = 0x00;
+      K1[i] = 0x00;
+    }
+  }
+  else
+  if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
+    /* generate two secret const for hash update */
+    memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memcpy((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+  }
+
+  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+    K0[i] ^= 0x55; /* simbol 'U' */
+    K1[i] ^= 0x66; /* simbol 'f' */
+  }
+  
+  /* clear sha256sum struct */
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+
+  sha256_init(ctx->sha256sum);
+  sha256_update(ctx->sha256sum, K0, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_final(ctx->sha256sum);
+
+  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+
+  /* clear sha256sum struct */
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+
+  sha256_init(ctx->sha256sum);
+  sha256_update(ctx->sha256sum, K1, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_final(ctx->sha256sum);
+  /* now control sum in buffer pointer ctx->sha256sum->hash */
+
+  /* clear local buffers for security */
+  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
+  meminit((void *)K0,   0x00, SHA256_BLOCK_SIZE);
+  meminit((void *)K1,   0x00, SHA256_BLOCK_SIZE);
+}
+
+void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
+  size_t       i = 0;
+  size_t remnant = count;
+
+  while (i < count) {
+    if (remnant < LENGTH_DATA_FOR_CHECK) {
+      sha256_update(ctx->sha256sum,
+                    (ctx->operation ? ctx->output : ctx->input) + i,
+                    remnant);
+    }
+    else { /* if remnant >= LENGTH_DATA_FOR_CHECK */
+      sha256_update(ctx->sha256sum,
+                    (ctx->operation ? ctx->output : ctx->input) + i,
+                    LENGTH_DATA_FOR_CHECK);
+    }
+
+          i += LENGTH_DATA_FOR_CHECK;
+    remnant -= LENGTH_DATA_FOR_CHECK;
+  }
+}
+
+uint32_t MessageForUser(const int tumbler,
+                        const char * head,
+                        const char * message) {
+
+  uint32_t result = Application->MessageBox(message, head, tumbler);
+
+  return result;
+}
+
+int filecrypt(GLOBAL_MEMORY * ctx) {
+  FILE * fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
 
   if (fi == NULL) {
-    return -1;
+    return READ_FILE_NOT_OPEN;
   }
 
-  long int fsize = size_of_file(fi);
-  long int position = 0;
+  register long int fsize    = size_of_file(fi);
+  register long int position = 0;
 
-  if ((fsize == -1L) || (fsize == 0)) {
-    fclose(fi);
-    return -3;
+  if (ENCRYPT == ctx->operation) { /* only for check fsize */
+    fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
   }
 
-  FILE * fo = fopen(foutput, PARAM_WRITE_BYTE);
-
-  if (fo == NULL) {
-    fclose(fi);
-    return -2;
+  if (fsize <= 0L) {
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+      return SIZE_FILE_ERROR;
   }
 
-  size_t memory_ctx_len = sizeof(MEMORY_CTX);
-  MEMORY_CTX * memory = (MEMORY_CTX *) calloc(1, memory_ctx_len);
+  if (ENCRYPT == ctx->operation) { /* only for check fsize */
+    fsize -= (SHA256_BLOCK_SIZE + ctx->vector_length);
+  }
 
-  if (memory == NULL) {
-    fclose(fi);
-    fclose(fo);
-    return -4;
+  if (DECRYPT == ctx->operation) {
+    /* if fsize < minimal size file for decrypt */
+    if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+      if (fclose(fi) == -1)
+        return STREAM_INPUT_CLOSE_ERROR;
+      else
+        return SIZE_DECRYPT_FILE_INCORRECT;
+    }
+  }
+
+  FILE * fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
+
+  if (NULL == fo) {
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+      return WRITE_FILE_NOT_OPEN;
   }
 
   float div = (float)fsize / 100.0;
@@ -482,146 +640,173 @@ int filecrypt(const char * finput, const char * foutput, uint8_t * vector,
 
   Form1->Shape4->Width = 0;
 
+  sha256_init(ctx->sha256sum);
+
   while (position < fsize) {
-    if (cipher != ARC4 && position == 0) {
-      switch (operation) {
-        case ENCRYPT:
-	  switch (cipher) {
-            case AES:
-	      rijndael_encrypt(rijndael_ctx, vector, memory->output);
-              break;
-            case SERPENT:
-	      serpent_encrypt(serpent_ctx, (uint32_t *)vector, (uint32_t *)memory->output);
-              break;
-	    case TWOFISH:
-	      twofish_encrypt(twofish_ctx, vector, memory->output);
-	      break;
-            case BLOWFISH:
-              memmove(memory->output, vector, block_size);
-              blowfish_encrypt(blowfish_ctx, (uint32_t *)memory->output, (uint32_t *)(memory->output + 4));
-              break;
-             case THREEFISH:
-               threefish_encrypt(threefish_ctx, (uint64_t*)vector, (uint64_t*)memory->output);
-               break;
-	   }
-		  
-          memmove(vector, memory->output, block_size);
-          
-	  if (fwrite((void *)vector, 1, block_size, fo) != block_size) {
-            fclose(fi);
-            fclose(fo);
-
-            free((void *)memory);
-            memory = NULL;
-
-            return -5;
-          }
-          else {
-            fflush(fo);
-          }
-          break;
-		   
-        case DECRYPT:
-	  if (fread((void *)vector, 1, block_size, fi) != block_size) {
-            fclose(fi);
-            fclose(fo);
-
-            free((void *)memory);
-            memory = NULL;
-
-            return -6;
-          }
-          position += (long int)block_size;
-          break;
-      }
-    }
-
-    realread = fread((void *)memory->input, 1, DATA_SIZE, fi);
-
-    if (cipher == ARC4) {
-      arc4(arc4_ctx, memory->input, memory->output, realread);
-    }
-    else {
-      for (nblock = 0; nblock < realread; nblock += block_size) {
-        switch (cipher) {
+    if (0 == position) {
+      if (ENCRYPT == ctx->operation) {
+        switch (ctx->cipher_number) {
           case AES:
-	    rijndael_encrypt(rijndael_ctx, vector, memory->output + nblock);
+            rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
             break;
           case SERPENT:
-	    serpent_encrypt(serpent_ctx, (uint32_t *)vector, (uint32_t *)(memory->output + nblock));
+            serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
             break;
           case TWOFISH:
-	    twofish_encrypt(twofish_ctx, vector, memory->output + nblock);
-	    break;
+            twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
+            break;
           case BLOWFISH:
-	    blowfish_encrypt(blowfish_ctx, (uint32_t *)vector, (uint32_t *)(vector + 4));
-            memmove(memory->output + nblock, vector, block_size);
+            memmove(ctx->output, ctx->vector, ctx->vector_length);
+            blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
             break;
           case THREEFISH:
-	    threefish_encrypt(threefish_ctx, (uint64_t*)vector, (uint64_t*)(memory->output + nblock));
+            threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
             break;
         }
 
-        strxor(memory->output + nblock, memory->input + nblock, block_size);
-        memmove(vector, (operation ? memory->input : memory->output) + nblock, block_size);
+        memmove(ctx->vector, ctx->output, ctx->vector_length);
+
+        if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
+          if (fclose(fi) == -1)
+            return STREAM_INPUT_CLOSE_ERROR;
+          else
+          if (fclose(fo) == -1)
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          else
+            return WRITE_FILE_ERROR;
+        }
+        else {
+          fflush(fo);
+        }
+      }
+      else
+      if (DECRYPT == ctx->operation) {
+        if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
+          if (fclose(fi) == -1)
+            return STREAM_INPUT_CLOSE_ERROR;
+          else
+          if (fclose(fo) == -1)
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          else
+            return READ_FILE_ERROR;
+        }
+        position += (int32_t)ctx->vector_length;
       }
     }
 
-    if (fwrite((void *)memory->output, 1, realread, fo) != realread) {
-      fclose(fi);
-      fclose(fo);
+    realread = fread((void *)ctx->input, 1, DATA_SIZE, fi);
 
-      free((void *)memory);
-      memory = NULL;
+    for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
+      switch (ctx->cipher_number) {
+        case AES:
+          rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output + nblock);
+          break;
+        case SERPENT:
+          serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->output + nblock));
+          break;
+        case TWOFISH:
+          twofish_encrypt(twofish_ctx, ctx->vector, ctx->output + nblock);
+          break;
+        case BLOWFISH:
+          blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->vector + 4));
+          memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
+          break;
+        case THREEFISH:
+          threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
+          break;
+        }
 
-      return -5;
+      strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
+    }
+
+       position  += (int32_t)realread;
+    real_percent  = (int)((double)position / div + 0.1);
+
+    centreal(&real_percent);
+
+    if ((position == fsize) && (DECRYPT == ctx->operation)) {
+      realread -= SHA256_BLOCK_SIZE;
+    }
+
+    /* control sum all read 1 MB data for [en/de]crypt + crypt key */
+    control_sum_buffer(ctx, realread);
+
+    if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
+      if (fclose(fi) == -1)
+        return STREAM_INPUT_CLOSE_ERROR;
+      else
+      if (fclose(fo) == -1)
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      else
+        return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
     }
 
-    position += (long int)realread;
-    real_percent = (short)((float)position / div + 0.1);
-
-    centreal(&real_percent);
-
     if (real_percent > past_percent) {
-      if ((real_percent % PERIOD) == 0) {
-        Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
+      Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
 
-        check = size_check(position);
+      check = size_check(position);
 
-        Form1->Label9->Caption = AnsiString(OPERATION_NAME[cipher ? (operation ? 1 : 0) : 2]) +
-        ": " + AnsiString(ALGORITM_NAME[cipher]) + "; ГЋГЎГ°Г ГЎГ®ГІГ Г­Г®: " +
-        (check ? FloatToStrF(((float)position / (float)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
-                 IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " ГЁГ§ " +
-        (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; ГЏГ°Г®ГЈГ°ГҐГ±Г±: " + IntToStr(real_percent) + " %" ;
+      Form1->Label9->Caption = AnsiString(OPERATION_NAME[ctx->operation ? 1 : 0 ]) +
+      ": " + AnsiString(ALGORITM_NAME[ctx->cipher_number]) + "; Обработано: " +
+      (check ? FloatToStrF(((float)position / (float)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
+               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
+      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
-        Application->ProcessMessages();
-      }
+      Application->ProcessMessages();
       past_percent = real_percent;
     }
   }
 
-  fclose(fi);
-  fclose(fo);
+  sha256_final(ctx->sha256sum);
 
-  meminit((void *)memory, 0x00, memory_ctx_len);
-  free((void *)memory);
-  memory = NULL;
+  hmac_sha256_uf(ctx);
 
-  return 0;
+  if (ENCRYPT == ctx->operation) {
+    if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
+      if (fclose(fi) == -1)
+        return STREAM_INPUT_CLOSE_ERROR;
+      else
+      if (fclose(fo) == -1)
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      else
+        return WRITE_FILE_ERROR;
+    }
+    else {
+      fflush(fo);
+    }
+  }
+  else {
+    if (memcmp((void *)(ctx->input + realread),
+               (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE) != 0) {
+
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Контрольная сумма файла НЕ совпадает с ожидаемой!\n"
+                     "Возможно файл поврежден или был использован неправильный ключ!");
+    }
+  }
+
+  if (fclose(fi) == -1)
+    return STREAM_INPUT_CLOSE_ERROR;
+  else
+  if (fclose(fo) == -1)
+    return STREAM_OUTPUT_CLOSE_ERROR;
+  else
+    return OK;
 }
 
 static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
-  size_t stack_trash; /* NOT initialized */
+  size_t stack_trash; /* NOT initialized == ALL OK */
 
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
-  data[0] ^= (uint8_t)((uint8_t)stack_trash ^ (uint8_t)genrand(0x00, 0xFF));
+  (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
 
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
@@ -636,504 +821,456 @@ static size_t vector_init(uint8_t * data, size_t size) {
   return i;
 }
 
-uint32_t MessageForUser(const int tumbler,
-                        const char * head,
-                        const char * message) {
-                        
-  uint32_t result = Application->MessageBox(message, head, tumbler);
-
-  return result;
-}
-
 void __fastcall TForm1::Button4Click(TObject *Sender) {
-  size_t ctx_len, block_size;
-  int    key_len, real_read,
-         cipher_number, operation;
-
+/*
+  не смог придумать ничего умнее, чем формировать строку простой конкатенацией
+  из языка C++, потому что в языке C формировать такую чушь - сложно.
+*/
   String UnicodeMsg = "";
 
-  if (__strnlen(Edit1->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г€Г¬Гї Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  Г­ГҐ ГўГўГҐГ¤ГҐГ­Г®!");
+                   "Имя обрабатываемого файла не введено!");
     return;
   }
 
-  if (__strnlen(Edit2->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Edit2->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г€Г¬Гї ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г­ГҐ ГўГўГҐГ¤ГҐГ­Г®!");
+                   "Имя файла назначения не введено!");
     return;
   }
 
-  if (__strnlen(Memo1->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Memo1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "ГЏГ Г°Г®Г«Гј ГЁГ«ГЁ ГЁГ¬Гї ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г­ГҐ ГўГўГҐГ¤ГҐГ­Г»!");
+                   "Пароль или имя ключевого файла не введены!");
     return;
   }
 
   if (Edit1->Text == Edit2->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г€Г¬ГҐГ­Г  Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  ГЁ ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
+                   "Имена обрабатываемого файла и файла назначения совпадают!");
     return;
   }
 
   if (Edit1->Text == Memo1->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г€Г¬ГҐГ­Г  Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  ГЁ ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
+                   "Имена обрабатываемого файла и ключевого файла совпадают!");
     return;
   }
 
   if (Edit2->Text == Memo1->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г€Г¬ГҐГ­Г  ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї ГЁ ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
+                   "Имена файла назначения и ключевого файла совпадают!");
     return;
   }
 
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[ARC4])) {
-    cipher_number = ARC4;
+  size_t memory_length = sizeof(GLOBAL_MEMORY);
+  GLOBAL_MEMORY * memory = (GLOBAL_MEMORY *)malloc(memory_length);
+
+  if (NULL == memory) {
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    return;
   }
-  else
+
+  meminit((void *)memory, 0x00, memory_length);
+
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) {
-    cipher_number = AES;
+    memory->cipher_number = AES;
   }
   else
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) {
-    cipher_number = SERPENT;
+    memory->cipher_number = SERPENT;
   }
   else
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) {
-    cipher_number = TWOFISH;
+    memory->cipher_number = TWOFISH;
   }
   else
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) {
-    cipher_number = BLOWFISH;
+    memory->cipher_number = BLOWFISH;
   }
   else
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
-    cipher_number = THREEFISH;
+    memory->cipher_number = THREEFISH;
   }
   else {
+    free_global_memory(memory, memory_length);
+
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "ГЂГ«ГЈГ®Г°ГЁГІГ¬ ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г« ГўГ»ГЎГ°Г Г­!");
+                   "Алгоритм шифрования не был выбран!");
     return;
   }
 
-  key_len = 0;
+  extern int AES_Rounds; /* in rijndael.c source code file */
 
-  if (cipher_number == ARC4) {
-    key_len = 2048;
-  }
-  else
-  if (cipher_number == AES ||
-      cipher_number == SERPENT ||
-      cipher_number == TWOFISH) { // AES or SERPENT
+  memory->temp_buffer_length = 0;
+
+  if (memory->cipher_number == AES ||
+      memory->cipher_number == SERPENT ||
+      memory->cipher_number == TWOFISH) { // AES or SERPENT
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
-      if (cipher_number == AES) {
+      if (memory->cipher_number == AES) {
         AES_Rounds = 10;
       }
-      key_len = 128;
+      memory->temp_buffer_length = 128;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("192")) {
-      if (cipher_number == AES) {
+      if (memory->cipher_number == AES) {
         AES_Rounds = 12;
       }
-      key_len = 192;
+      memory->temp_buffer_length = 192;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
-      if (cipher_number == AES) {
+      if (memory->cipher_number == AES) {
         AES_Rounds = 14;
       }
-      key_len = 256;
+      memory->temp_buffer_length = 256;
     }
     else {
+      free_global_memory(memory, memory_length);
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г  ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
+                     "Длина ключа шифрования не была выбрана!");
       return;
     }
   }
   else
-  if (cipher_number == BLOWFISH) {
-    key_len = 448;
+  if (memory->cipher_number == BLOWFISH) {
+    memory->temp_buffer_length = 448;
   }
   else
-  if (cipher_number == THREEFISH) {
+  if (memory->cipher_number == THREEFISH) {
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
-      key_len = 256;
+      memory->temp_buffer_length = 256;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("512")) {
-      key_len = 512;
+      memory->temp_buffer_length = 512;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("1024")) {
-      key_len = 1024;
+      memory->temp_buffer_length = 1024;
     }
     else {
+      free_global_memory(memory, memory_length);
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г  ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
+                     "Длина ключа шифрования не была выбрана!");
       return;
     }
   }
 
-  key_len = (key_len / 8);
+  memory->temp_buffer_length = (memory->temp_buffer_length / 8);
 
   /*
-    ARC4      = (key_len = 256);
-    AES       = (key_len = 16 or 24 or 32;
-    SERPENT   = (key_len = 16 or 24 or 32);
-    BLOWFISH  = (key_len = 56);
-    THREEFISH = (key_len = 32 or 64 or 128);
+    AES       = (temp_buffer_length = 16 or 24 or 32;
+    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
+    SERPENT   = (temp_buffer_length = 16 or 24 or 32);
+    BLOWFISH  = (temp_buffer_length = 56);
+    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
   */
 
-  operation = ENCRYPT;
+  memory->operation = ENCRYPT; /* fusking warnings c++ builder !*/
 
-  if (cipher_number != ARC4) {
-    if (RadioButton1->Checked) {
-      operation = ENCRYPT;
-    }
-    else
-    if (RadioButton2->Checked) {
-      operation = DECRYPT;
-    }
-    else {
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "ГЋГЇГҐГ°Г Г¶ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
-      return;
-    }
+  if (RadioButton1->Checked) {
+    memory->operation = ENCRYPT;
+  }
+  else
+  if (RadioButton2->Checked) {
+    memory->operation = DECRYPT;
+  }
+  else {
+    free_global_memory(memory, memory_length);
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Операция не была выбрана!");
+    return;
   }
 
   if (FileExists(Edit2->Text) == True) {
-    UnicodeMsg = "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г±ГіГ№ГҐГ±ГІГўГіГҐГІ! Г‘ГІГ Г°Г»ГҐ Г¤Г Г­Г­Г»ГҐ ГЎГіГ¤ГіГІ ГіГІГҐГ°ГїГ­Г»!\n"
-                 "Г‚Г» ГіГўГҐГ°ГҐГ­Г» Г·ГІГ® ГµГ®ГІГЁГІГҐ ГЇГҐГ°ГҐГ§Г ГЇГЁГ±Г ГІГј ГҐГЈГ®?";
+    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
+                 "Вы уверены что хотите перезаписать его?";
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
-    
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Г€Г§Г¬ГҐГ­ГЁГІГҐ ГЁГ¬Гї ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї!");
+                     "Измените имя файла назначения!");
       UnicodeMsg = "";
       return;
     }
     UnicodeMsg = "";
   }
 
-  UnicodeMsg = "Г‘ГЈГҐГ­ГҐГ°ГЁГ°Г®ГўГ ГІГј " + IntToStr(key_len * 8) + "-ГЎГЁГІГ­Г»Г© ГЄГ«ГѕГ· ГёГЁГґГ°Г®ГўГ Г­ГЁГї?";
+  UnicodeMsg = "Сгенерировать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования?";
 
   if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDNO) {
+    free_global_memory(memory, memory_length);
+
     UnicodeMsg = "";
+
     return;
   }
 
   UnicodeMsg = "";
 
-  uint8_t * buffer = (uint8_t*)calloc(key_len, 1);
+  memory->temp_buffer = (uint8_t*)malloc(memory->temp_buffer_length);
 
-  if (buffer == NULL) {
+  if (NULL == memory->temp_buffer) {
+    free_global_memory(memory, memory_length);
+
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+
     return;
   }
 
-  real_read = readfromfile(Memo1->Text.c_str(), buffer, key_len);
+  int real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
 
-  if ((real_read > 0) && (real_read < key_len)) {
-    UnicodeMsg = "ГЌГҐГ¤Г®Г±ГІГ ГІГ®Г·Г­Г® Г¤Г Г­Г­Г»Гµ Гў ГЄГ«ГѕГ·ГҐГўГ®Г¬ ГґГ Г©Г«ГҐ!\n\n"
-                 "ГЃГ»Г«Г® Г±Г·ГЁГІГ Г­Г®:\t" + IntToStr(real_read) + " ГЃГІ\n"
-                 "ГЌГҐГ®ГЎГµГ®Г¤ГЁГ¬Г®:\t" + IntToStr(key_len) + " ГЃГІ";
+  if ((real_read > 0) && (real_read < (int)(memory->temp_buffer_length))) {
+    free_global_memory(memory, memory_length);
+
+    UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
+                 "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+                 "Необходимо:\t" + IntToStr(memory->temp_buffer_length) + " Бт";
+                 
     Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
 
     UnicodeMsg = "";
-    free((void *)buffer);
-    buffer = NULL;
 
     return;
   }
   else
   if ((real_read == 0) || (real_read == -1)) {
-    real_read = (int)__strnlen(Memo1->Text.c_str(), 256);
+    real_read = (int)x_strnlen(Memo1->Text.c_str(), 256);
 
     if ((real_read > 7) && (real_read < 257)) {
-      ctx_len = sizeof(SHA256_CTX);
-      SHA256_CTX * sha256_ctx = (SHA256_CTX*) calloc(1, ctx_len);
+      memory->sha256sum_length = sizeof(SHA256_CTX);
+      memory->sha256sum = (SHA256_CTX *)malloc(memory->sha256sum_length);
 
-      if (sha256_ctx != NULL) {
+      if (NULL != memory->sha256sum) {
         Button4->Enabled = False;
         /* Crypt key generator; generate crypt key from password */
-        KDFCLOMUL(sha256_ctx, (uint8_t *)Memo1->Text.c_str(), real_read, buffer, key_len);
+        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
+
+        KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
+                  memory->temp_buffer, memory->temp_buffer_length);
+
         Button4->Enabled = True;
 
-        meminit((void *)sha256_ctx, 0x00, ctx_len);
-        free((void *)sha256_ctx);
-        sha256_ctx = NULL;
+        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
       }
       else {
+        free_global_memory(memory, memory_length);
+
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
-        meminit((void *)buffer, 0x00, key_len);
-        free((void *)buffer);
-        buffer = NULL;
         return;
       }
     }
     else {
-      UnicodeMsg = "Г„Г«ГЁГ­Г  Г±ГІГ°Г®ГЄГ®ГўГ®ГЈГ® ГЄГ«ГѕГ·Г  Г­ГҐГЄГ®Г°Г°ГҐГЄГІГ­Г !\n\n"
-                   "ГЃГ»Г«Г® Г±Г·ГЁГІГ Г­Г®:\t" + IntToStr(real_read) + " ГЃГІ\n"
-                   "ГЌГҐГ®ГЎГµГ®Г¤ГЁГ¬Г®:\tГ®ГІ 8 Г¤Г® 256 ГЃГІ";
+      free_global_memory(memory, memory_length);
+
+      UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
+                   "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+                   "Необходимо:\tот 8 до 256 Бт";
+                   
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG, UnicodeMsg.c_str());
 
       UnicodeMsg = "";
-      meminit((void *)buffer, 0x00, key_len);
-      free((void *)buffer);
-      buffer = NULL;
+
       return;
     }
   }
 
-  switch (cipher_number) {
+  switch (memory->cipher_number) {
     case AES:
-      block_size = 16;
+      memory->vector_length = 16;
       break;
     case SERPENT:
-      block_size = 16;
+      memory->vector_length = 16;
       break;
     case TWOFISH:
-      block_size = 16;
+      memory->vector_length = 16;
       break;
     case BLOWFISH:
-      block_size =  8;
+      memory->vector_length =  8;
       break;
     case THREEFISH:
-      block_size = key_len;
+      memory->vector_length = memory->temp_buffer_length;
       break;
   }
 
-  uint8_t * vector = NULL;
+  memory->vector = (uint8_t*)malloc(memory->vector_length);
 
-  if (cipher_number != ARC4) {
-    vector = (uint8_t*)calloc(block_size, 1);
+  if (memory->vector == NULL) {
+    free_global_memory(memory, memory_length);
 
-    if (vector == NULL) {
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
-      meminit((void *)buffer, 0x00, key_len);
-      free((void *)buffer);
-      buffer = NULL;
-      return;
-    }
+    return;
   }
 
-  if (cipher_number != ARC4 && operation == ENCRYPT) {
+  meminit((void *)memory->vector, 0x00, memory->vector_length);
 
+  if (ENCRYPT == memory->operation) {
     srand((unsigned int)time(NULL));
 
-    if (vector_init(vector, block_size) < (block_size - 2)) {
+    if (vector_init(memory->vector, memory->vector_length) < (memory->vector_length - 2)) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "ГЉГ°ГЁГІГЁГ·ГҐГ±ГЄГ Гї Г®ГёГЁГЎГЄГ  ГѓГЏГ‘Г—! Г„Г Г«ГјГ­ГҐГ©ГёГЁГҐ Г®ГЇГҐГ°Г Г¶ГЁГЁ Г­ГҐ ГЇГ®Г§ГўГ®Г«ГҐГ­Г»!"
-                     "\nГ‘ГЁГ±ГІГҐГ¬Г­Г®ГҐ ГўГ°ГҐГ¬Гї Г®Г±ГІГ Г­Г®ГўГ«ГҐГ­Г®? ГЏГ°Г®ГўГҐГ°ГјГІГҐ Г±ГЁГ±ГІГҐГ¬Г­Г»ГҐ Г·Г Г±Г»!");
-
-      meminit((void *)vector, 0x00, block_size);
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
+                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!"
+                     "\nСистемное время остановлено? Проверьте системные часы!");
 
       Form1->Close();
     }
   }
 
-  if (cipher_number == ARC4) {
-    ctx_len = sizeof(ARC4_CTX);
-    arc4_ctx = (ARC4_CTX *)calloc(1, ctx_len);
+  size_t cipher_length  = 0;
+  void * cipher_pointer = NULL;
 
-    if (arc4_ctx == NULL) {
+  if (AES == memory->cipher_number) {
+    cipher_length  = 4 * (AES_Rounds + 1) * 4;
+    rijndael_ctx   = (uint32_t *) calloc(cipher_length, 1);
+    cipher_pointer = (void *)rijndael_ctx;
+
+    if (NULL == rijndael_ctx) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      meminit((void *)buffer, 0x00, key_len);
-      free((void *)buffer);
-      buffer = NULL;
-
-      return;
-    }
-
-    arc4_init(arc4_ctx, buffer, key_len);
-  }
-  if (cipher_number == AES) {
-    ctx_len = 4 * (AES_Rounds + 1) * 4;
-    rijndael_ctx = (uint32_t *) calloc(ctx_len, 1);
-    if (rijndael_ctx == NULL) {
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
-
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
 
       return;
     }
 
     AES_Rounds =
-      rijndael_key_encrypt_init(rijndael_ctx, buffer, key_len * 8);
+      rijndael_key_encrypt_init(rijndael_ctx, memory->temp_buffer, memory->temp_buffer_length * 8);
   }
-  if (cipher_number == TWOFISH) {
-    ctx_len = sizeof(TWOFISH_CTX);
-    twofish_ctx = (TWOFISH_CTX *) calloc(1, ctx_len);
+  if (memory->cipher_number == TWOFISH) {
+    cipher_length  = sizeof(TWOFISH_CTX);
+    twofish_ctx    = (TWOFISH_CTX *) calloc(1, cipher_length);
+    cipher_pointer = (void *)twofish_ctx;
+    
     if (twofish_ctx == NULL) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
-
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
 
       return;
     }
-    twofish_init(twofish_ctx, buffer, key_len);
+    twofish_init(twofish_ctx, memory->temp_buffer, memory->temp_buffer_length);
   }
   else
-  if (cipher_number == SERPENT) {
-    ctx_len = sizeof(SERPENT_CTX);
-    serpent_ctx = (SERPENT_CTX *) calloc(1, ctx_len);
+  if (memory->cipher_number == SERPENT) {
+    cipher_length = sizeof(SERPENT_CTX);
+    serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_length);
+    cipher_pointer = (void *)serpent_ctx;
+
     if (serpent_ctx == NULL) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
-
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
 
       return;
     }
-    serpent_init(serpent_ctx, key_len * 8, buffer);
+    serpent_init(serpent_ctx, memory->temp_buffer_length * 8, memory->temp_buffer);
   }
   else
-  if (cipher_number == BLOWFISH) {
-    ctx_len = sizeof(BLOWFISH_CTX);
-    blowfish_ctx = (BLOWFISH_CTX*)calloc(1, ctx_len);
+  if (memory->cipher_number == BLOWFISH) {
+    cipher_length = sizeof(BLOWFISH_CTX);
+    blowfish_ctx = (BLOWFISH_CTX*)calloc(1, cipher_length);
+    cipher_pointer = (void *)blowfish_ctx;
+
     if (blowfish_ctx == NULL) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
-
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
 
       return;
     }
-    blowfish_init(blowfish_ctx, buffer, key_len);
+    blowfish_init(blowfish_ctx, memory->temp_buffer, memory->temp_buffer_length);
   }
   else
-  if (cipher_number == THREEFISH) {
-    ctx_len = sizeof(THREEFISH_CTX);
-    threefish_ctx = (THREEFISH_CTX *)calloc(1, ctx_len);
+  if (memory->cipher_number == THREEFISH) {
+    cipher_length = sizeof(THREEFISH_CTX);
+    threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_length);
+    cipher_pointer = (void *)threefish_ctx;
+
     if (threefish_ctx == NULL) {
+      free_global_memory(memory, memory_length);
+
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      if (operation == ENCRYPT)
-        meminit((void *)vector, 0x00, block_size);
-
-      meminit((void *)buffer, 0x00, key_len);
-
-      free((void *)vector);
-      free((void *)buffer);
-
-      vector = NULL;
-      buffer = NULL;
 
       return;
     }
-    threefish_init(threefish_ctx, (threefishkeysize_t)(key_len * 8),
-                   (uint64_t *)buffer, (uint64_t *)buffer);
+    threefish_init(threefish_ctx, (threefishkeysize_t)(memory->temp_buffer_length * 8),
+                   (uint64_t *)memory->temp_buffer, (uint64_t *)memory->temp_buffer);
   }
-
-  meminit((void *)buffer, 0x00, key_len);
-  free((void *)buffer);
-  buffer = NULL;
 
   int result = 0xDE;
 
   UnicodeMsg =
-    "ГЏГ°ГЁГ±ГІГіГЇГЁГІГј ГЄ ГўГ»ГЎГ°Г Г­Г­Г®Г© Г®ГЇГҐГ°Г Г¶ГЁГЁ? ГЋГ±ГІГ Г­Г®ГўГЁГІГј Г®ГЇГҐГ°Г Г¶ГЁГѕ ГЎГіГ¤ГҐГІ Г­ГҐГўГ®Г§Г¬Г®Г¦Г­Г®!\n\n"
-    "ГЋГЇГҐГ°Г Г¶ГЁГї:\t" + String(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
-    "ГЂГ«ГЈГ®Г°ГЁГІГ¬:\t" + String(ALGORITM_NAME[cipher_number]) + "\n"
-    "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г :\t" + IntToStr(key_len * 8).c_str() + " ГЎГЁГІ" +
-                       (24 == key_len || 128 == key_len ? "Г " : "Г®Гў");
+    "Приступить к выбранной операции? Остановить операцию будет невозможно!\n\n"
+    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
+    "Длина ключа:\t" + IntToStr(memory->temp_buffer_length * 8).c_str() + " бит" +
+                       (24 == memory->temp_buffer_length ||
+                        64 == memory->temp_buffer_length ||
+                       128 == memory->temp_buffer_length ? "а" : "ов");
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
     Button4->Enabled = false;
-    result = filecrypt(Edit1->Text.c_str(), Edit2->Text.c_str(), vector, block_size, cipher_number, operation);
+    result = filecrypt(memory);
   }
 
   UnicodeMsg = "";
-  
-/*
-  if (MessageDlg("ГЏГ°ГЁГ±ГІГіГЇГЁГІГј ГЄ ГўГ»ГЎГ°Г Г­Г­Г®Г© Г®ГЇГҐГ°Г Г¶ГЁГЁ? ГЋГІГ¬ГҐГ­ГЁГІГј Г®ГЇГҐГ°Г Г¶ГЁГѕ ГЎГіГ¤ГҐГІ Г­ГҐГўГ®Г§Г¬Г®Г¦Г­Г®!\n\n"
-                 "ГЋГЇГҐГ°Г Г¶ГЁГї:\t" + AnsiString(OPERATION_NAME[cipher_number ? (operation ? 1 : 0) : 2]) + "\n"
-                 "ГЂГ«ГЈГ®Г°ГЁГІГ¬:\t" + AnsiString(ALGORITM_NAME[cipher_number]) + "\n"
-                 "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г :\t" + IntToStr(key_len * 8) + " ГЎГЁГІ" + (24 == key_len ? "Г " : "Г®Гў"), mtInformation, TMsgDlgButtons() << mbYes << mbNo,0) == mrYes) {
-
-      Button4->Enabled = false;
-      result = filecrypt(Edit1->Text.c_str(), Edit2->Text.c_str(), vector, block_size, cipher_number, operation);
-  }
-*/
 
   switch (result) {
-    case  0xDE: MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                               "ГЋГЇГҐГ°Г Г¶ГЁГї ГЎГ»Г«Г  Г®ГІГ¬ГҐГ­ГҐГ­Г !");
-                break;
-
-    case  0:    MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                               "Г”Г Г©Г« ГіГ±ГЇГҐГёГ­Г® Г®ГЎГ°Г ГЎГ®ГІГ Г­!");
-                break;
-    case -1:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                               "Г”Г Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ Г­ГҐ ГЎГ»Г« Г®ГІГЄГ°Г»ГІ!");
-                break;
-    case -2:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                               "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г­ГҐ ГЎГ»Г« Г®ГІГЄГ°Г»ГІ!");
-                break;
-    case -3:    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                               "Г”Г Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ ГЇГіГ±ГІ ГЁГ«ГЁ ГҐГЈГ® Г°Г Г§Г¬ГҐГ°"
-                               " ГЇГ°ГҐГўГ»ГёГ ГҐГІ 2 ГѓГЁГЃ!");
-                break;
-    case -4:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                               MEMORY_BLOCKED);
-                break;
-    case -5:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                               "ГЋГёГЁГЎГЄГ  Г§Г ГЇГЁГ±ГЁ Гў ГґГ Г©Г«!");
-                break;
-    case -6:    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                               "ГЋГёГЁГЎГЄГ  Г·ГІГҐГ­ГЁГї ГЁГ§ ГґГ Г©Г«Г !");
-                break;
+    case  0xDE:
+      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                     "Операция была отменена!");
+      break;
+    case OK:
+      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                     "Файл успешно обработан!");
+      break;
+    case READ_FILE_NOT_OPEN:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Файл для обработки не был открыт!");
+      break;
+    case WRITE_FILE_NOT_OPEN:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Файл назначения не был открыт!");
+      break;
+    case SIZE_FILE_ERROR:
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Файл для обработки пуст или его размер"
+                     " превышает 2 ГиБ!");
+      break;
+    case WRITE_FILE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Ошибка записи в файл!");
+      break;
+    case READ_FILE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Ошибка чтения из файла!");
+      break;
+    case STREAM_INPUT_CLOSE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Поток ввода не был закрыт!");
+      break;
+    case STREAM_OUTPUT_CLOSE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
+                     "Поток вывода не был закрыт!");
+      break;
+    case SIZE_DECRYPT_FILE_INCORRECT:
+      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                     "Размер файла для расшифровки некорректен!\n"
+                     "Обрабатываемый файл ранее был зашифрован?");
+      break;
   }
 
   if ((result == 0) && (CheckBox1->Checked == True)) {
-    UnicodeMsg = "Г‚Г» ГіГўГҐГ°ГҐГ­Г» Г·ГІГ® ГµГ®ГІГЁГІГҐ ГіГ­ГЁГ·ГІГ®Г¦ГЁГІГј ГґГ Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ?\n"
-                 "Г‘ГІГҐГ°ГІГ»ГҐ Г¤Г Г­Г­Г»ГҐ ГЎГіГ¤ГҐГІ Г­ГҐГўГ®Г§Г¬Г®Г¦Г­Г® ГўГ®Г±Г±ГІГ Г­Г®ГўГЁГІГј!";
+    UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
+                 "Стертые данные будет невозможно восстановить!";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
@@ -1143,11 +1280,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
           (DeleteFile(Edit1->Text)         == True)) {
 
         MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                       "Г”Г Г©Г« ГЎГ»Г« ГіГ­ГЁГ·ГІГ®Г¦ГҐГ­!");
+                       "Файл был уничтожен!");
       }
-      else
+      else {
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                       "ГЋГёГЁГЎГЄГ  ГіГ­ГЁГ·ГІГ®Г¦ГҐГ­ГЁГї ГґГ Г©Г«Г !");
+                       "Ошибка уничтожения файла!");
+      }
     }
     UnicodeMsg = "";
   }
@@ -1155,44 +1293,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   Form1->Shape4->Width = 0;
   Application->ProcessMessages();
 
-  switch (cipher_number) {
-    case ARC4:      meminit((void *)arc4_ctx->secret_key, 0x00, key_len);
-                    free((void *)arc4_ctx);
-                    arc4_ctx = NULL;
-                    break;
+  cipher_free((void *)cipher_pointer, cipher_length);
 
-    case AES:       meminit((void *)rijndael_ctx, 0x00, ctx_len);
-                    free((void *)rijndael_ctx);
-                    rijndael_ctx = NULL;
-                    break;
+  free_global_memory(memory, memory_length);
 
-    case SERPENT:   meminit((void *)serpent_ctx, 0x00, ctx_len);
-                    free((void *)serpent_ctx);
-                    serpent_ctx = NULL;
-                    break;
-
-    case TWOFISH:   meminit((void *)twofish_ctx, 0x00, ctx_len);
-                    free((void *)twofish_ctx);
-                    twofish_ctx = NULL;
-                    break;
-
-    case BLOWFISH:  meminit((void *)blowfish_ctx, 0x00, ctx_len);
-                    free((void *)blowfish_ctx);
-                    blowfish_ctx = NULL;
-                    break;
-
-    case THREEFISH: meminit((void *)threefish_ctx, 0x00, ctx_len);
-                    free((void *)threefish_ctx);
-                    threefish_ctx = NULL;
-                    break;
-
-  }
-
-  if (vector != NULL) {
-    meminit((void *)vector, 0x00, block_size);
-    free((void *)vector);
-    vector = NULL;
-  }
   Button4->Enabled = true;
 }
 
@@ -1218,25 +1322,23 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
 
   if ((len < 8) || (len > 256)) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Г‚ГўГҐГ¤ГЁГІГҐ Г·ГЁГ±Г«Г® Г®ГІ 8 Г¤Г® 256!");
+                   "Введите число от 8 до 256!");
     return;
   }
 
-  size_t ctx_len        = sizeof(ARC4_CTX);
-  size_t memory_ctx_len = sizeof(MEMORY_CTX);
+  size_t cipher_len              = sizeof(ARC4_CTX);
+  size_t password_memory_ctx_len = sizeof(PASSWORD_MEMORY_CTX);
 
-  MEMORY_CTX * memory   = (MEMORY_CTX *)calloc(1, memory_ctx_len);
-               arc4_ctx = (ARC4_CTX *)  calloc(1, ctx_len);
+  PASSWORD_MEMORY_CTX * memory   = (PASSWORD_MEMORY_CTX *)malloc(password_memory_ctx_len);
+  ARC4_CTX * arc4_ctx = (ARC4_CTX *)malloc(cipher_len);
 
   if ((memory == NULL) || (arc4_ctx == NULL)) {
     if (memory != NULL) {
       free((void *)memory);
-      memory = NULL;
     }
 
     if (arc4_ctx != NULL) {
       free((void *)arc4_ctx);
-      arc4_ctx = NULL;
     }
 
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1258,14 +1360,11 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   Memo1->Clear();
   Memo1->Lines->Text = AnsiString((char*)memory->input);
 
-  meminit((void *)arc4_ctx->secret_key, 0x00, ctx_len);
-  meminit((void *)memory, 0x00, memory_ctx_len);
+  meminit((void *)arc4_ctx, 0x00, cipher_len);
+  meminit((void *)memory, 0x00, password_memory_ctx_len);
 
   free((void *)memory);
   free((void *)arc4_ctx);
-
-  memory = NULL;
-  arc4_ctx = NULL;
 }
 
 void __fastcall TForm1::Shape2MouseDown(TObject *Sender,

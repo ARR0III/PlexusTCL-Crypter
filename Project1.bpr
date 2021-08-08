@@ -65,10 +65,10 @@
 [Version Info]
 IncludeVerInfo=1
 AutoIncBuild=0
-MajorVer=4
+MajorVer=5
 MinorVer=0
-Release=9
-Build=2
+Release=0
+Build=0
 Debug=0
 PreRelease=0
 Special=0
@@ -80,7 +80,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Technology CL
 FileDescription=
-FileVersion=4.0.9.2
+FileVersion=5.0.0.0
 InternalName=
 LegalCopyright=
 LegalTrademarks=
