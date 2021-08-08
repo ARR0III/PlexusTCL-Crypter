@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "src/sha256.h"
-#include "src/myfunctions.h"
+#include "src/xtalw.h"
 
 int sha256(const int tumbler, SHA256_CTX * ctx, 
            const uint8_t * data, uint8_t * hash, const int data_length) {
@@ -12,7 +12,10 @@ int sha256(const int tumbler, SHA256_CTX * ctx,
 
   if (tumbler == 1) {
     sha256_update(ctx, data, data_length);
-    sha256_final(ctx, hash);
+    sha256_final(ctx);
+    
+    memmove(hash, ctx->hash, 32);
+    
     return 0;
   }
 
@@ -62,7 +65,7 @@ int sha256(const int tumbler, SHA256_CTX * ctx,
       if ((real_procent % 4) == 0)
         memset(progress_bar, '#', real_procent / 4);
 
-      printf("\rProgress ]%s[ %3d %%", progress_bar, real_procent);
+      printf("\rProgress [%s] %3d %%", progress_bar, real_procent);
       fflush(stdout);
       past_procent = real_procent;
     }
@@ -71,7 +74,9 @@ int sha256(const int tumbler, SHA256_CTX * ctx,
   putc('\n', stdout);
   fclose(f);
 
-  sha256_final(ctx, hash);
+  sha256_final(ctx);
+
+  memmove(hash, ctx->hash, 32);
 
   free(buffer);
   buffer = NULL;
@@ -149,13 +154,14 @@ int main (int argc, char * argv[]) {
     return 0;
   }
 
-  hexprint(snark, buffer, 32);
+  printhex(snark, buffer, 32);
 
-  memset(ctx, 0x00, ctx_length);
-  memset(buffer, 0x00, 32);
+  meminit(ctx, 0x00, ctx_length);
+  meminit(buffer, 0x00, 32);
 
   free(ctx);
   ctx = NULL;
 
   return 0;
 }
+
