@@ -9,6 +9,9 @@ typedef struct {
   uint32_t datalen;
   uint64_t bitlen;
   uint32_t state[8];
+
+  /* this is buffer for control sum */
+  uint8_t  hash[SHA256_BLOCK_SIZE];
 } SHA256_CTX;
 
 #define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
@@ -105,7 +108,7 @@ void sha256_update(SHA256_CTX *ctx, const uint8_t * data, const size_t len) {
   }
 }
 
-void sha256_final(SHA256_CTX *ctx, uint8_t * hash) {
+void sha256_final(SHA256_CTX *ctx) {
   uint32_t i = ctx->datalen;
 
   if (ctx->datalen < 56) {
@@ -140,14 +143,14 @@ void sha256_final(SHA256_CTX *ctx, uint8_t * hash) {
   sha256_transform(ctx, ctx->data);
 
   for (i = 0; i < 4; ++i) {
-    hash[i]      = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 4]  = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 8]  = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 12] = (ctx->state[3] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 16] = (ctx->state[4] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 20] = (ctx->state[5] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 24] = (ctx->state[6] >> (24 - i * 8)) & 0x000000ff;
-    hash[i + 28] = (ctx->state[7] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i]      = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 4]  = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 8]  = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 12] = (ctx->state[3] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 16] = (ctx->state[4] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 20] = (ctx->state[5] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 24] = (ctx->state[6] >> (24 - i * 8)) & 0x000000ff;
+    ctx->hash[i + 28] = (ctx->state[7] >> (24 - i * 8)) & 0x000000ff;
   }
 }
 

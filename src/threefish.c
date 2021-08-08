@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-/* !!! do NOT change this is const !!! */
+/* !!! do NOT change this const !!! */
 uint64_t C240 = 0x1BD11BDAA9FC1A22;
 
 typedef enum ThreefishSize {
@@ -2416,13 +2416,13 @@ void threefishDecrypt1024(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
 void threefish_encrypt(THREEFISH_CTX * ctx,
                        uint64_t * in, uint64_t * out) {
   switch (ctx->keysize) {
-    case Threefish256 :
+    case Threefish256:
       threefishEncrypt256(ctx, in, out);
       break;
-    case Threefish512 :
+    case Threefish512:
       threefishEncrypt512(ctx, in, out);
       break;
-    case Threefish1024 :
+    case Threefish1024:
       threefishEncrypt1024(ctx, in, out);
       break;
   }
@@ -2431,13 +2431,13 @@ void threefish_encrypt(THREEFISH_CTX * ctx,
 void threefish_decrypt(THREEFISH_CTX * ctx,
                        uint64_t * in, uint64_t * out) {
   switch (ctx->keysize) {
-    case Threefish256 :
+    case Threefish256:
       threefishDecrypt256(ctx, in, out);
       break;
-    case Threefish512 :
+    case Threefish512:
       threefishDecrypt512(ctx, in, out);
       break;
-    case Threefish1024 :
+    case Threefish1024:
       threefishDecrypt1024(ctx, in, out);
       break;
   }

@@ -12,7 +12,34 @@
 
 #define HEX_TABLE  1
 #define HEX_STRING 0
-  
+
+void strinc(uint8_t * data, int len) {
+  while(--len) {
+    if (0xFF == data[len]) {
+      data[len] = 0x00;
+      continue;
+    }
+    else {
+      data[len] += 1;
+      break;
+    }
+  }
+}
+
+void strdec(uint8_t * data, int len) {
+  while(--len) {
+    if (0x00 == data[len]) {
+      data[len] = 0xFF;
+      continue;
+    }
+    else {
+      data[len] -= 1;
+      break;
+    }
+  }
+}
+
+
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
