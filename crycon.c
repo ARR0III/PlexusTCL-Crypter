@@ -582,7 +582,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
   else {
-    if (memcmp((void *)ctx->input + realread,
+    if (memcmp((void *)((uint8_t *)(ctx->input) + realread),
                (void *)ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
