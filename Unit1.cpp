@@ -40,7 +40,7 @@
 #define ERROR_ALLOCATE_MEMORY       -8
 #define SIZE_DECRYPT_FILE_INCORRECT -9
 
-#define SIZE_PASSWORD_GENERATE     256
+#define SIZE_PASSWORD_GENERATE     512
 
 #define LENGTH_DATA_FOR_CHECK     1024
 
@@ -73,7 +73,7 @@ const char * PARAM_REWRITE_BYTE = "r+b";
 
 const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
-const char * CHAR_KEY_LENGTH_AES[] ={
+const char * CHAR_KEY_LENGTH_AES[] = {
   "128",
   "192",
   "256"
@@ -780,7 +780,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
   else {
-    if (memcmp((void *)((uint8_t *)(ctx->input) + realread),
+    if (memcmp((void *)(ctx->input + realread),
                (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE) != 0) {
 
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
@@ -1329,6 +1329,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   size_t cipher_len              = sizeof(ARC4_CTX);
   size_t password_memory_ctx_len = sizeof(PASSWORD_MEMORY_CTX);
 
+  /* allocate memory and NOT clear memory */
   PASSWORD_MEMORY_CTX * memory   = (PASSWORD_MEMORY_CTX *)malloc(password_memory_ctx_len);
   ARC4_CTX * arc4_ctx = (ARC4_CTX *)malloc(cipher_len);
 
@@ -1345,8 +1346,9 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
     return;
   }
 
+  /* random byte to 0x00 do 0xFF xor random memory block */
   for (int i = 0; i < len; i++) {
-    memory->input[i] = (uint8_t)genrand(0x00, 0xFF);
+    memory->input[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
   arc4_init(arc4_ctx, memory->input, len);
