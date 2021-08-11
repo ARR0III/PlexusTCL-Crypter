@@ -173,7 +173,7 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
-  
+
   if (SaveDialog1->Execute()) {
     Form1->Edit2->Clear();
     Form1->Edit2->Text = SaveDialog1->FileName;
@@ -193,7 +193,7 @@ int operation_variant(const int operation) {
 
 void __fastcall TForm1::Button3Click(TObject *Sender) {
   OpenDialog1->Title = KEY_FILENAME;
-  
+
   if (OpenDialog1->Execute()) {
     Form1->Memo1->Clear();
     Form1->Memo1->Lines->Text = OpenDialog1->FileName;
@@ -208,12 +208,10 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
   }
 
-  Form1->Caption = PROGRAMM_NAME;
-
+  Form1->Caption         = PROGRAMM_NAME;
   Form1->Label6->Caption = PROGRAMM_NAME;
 
   Form1->Shape1->Pen->Color   = FORM_HEAD_COLOR;
-
   Form1->Shape2->Brush->Color = FORM_HEAD_COLOR;
   Form1->Shape2->Pen->Color   = FORM_HEAD_COLOR;
 
@@ -422,6 +420,8 @@ int erasedfile(const char * filename) {
     return -1;
   }
 
+  meminit((void *)data, 0x00, BLOCK_SIZE_FOR_ERASED);
+
   int   fsize_check = size_check(fsize);
   float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
 
@@ -432,27 +432,26 @@ int erasedfile(const char * filename) {
   int   check;
 
   size_t realread;
+  size_t size_for_erased ;
 
   while (position < fsize) {
-    realread = fread((void *)data, 1, BLOCK_SIZE_FOR_ERASED, f);
+    size_for_erased = (fsize - position);
 
-    if (realread > 0L) {
-      meminit((void *)data, 0x00, realread);
-      
-      fseek(f, position, SEEK_SET);
-
-      if (fwrite((void *)data, 1, realread, f) != realread) {
-        fclose(f);
-        free((void *)data);
-
-        return -1;
-      }
-      else {
-        fflush(f);
-      }
+    if (size_for_erased >= BLOCK_SIZE_FOR_ERASED) {
+      size_for_erased = BLOCK_SIZE_FOR_ERASED;
     }
 
-    position += (long int)realread;
+    if (fwrite((void *)data, 1, size_for_erased, f) != size_for_erased) {
+      fclose(f);
+      free((void *)data);
+
+      return -1;
+    }
+    else {
+      fflush(f);
+    }
+
+    position += (long int)size_for_erased;
 
     real_percent = (short)((float)position / div + 0.1);
 
@@ -495,7 +494,7 @@ void cipher_free(void * ctx, size_t ctx_length) {
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   uint8_t hash[SHA256_BLOCK_SIZE];
-  
+
   uint8_t K0[SHA256_BLOCK_SIZE];
   uint8_t K1[SHA256_BLOCK_SIZE];
 
@@ -508,7 +507,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     /* generate two secret const for hash update */
     memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
     memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
-    
+
     for (i = (SHA256_BLOCK_SIZE - ctx->temp_buffer_length); i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
       K1[i] = 0x00;
@@ -525,7 +524,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     K0[i] ^= 0x55; /* simbol 'U' */
     K1[i] ^= 0x66; /* simbol 'f' */
   }
-  
+
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
@@ -1030,7 +1029,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
                  "Было считано:\t" + IntToStr(real_read) + " Бт\n"
                  "Необходимо:\t" + IntToStr(memory->temp_buffer_length) + " Бт";
-                 
+
     Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
 
     UnicodeMsg = "";
@@ -1071,7 +1070,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
                    "Было считано:\t" + IntToStr(real_read) + " Бт\n"
                    "Необходимо:\tот 8 до 256 Бт";
-                   
+
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG, UnicodeMsg.c_str());
 
       UnicodeMsg = "";
@@ -1147,7 +1146,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     cipher_length  = sizeof(TWOFISH_CTX);
     twofish_ctx    = (TWOFISH_CTX *) calloc(1, cipher_length);
     cipher_pointer = (void *)twofish_ctx;
-    
+
     if (twofish_ctx == NULL) {
       free_global_memory(memory, memory_length);
 
@@ -1374,4 +1373,3 @@ void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
   ReleaseCapture();
   Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);
 }
-
