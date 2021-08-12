@@ -3,7 +3,7 @@
   Console Cryptography Software v5.00;
 
   Developer:         ARR0III;
-  Modification date: 09 AUG 2021;
+  Modification date: 08 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -61,7 +61,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 09AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 08AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -409,7 +409,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       if (fclose(fo) == -1)
         return STREAM_OUTPUT_CLOSE_ERROR;
       else
-        return SIZE_FILE_ERROR;
+        return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
 
