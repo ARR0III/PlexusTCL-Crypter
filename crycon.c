@@ -1,9 +1,9 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v5.00;
+  Console Cryptography Software v5.01;
 
   Developer:         ARR0III;
-  Modification date: 08 AUG 2021;
+  Modification date: 21 AUG 2021;
   Modification:      Testing (NOT original);
   Language:          English;
 */
@@ -61,7 +61,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.00 08AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.01 21AUG21 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
