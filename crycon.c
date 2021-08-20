@@ -387,13 +387,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   /* fsize += (size initialized vector + size sha256 hash sum) */
   /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
   if (fsize <= 0L) {
-    if (fclose(fi) == -1)
+    if (fclose(fi) == -1) {
       return STREAM_INPUT_CLOSE_ERROR;
-    else
-    if (fclose(fo) == -1)
+    }
+      
+    if (fclose(fo) == -1) {
       return STREAM_OUTPUT_CLOSE_ERROR;
-    else
-      return SIZE_FILE_ERROR;
+    }
+    
+    return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
@@ -403,13 +405,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   if (DECRYPT == ctx->operation) {
     /* if fsize < minimal size file for decrypt */
     if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
-      if (fclose(fi) == -1)
+      if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
-      else
-      if (fclose(fo) == -1)
+      }
+      
+      if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
-      else
-        return SIZE_DECRYPT_FILE_INCORRECT;
+      }
+      
+      return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
 
@@ -453,13 +457,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         memmove(ctx->vector, ctx->output, ctx->vector_length);
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
-          if (fclose(fi) == -1)
+          if (fclose(fi) == -1) {
             return STREAM_INPUT_CLOSE_ERROR;
-          else
-          if (fclose(fo) == -1)
+          }
+      
+          if (fclose(fo) == -1) {
             return STREAM_OUTPUT_CLOSE_ERROR;
-          else
-            return WRITE_FILE_ERROR;
+          } 
+          
+          return WRITE_FILE_ERROR;
         }
         else {
           fflush(fo);
@@ -468,13 +474,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       else
       if (DECRYPT == ctx->operation) {
         if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
-          if (fclose(fi) == -1)
+          if (fclose(fi) == -1) {
             return STREAM_INPUT_CLOSE_ERROR;
-          else
-          if (fclose(fo) == -1)
+          }
+      
+          if (fclose(fo) == -1) {
             return STREAM_OUTPUT_CLOSE_ERROR;
-          else
-            return READ_FILE_ERROR;
+          } 
+          
+          return READ_FILE_ERROR;
         }
         position += (int32_t)ctx->vector_length;
       }
@@ -519,13 +527,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     control_sum_buffer(ctx, realread);
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
-      if (fclose(fi) == -1)
+      if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
-      else
-      if (fclose(fo) == -1)
+      }
+      
+      if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
-      else
-        return WRITE_FILE_ERROR;
+      } 
+      
+      return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
@@ -569,13 +579,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
-      if (fclose(fi) == -1)
+      if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
-      else
-      if (fclose(fo) == -1)
+      }
+      
+      if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
-      else
-        return WRITE_FILE_ERROR;
+      } 
+      
+      return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
@@ -597,13 +609,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   printhex(HEX_TABLE, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 #endif
 
-  if (fclose(fi) == -1)
+  if (fclose(fi) == -1) {
     return STREAM_INPUT_CLOSE_ERROR;
-  else
-  if (fclose(fo) == -1)
+  }
+      
+  if (fclose(fo) == -1) {
     return STREAM_OUTPUT_CLOSE_ERROR;
-  else
-    return OK;
+  } 
+  
+  return OK;
 }
 
 size_t vector_init(uint8_t * data, size_t size) {
