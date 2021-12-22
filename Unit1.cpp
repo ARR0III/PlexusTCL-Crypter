@@ -446,7 +446,7 @@ int erasedfile(const char * filename) {
     
     fseek(f, position, SEEK_SET);
     
-    if (fwrite((void *)data, 1, size_for_erased, f) != size_for_erased) {
+    if (fwrite((void *)data, 1, realread, f) != realread) {
       fclose(f);
       free((void *)data);
 
@@ -456,7 +456,7 @@ int erasedfile(const char * filename) {
       fflush(f);
     }
 
-    position += (long int)size_for_erased;
+    position += (long int)realread;
 
     real_percent = (short)((float)position / div + 0.1);
 
