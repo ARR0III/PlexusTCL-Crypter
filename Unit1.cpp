@@ -508,7 +508,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   /* copy hash sum file in local buffer "hash" */
   memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
   
-  if (ctx->temp_buffer_length > SHA256_BLOCK_SIZE) {
+  if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
     /* generate two secret const for hash update */
     memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
     memcpy((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
