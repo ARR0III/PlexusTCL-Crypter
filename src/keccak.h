@@ -4,6 +4,10 @@
 #ifndef KECCAK_H
 #define KECCAK_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,5 +31,9 @@ void * sha3(const void *in, size_t inlen, void *md, int mdlen);
 
 void shake_xof(sha3_ctx_t *c);
 void shake_out(sha3_ctx_t *c, void *out, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

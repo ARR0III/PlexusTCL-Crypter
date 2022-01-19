@@ -393,20 +393,21 @@ void threefishDecrypt256(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
   }
 
 
-void threefishEncrypt512(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
-    {
+void threefishEncrypt512(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output) {
 
     uint64_t b0 = input[0], b1 = input[1],
-      b2 = input[2], b3 = input[3],
-      b4 = input[4], b5 = input[5],
-      b6 = input[6], b7 = input[7];
+             b2 = input[2], b3 = input[3],
+             b4 = input[4], b5 = input[5],
+             b6 = input[6], b7 = input[7];
+             
     uint64_t k0 = ctx->key[0], k1 = ctx->key[1],
-      k2 = ctx->key[2], k3 = ctx->key[3],
-      k4 = ctx->key[4], k5 = ctx->key[5],
-      k6 = ctx->key[6], k7 = ctx->key[7],
-      k8 = ctx->key[8];
+             k2 = ctx->key[2], k3 = ctx->key[3],
+             k4 = ctx->key[4], k5 = ctx->key[5],
+             k6 = ctx->key[6], k7 = ctx->key[7],
+             k8 = ctx->key[8];
+             
     uint64_t t0 = ctx->tweak[0], t1 = ctx->tweak[1],
-      t2 = ctx->tweak[2];
+             t2 = ctx->tweak[2];
 
         b1 += k1; b0 += b1 + k0; b1 = ((b1 << 46) | (b1 >> (64 - 46))) ^ b0;
         b3 += k3; b2 += b3 + k2; b3 = ((b3 << 36) | (b3 >> (64 - 36))) ^ b2;
@@ -1036,24 +1037,26 @@ void threefishDecrypt512(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
 void threefishEncrypt1024(THREEFISH_CTX * ctx, uint64_t * input, uint64_t * output) {
 
     uint64_t b0 = input[0], b1 = input[1],
-      b2 = input[2], b3 = input[3],
-      b4 = input[4], b5 = input[5],
-      b6 = input[6], b7 = input[7],
-      b8 = input[8], b9 = input[9],
-      b10 = input[10], b11 = input[11],
-      b12 = input[12], b13 = input[13],
-      b14 = input[14], b15 = input[15];
+             b2 = input[2], b3 = input[3],
+             b4 = input[4], b5 = input[5],
+             b6 = input[6], b7 = input[7],
+             b8 = input[8], b9 = input[9],
+             b10 = input[10], b11 = input[11],
+             b12 = input[12], b13 = input[13],
+             b14 = input[14], b15 = input[15];
+             
     uint64_t k0 = ctx->key[0], k1 = ctx->key[1],
-      k2 = ctx->key[2], k3 = ctx->key[3],
-      k4 = ctx->key[4], k5 = ctx->key[5],
-      k6 = ctx->key[6], k7 = ctx->key[7],
-      k8 = ctx->key[8], k9 = ctx->key[9],
-      k10 = ctx->key[10], k11 = ctx->key[11],
-      k12 = ctx->key[12], k13 = ctx->key[13],
-      k14 = ctx->key[14], k15 = ctx->key[15],
-      k16 = ctx->key[16];
+             k2 = ctx->key[2], k3 = ctx->key[3],
+             k4 = ctx->key[4], k5 = ctx->key[5],
+             k6 = ctx->key[6], k7 = ctx->key[7],
+             k8 = ctx->key[8], k9 = ctx->key[9],
+             k10 = ctx->key[10], k11 = ctx->key[11],
+             k12 = ctx->key[12], k13 = ctx->key[13],
+             k14 = ctx->key[14], k15 = ctx->key[15],
+             k16 = ctx->key[16];
+             
     uint64_t t0 = ctx->tweak[0], t1 = ctx->tweak[1],
-      t2 = ctx->tweak[2];
+             t2 = ctx->tweak[2];
 
             b1 += k1; b0 += b1 + k0; b1 = ((b1 << 24) | (b1 >> (64 - 24))) ^ b0;
             b3 += k3; b2 += b3 + k2; b3 = ((b3 << 13) | (b3 >> (64 - 13))) ^ b2;
@@ -2413,8 +2416,7 @@ void threefishDecrypt1024(THREEFISH_CTX* ctx, uint64_t* input, uint64_t* output)
             output[0] = b0;
 }
 
-void threefish_encrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out) {
+void threefish_encrypt(THREEFISH_CTX * ctx, uint64_t * in, uint64_t * out) {
   switch (ctx->keysize) {
     case Threefish256:
       threefishEncrypt256(ctx, in, out);
@@ -2428,8 +2430,7 @@ void threefish_encrypt(THREEFISH_CTX * ctx,
   }
 }
 
-void threefish_decrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out) {
+void threefish_decrypt(THREEFISH_CTX * ctx, uint64_t * in, uint64_t * out) {
   switch (ctx->keysize) {
     case Threefish256:
       threefishDecrypt256(ctx, in, out);

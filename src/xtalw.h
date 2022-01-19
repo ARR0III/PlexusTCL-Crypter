@@ -9,7 +9,13 @@
 #ifndef XTALW_H
 #define XTALW_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "xtalw.c"
+
+void chartobits(uint8_t * data, int len);
 
 void   strinc(uint8_t * data, int len);
 void   strdec(uint8_t * data, int len);
@@ -22,5 +28,9 @@ size_t x_strnlen(const char * string, size_t length);
 
 void * meminit(void * data, const uint8_t simbol, size_t length);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

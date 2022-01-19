@@ -42,10 +42,18 @@
 #ifndef TWOFISH_H
 #define TWOFISH_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "twofish.c"
 
 void twofish_init(TWOFISH_CTX * ctx, uint8_t * key, int len);
 void twofish_encrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output);
 void twofish_decrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

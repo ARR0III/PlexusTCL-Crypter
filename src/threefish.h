@@ -1,6 +1,11 @@
 #ifndef THREEFISH_H
 #define THREEFISH_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <stdint.h>
 
 #include "threefish.c"
@@ -27,4 +32,8 @@ void threefish_encrypt(THREEFISH_CTX * ctx,
                          
 void threefish_decrypt(THREEFISH_CTX * ctx,
                        uint64_t * in, uint64_t * out);
+#ifdef __cplusplus
+}
+#endif
+
 #endif
