@@ -27,3 +27,15 @@ void __fastcall TForm2::Shape1MouseDown(TObject *Sender,
 
 
 
+void __fastcall TForm2::Label5MouseEnter(TObject *Sender)
+{
+  Label5->Font->Color = clRed;        
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TForm2::Label5MouseLeave(TObject *Sender)
+{
+  Label5->Font->Color = clWhite;        
+}
+//---------------------------------------------------------------------------
+

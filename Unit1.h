@@ -1,5 +1,4 @@
 //---------------------------------------------------------------------------
-
 #ifndef Unit1H
 #define Unit1H
 //---------------------------------------------------------------------------
@@ -53,6 +52,10 @@ __published:	// IDE-managed Components
         void __fastcall Button5Click(TObject *Sender);
         void __fastcall Shape2MouseDown(TObject *Sender,
           TMouseButton Button, TShiftState Shift, int X, int Y);
+        void __fastcall Label5MouseEnter(TObject *Sender);
+        void __fastcall Label5MouseLeave(TObject *Sender);
+        void __fastcall Label7MouseLeave(TObject *Sender);
+        void __fastcall Label7MouseEnter(TObject *Sender);
 private:	// User declarations
 public:		// User declarations
         __fastcall TForm1(TComponent* Owner);

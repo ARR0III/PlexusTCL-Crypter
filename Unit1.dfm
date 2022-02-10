@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 223
-  Top = 278
+  Left = 227
+  Top = 255
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -27,7 +27,7 @@ object Form1: TForm1
     OnMouseDown = Shape2MouseDown
   end
   object Label7: TLabel
-    Left = 424
+    Left = 456
     Top = 5
     Width = 18
     Height = 13
@@ -42,14 +42,16 @@ object Form1: TForm1
     ParentColor = False
     ParentFont = False
     OnClick = Label7Click
+    OnMouseEnter = Label7MouseEnter
+    OnMouseLeave = Label7MouseLeave
   end
   object Label5: TLabel
-    Left = 450
+    Left = 480
     Top = 5
-    Width = 50
+    Width = 19
     Height = 13
     Cursor = crHandPoint
-    Caption = '['#1047#1072#1082#1088#1099#1090#1100']'
+    Caption = '[ X ]'
     Color = clNavy
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWhite
@@ -59,6 +61,8 @@ object Form1: TForm1
     ParentColor = False
     ParentFont = False
     OnClick = Label5Click
+    OnMouseEnter = Label5MouseEnter
+    OnMouseLeave = Label5MouseLeave
   end
   object Label6: TLabel
     Left = 5
