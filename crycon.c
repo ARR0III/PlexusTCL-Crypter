@@ -3,8 +3,8 @@
   Console Cryptography Software v5.01;
 
   Developer:         ARR0III;
-  Modification date: 21 AUG 2021;
-  Modification:      Testing (NOT original);
+  Modification date: 10 FEB 2022;
+  Modification:      Original;
   Language:          English;
 */
 
@@ -61,7 +61,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.01 21AUG21 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.01 10FEB22 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -279,7 +279,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 
   /* copy hash sum file in local buffer "hash" */
   memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
-  
+
   if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
     /* generate two secret const for hash update */
     memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
@@ -389,11 +389,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     if (fclose(fi) == -1) {
       return STREAM_INPUT_CLOSE_ERROR;
     }
-      
+
     if (fclose(fo) == -1) {
       return STREAM_OUTPUT_CLOSE_ERROR;
     }
-    
+
     return SIZE_FILE_ERROR;
   }
 
@@ -407,11 +407,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
       }
-      
+
       if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
       }
-      
+
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
@@ -459,11 +459,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           if (fclose(fi) == -1) {
             return STREAM_INPUT_CLOSE_ERROR;
           }
-      
+
           if (fclose(fo) == -1) {
             return STREAM_OUTPUT_CLOSE_ERROR;
-          } 
-          
+          }
+
           return WRITE_FILE_ERROR;
         }
         else {
@@ -476,11 +476,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           if (fclose(fi) == -1) {
             return STREAM_INPUT_CLOSE_ERROR;
           }
-      
+
           if (fclose(fo) == -1) {
             return STREAM_OUTPUT_CLOSE_ERROR;
-          } 
-          
+          }
+
           return READ_FILE_ERROR;
         }
         position += (int32_t)ctx->vector_length;
@@ -529,11 +529,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
       }
-      
+
       if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
-      } 
-      
+      }
+
       return WRITE_FILE_ERROR;
     }
     else {
@@ -581,11 +581,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       if (fclose(fi) == -1) {
         return STREAM_INPUT_CLOSE_ERROR;
       }
-      
+
       if (fclose(fo) == -1) {
         return STREAM_OUTPUT_CLOSE_ERROR;
-      } 
-      
+      }
+
       return WRITE_FILE_ERROR;
     }
     else {
@@ -595,7 +595,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   else {
     if (memcmp((void *)(ctx->input + realread),
                (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE) != 0) {
-      
+
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
     else {
@@ -611,11 +611,11 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   if (fclose(fi) == -1) {
     return STREAM_INPUT_CLOSE_ERROR;
   }
-      
+
   if (fclose(fo) == -1) {
     return STREAM_OUTPUT_CLOSE_ERROR;
-  } 
-  
+  }
+
   return OK;
 }
 
