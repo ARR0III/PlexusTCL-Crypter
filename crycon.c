@@ -3,7 +3,7 @@
   Console Cryptography Software v5.01;
 
   Developer:         ARR0III;
-  Modification date: 10 FEB 2022;
+  Modification date: 21 MAY 2022;
   Modification:      Original;
   Language:          English;
 */
@@ -238,7 +238,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   count = i = j = k = 0;
 }
 
-static void cent(int * number) {
+void cent(int * number) {
   if (*number > 100) {
     *number = 100;
   }
@@ -290,7 +290,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
     memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
 
-    for (i = (SHA256_BLOCK_SIZE - ctx->temp_buffer_length); i < SHA256_BLOCK_SIZE; i++) {
+    for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
       K1[i] = 0x00;
     }
