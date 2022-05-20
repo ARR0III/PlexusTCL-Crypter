@@ -89,9 +89,6 @@ ProductName=
 ProductVersion=1.0.0.0
 Comments=
 
-[Excluded Packages]
-d:\program\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
-
 [HistoryLists\hlIncludePath]
 Count=1
 Item0=C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\include;$(BCB)\include\vcl
@@ -128,5 +125,10 @@ LinkCGLIB=0
 AddServerUnit=1
 AddClientUnit=1
 PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
   </IDEOPTIONS>
 </PROJECT>

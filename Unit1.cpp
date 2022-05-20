@@ -515,7 +515,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
     memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
 
-    for (i = (SHA256_BLOCK_SIZE - ctx->temp_buffer_length); i < SHA256_BLOCK_SIZE; i++) {
+    for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
       K1[i] = 0x00;
     }
@@ -824,7 +824,7 @@ static size_t vector_init(uint8_t * data, size_t size) {
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /*
   не смог придумать ничего умнее, чем формировать строку простой конкатенацией
-  из языка C++, потому что в языке C формировать такую чушь это сложно.
+  из языка C++, потому что в языке C формировать такую чушь сложно.
 */
   String UnicodeMsg = "";
 
