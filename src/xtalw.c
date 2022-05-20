@@ -13,17 +13,20 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
-void chartobits(uint8_t * data, int len) {
-  int j, k;
+void chartobits(uint8_t * data, int len, FILE * stream) {
+  if (NULL == data)
+    return;
 
-  for (j = 0; j < len; j++) {
+  for (int j = 0; j < len; j++) {
     uint8_t c = data[j];
 
-    for (k = 0; k < 8; k++) {
-      putc((48 + ((c >> k) & 0x00000001)), stdout);
+    for(int k = 7; k >= 0; --k) {
+      putc((48 + ((c >> k) & 0x01)), stream);
     }
   }
-  putc('\n', stdout);
+
+  if (len > 0)
+    putc('\n', stream);
 }
 
 void strinc(uint8_t * data, int len) {
@@ -51,6 +54,7 @@ void strdec(uint8_t * data, int len) {
     }
   }
 }
+
 
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
@@ -108,13 +112,11 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
-  const uint8_t * temp;
-
   if (NULL == input || NULL == output || 0 == length) {
     return output;
   }
 
-  temp = input;
+  const uint8_t * temp = input;
 
   while (length) {
     *output ^= *temp;
@@ -125,6 +127,35 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
   }
   
   return output;
+}
+
+void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
+
+  if (NULL == data) {
+    return;
+  }
+
+  size_t i;
+
+  int left, right, symbol;
+  const char digits[] = "0123456789ABCDEF";
+
+  for (i = 0; i < length; ++i) {
+    symbol = (int)data[i];
+
+    left  = symbol >> 0x04; /* 11000011 >> 0x04 = 00001100 */
+    right = symbol  & 0x0F; /* 11000011  & 0x0F = 00000011 */
+
+    putc(digits[left],  stream);
+    putc(digits[right], stream);
+
+    if (HEX_TABLE == tumbler) {
+      putc(((i + 1) % 16) ? ' ' : '\n', stream);
+    }
+  }
+
+  if (length > 0)
+    putc('\n', stream);
 }
 
 size_t printhex(const int tumbler, const void * data, size_t length) {
@@ -139,7 +170,7 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   temp = (uint8_t *)data;
 
   if (HEX_TABLE == tumbler) {
-    for (; i < length; ++i) {
+    for (i = 0; i < length; ++i) {
       (void)printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
@@ -150,6 +181,8 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
     }
   }
 
-  putc('\n', stdout);
+  if (length > 0)
+    putc('\n', stdout);
+
   return i;
 }
