@@ -11,7 +11,6 @@
 #include <time.h>
 
 #include "src/arc4.h"      /* only for password generator */
-
 #include "src/serpent.h"
 #include "src/twofish.h"
 #include "src/rijndael.h"
@@ -20,7 +19,6 @@
 
 #include "src/crc32.h"
 #include "src/sha256.h"
-
 #include "src/base64.h"
 
 #include "src/xtalw.h"
@@ -111,7 +109,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.01 10FEB22 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.02 21MAY22 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -155,32 +153,68 @@ typedef struct {
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
+bool crycon_name_check(char * filename, int filename_len) {
+  bool result = false;
+
+  if ((filename_len > 7) && (strstr(filename, ".crycon") != NULL)) {
+    result = true;
+  }
+
+  return result;
+}
+
+/* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
 
+  char * filename;
+  int    filename_len;
+
   if (OpenDialog1->Execute()) {
+    filename = OpenDialog1->FileName.c_str();
+
     Form1->Edit1->Clear();
+    Form1->Edit2->Clear();
+    
     Form1->Edit1->Text = OpenDialog1->FileName;
 
-    if ((strlen(Form1->Edit1->Text.c_str()) > 0) &&
-        (Form1->Edit1->Text == Form1->Edit2->Text)) {
+    filename_len = strlen(filename);
 
-      Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
+    /* if in string filename not found string ".crycon" */
+    if (crycon_name_check(filename, filename_len) == true) {
+      filename[filename_len - 7] = 0x00;
+      Form1->Edit2->Text = AnsiString(filename);
+    }
+    else {
+      Form1->Edit2->Text = OpenDialog1->FileName + ".crycon";
     }
   }
 }
 
+/* OUTPUT FILE */
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
 
+  char * filename;
+  int    filename_len;
+
   if (SaveDialog1->Execute()) {
     Form1->Edit2->Clear();
-    Form1->Edit2->Text = SaveDialog1->FileName;
 
-    if ((strlen(Form1->Edit1->Text.c_str()) > 0) &&
-        (Form1->Edit1->Text == Form1->Edit2->Text)) {
+    filename     = SaveDialog1->FileName.c_str();
+    filename_len = strlen(filename);
 
-      Form1->Edit2->Text = Form1->Edit2->Text + ".crycon";
+    if (Form1->Edit1->Text == SaveDialog1->FileName) {
+      if (crycon_name_check(filename, filename_len) == true) {
+        filename[filename_len - 7] = 0x00;
+        Form1->Edit2->Text = AnsiString(filename);
+      }
+      else {
+        Form1->Edit2->Text = SaveDialog1->FileName + ".crycon";
+      }
+    }
+    else {
+      Form1->Edit2->Text = SaveDialog1->FileName;
     }
   }
 }
@@ -591,6 +625,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   register long int fsize    = size_of_file(fi);
   register long int position = 0;
 
+  if (0L == fsize ) {
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+      return SIZE_FILE_ERROR;
+  }
+
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
     fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
   }
@@ -607,7 +648,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   }
 
   if (DECRYPT == ctx->operation) {
-    /* if fsize < minimal size file for decrypt */
+    /* if fsize < minimal size for decrypt */
     if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
       if (fclose(fi) == -1)
         return STREAM_INPUT_CLOSE_ERROR;
@@ -907,7 +948,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if (memory->cipher_number == AES ||
       memory->cipher_number == SERPENT ||
-      memory->cipher_number == TWOFISH) { // AES or SERPENT
+      memory->cipher_number == TWOFISH) {
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (memory->cipher_number == AES) {
         AES_Rounds = 10;

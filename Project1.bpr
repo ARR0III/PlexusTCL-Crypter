@@ -68,7 +68,7 @@ AutoIncBuild=0
 MajorVer=5
 MinorVer=0
 Release=0
-Build=1
+Build=2
 Debug=0
 PreRelease=0
 Special=0
@@ -80,7 +80,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Technology CL
 FileDescription=
-FileVersion=5.0.0.1
+FileVersion=5.0.0.2
 InternalName=
 LegalCopyright=
 LegalTrademarks=
