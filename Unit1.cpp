@@ -27,6 +27,8 @@
 #include "Unit1.h"
 #include "Unit2.h"
 
+#define EXT_CRYCON ".crycon"
+
 #define OK                           0
 #define READ_FILE_NOT_OPEN          -1
 #define WRITE_FILE_NOT_OPEN         -2
@@ -153,40 +155,25 @@ typedef struct {
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
-bool crycon_name_check(char * filename, int filename_len) {
-  bool result = false;
-
-  if ((filename_len > 7) && (strstr(filename, ".crycon") != NULL)) {
-    result = true;
-  }
-
-  return result;
-}
-
 /* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
 
-  char * filename;
-  int    filename_len;
-
   if (OpenDialog1->Execute()) {
-    filename = OpenDialog1->FileName.c_str();
+    AnsiString path = ExtractFilePath(OpenDialog1->FileName);
+    AnsiString name = ExtractFileName(OpenDialog1->FileName);
+    AnsiString ext  = ExtractFileExt(OpenDialog1->FileName);
 
     Form1->Edit1->Clear();
-    Form1->Edit2->Clear();
-    
     Form1->Edit1->Text = OpenDialog1->FileName;
 
-    filename_len = strlen(filename);
+    Form1->Edit2->Clear();
 
-    /* if in string filename not found string ".crycon" */
-    if (crycon_name_check(filename, filename_len) == true) {
-      filename[filename_len - 7] = 0x00;
-      Form1->Edit2->Text = AnsiString(filename);
+    if (ext.LowerCase() == EXT_CRYCON) {
+      Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
     }
     else {
-      Form1->Edit2->Text = OpenDialog1->FileName + ".crycon";
+      Form1->Edit2->Text = OpenDialog1->FileName + EXT_CRYCON;
     }
   }
 }
@@ -195,22 +182,19 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
 
-  char * filename;
-  int    filename_len;
-
   if (SaveDialog1->Execute()) {
+    AnsiString path = ExtractFilePath(SaveDialog1->FileName);
+    AnsiString name = ExtractFileName(SaveDialog1->FileName);
+    AnsiString ext  = ExtractFileExt(SaveDialog1->FileName);
+
     Form1->Edit2->Clear();
 
-    filename     = SaveDialog1->FileName.c_str();
-    filename_len = strlen(filename);
-
     if (Form1->Edit1->Text == SaveDialog1->FileName) {
-      if (crycon_name_check(filename, filename_len) == true) {
-        filename[filename_len - 7] = 0x00;
-        Form1->Edit2->Text = AnsiString(filename);
+      if (ext.LowerCase() == EXT_CRYCON) {
+        Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
       }
       else {
-        Form1->Edit2->Text = SaveDialog1->FileName + ".crycon";
+        Form1->Edit2->Text = SaveDialog1->FileName + EXT_CRYCON;
       }
     }
     else {
