@@ -1,10 +1,10 @@
 /*
   Plexus Technology Cybernetic Laboratories;
-  Console Cryptography Software v5.02;
+  Console Cryptography Software v5.03;
 
   Developer:         ARR0III;
-  Modification date: 21 MAY 2022;
-  Modification:      Original;
+  Modification date: 10 AUG 2022;
+  Modification:      Alpha testing;
   Language:          English;
 */
 
@@ -509,7 +509,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         }
 
-      strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      strxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
       memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
