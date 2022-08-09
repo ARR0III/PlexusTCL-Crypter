@@ -4,7 +4,7 @@
 
   Developer:         ARR0III;
   Modification date: 10 AUG 2022;
-  Modification:      Alpha testing;
+  Modification:      Testing;
   Language:          English;
 */
 
