@@ -110,6 +110,37 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   return result;
 }
 
+void * strxormove(void * output, const void * input, size_t length) {
+  if (!output || !input || (output == input)) {
+    return output;
+  }
+
+        unsigned char * local_output = (unsigned char *)output;
+  const unsigned char * local_input  = (const unsigned char *)input;
+
+  if (local_output < local_input) {
+    while(length--) {
+      *local_output ^= *local_input;
+
+      ++local_output;
+      ++local_input;
+    }
+  }
+  else {
+          unsigned char * last_output = local_output + (length - 1);
+    const unsigned char * last_input  = local_input  + (length - 1);
+     
+     while (length--) {
+       *last_output ^= *last_input;
+
+       --last_output;
+       --last_input;
+     }
+  }
+
+  return output;
+}
+
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
   if (NULL == input || NULL == output || 0 == length) {
