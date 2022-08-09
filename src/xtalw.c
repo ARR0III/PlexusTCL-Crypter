@@ -14,7 +14,7 @@
 #define HEX_STRING 0
 
 void chartobits(uint8_t * data, int len, FILE * stream) {
-  if (NULL == data)
+  if (!data)
     return;
 
   for (int j = 0; j < len; j++) {
@@ -55,7 +55,6 @@ void strdec(uint8_t * data, int len) {
   }
 }
 
-
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
@@ -64,7 +63,7 @@ int genrand(const int min, const int max) {
 void * meminit(void * data, const uint8_t simbol, size_t length) {
   volatile uint8_t * temp = (uint8_t *)data;
 
-  if (NULL == data) {
+  if (!data) {
     return data;
   }
 
@@ -94,13 +93,13 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if (NULL == filename || NULL == buffer || 0 == length) {
+  if (!filename || !buffer || 0 == length) {
     return (-1);
   }
 
   f = fopen(filename, "rb");
 
-  if (NULL == f) {
+  if (!f) {
     return (-1);
   }
 
@@ -143,18 +142,18 @@ void * strxormove(void * output, const void * input, size_t length) {
 
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
-  if (NULL == input || NULL == output || 0 == length) {
+  if (!input || !output || (input == output)) {
     return output;
   }
 
-  const uint8_t * temp = input;
+        uint8_t * local_output = output;
+  const uint8_t * local_input  = input;
 
-  while (length) {
-    *output ^= *temp;
+  while (length--) {
+    *local_output ^= *local_input;
     
-    length--;
-    output++;
-    temp++;
+    local_output++;
+    local_input++;
   }
   
   return output;
@@ -162,8 +161,12 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
 
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
 
-  if (NULL == data) {
+  if (!data) {
     return;
+  }
+
+  if (stream != stdin || stream != stdout || stream != stderr) {
+    stream = stderr;
   }
 
   size_t i;
@@ -192,13 +195,11 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
 size_t printhex(const int tumbler, const void * data, size_t length) {
 
   size_t i = 0;
-  const uint8_t * temp;
+  const uint8_t * temp = (uint8_t *)data;
 
-  if (NULL == data || 0 == length) {
+  if (!data || 0 == length) {
     return i;
   }
-
-  temp = (uint8_t *)data;
 
   if (HEX_TABLE == tumbler) {
     for (i = 0; i < length; ++i) {
