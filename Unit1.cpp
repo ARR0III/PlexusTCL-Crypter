@@ -111,7 +111,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.02 21MAY22 [RU]";
+const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.03 12AUG22 [RU]";
 
 const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
 
@@ -270,21 +270,25 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
 }
 
 void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
-  if (NULL != ctx->sha256sum) {
+  if (!ctx) {
+    return;
+  }
+
+  if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
       meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
     }
     free((void *)ctx->sha256sum);
   }
 
-  if (NULL != ctx->vector) {
+  if (ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
     }
     free((void *)ctx->vector);
   }
 
-  if (NULL != ctx->temp_buffer) {
+  if (ctx->temp_buffer) {
     if (ctx->temp_buffer_length > 0) {
       meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
@@ -417,7 +421,7 @@ float sizetofloatprint(const int status, const float size) {
 int erasedfile(const char * filename) {
   FILE * f = fopen(filename, PARAM_REWRITE_BYTE);
 
-  if (NULL == f) {
+  if (!f) {
     return -1;
   }
 
@@ -431,7 +435,7 @@ int erasedfile(const char * filename) {
 
   uint8_t * data = (uint8_t *)malloc(BLOCK_SIZE_FOR_ERASED);
 
-  if (NULL == data) {
+  if (!data) {
     fclose(f);
     return -1;
   }
@@ -602,7 +606,7 @@ uint32_t MessageForUser(const int tumbler,
 int filecrypt(GLOBAL_MEMORY * ctx) {
   FILE * fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
 
-  if (fi == NULL) {
+  if (!fi) {
     return READ_FILE_NOT_OPEN;
   }
 
@@ -643,7 +647,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
 
-  if (NULL == fo) {
+  if (!fo) {
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
     else
@@ -741,7 +745,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         }
 
-      strxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      strxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
       memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
@@ -892,7 +896,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   size_t memory_length = sizeof(GLOBAL_MEMORY);
   GLOBAL_MEMORY * memory = (GLOBAL_MEMORY *)malloc(memory_length);
 
-  if (NULL == memory) {
+  if (!memory) {
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
@@ -1039,7 +1043,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   memory->temp_buffer = (uint8_t*)malloc(memory->temp_buffer_length);
 
-  if (NULL == memory->temp_buffer) {
+  if (!memory->temp_buffer) {
     free_global_memory(memory, memory_length);
 
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1070,7 +1074,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       memory->sha256sum_length = sizeof(SHA256_CTX);
       memory->sha256sum = (SHA256_CTX *)malloc(memory->sha256sum_length);
 
-      if (NULL != memory->sha256sum) {
+      if (memory->sha256sum) {
         Button4->Enabled = False;
         /* Crypt key generator; generate crypt key from password */
         meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
@@ -1125,7 +1129,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   memory->vector = (uint8_t*)malloc(memory->vector_length);
 
-  if (memory->vector == NULL) {
+  if (!memory->vector) {
     free_global_memory(memory, memory_length);
 
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1157,7 +1161,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     rijndael_ctx   = (uint32_t *) calloc(cipher_length, 1);
     cipher_pointer = (void *)rijndael_ctx;
 
-    if (NULL == rijndael_ctx) {
+    if (!rijndael_ctx) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1173,7 +1177,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     twofish_ctx    = (TWOFISH_CTX *) calloc(1, cipher_length);
     cipher_pointer = (void *)twofish_ctx;
 
-    if (twofish_ctx == NULL) {
+    if (!twofish_ctx) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1188,7 +1192,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_length);
     cipher_pointer = (void *)serpent_ctx;
 
-    if (serpent_ctx == NULL) {
+    if (!serpent_ctx) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1203,7 +1207,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     blowfish_ctx = (BLOWFISH_CTX*)calloc(1, cipher_length);
     cipher_pointer = (void *)blowfish_ctx;
 
-    if (blowfish_ctx == NULL) {
+    if (!blowfish_ctx) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1218,7 +1222,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_length);
     cipher_pointer = (void *)threefish_ctx;
 
-    if (threefish_ctx == NULL) {
+    if (!threefish_ctx) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1358,12 +1362,12 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   PASSWORD_MEMORY_CTX * memory   = (PASSWORD_MEMORY_CTX *)malloc(password_memory_ctx_len);
   ARC4_CTX * arc4_ctx = (ARC4_CTX *)malloc(cipher_len);
 
-  if ((memory == NULL) || (arc4_ctx == NULL)) {
-    if (memory != NULL) {
+  if (!memory || !arc4_ctx) {
+    if (memory) {
       free((void *)memory);
     }
 
-    if (arc4_ctx != NULL) {
+    if (arc4_ctx) {
       free((void *)arc4_ctx);
     }
 
@@ -1422,4 +1426,5 @@ void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
   Label7->Font->Color = clRed;        
 }
 //---------------------------------------------------------------------------
+
 
