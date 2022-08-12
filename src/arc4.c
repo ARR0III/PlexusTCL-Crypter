@@ -2,7 +2,7 @@
 #include <stddef.h>
 
 typedef struct {
-  size_t i, j;
+  uint32_t i, j;
   uint8_t  secret_key[256];
 } ARC4_CTX;
 
@@ -29,7 +29,7 @@ void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {
 
 /* MAX size data for encrypt = 4 GiB */
 void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, size_t length) {
-  register size_t position = 0;
+  register uint32_t position = 0;
   
   while (length--) {
     ctx->i = (ctx->i + 1) & 255;

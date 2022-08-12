@@ -1,9 +1,13 @@
 /*
-  Plexus Technology Cybernetic Laboratories;
+  Plexus Technology Cybernetic Laboratory;
 
-  Some functions of this library are functional analogs of system
-  functions, so their replacement with the original functions should not
-  affect the operation of the program in any way.
+  This library of functions was created as a set of functions
+  that I need to replace some of the functions in the C
+  programming language standard library that I think could be
+  better implemented. Some functions are needed for debugging
+  programs, such as "phex", which prints the contents of memory
+  in hexadecimal. The functions were debugged, tested and
+  implemented into the program just in case.
 */
 
 #include <stdio.h>
@@ -13,9 +17,14 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
-void chartobits(uint8_t * data, size_t len, FILE * stream) {
-  if (!data)
+void arraytobits(uint8_t * data, size_t len, FILE * stream) {
+  if (!data) {
     return;
+  }
+
+  if (stream != stdin || stream != stdout || stream != stderr) {
+    stream = stderr;
+  }
 
   for (size_t j = 0; j < len; j++) {
     uint8_t c = data[j];
@@ -30,6 +39,10 @@ void chartobits(uint8_t * data, size_t len, FILE * stream) {
 }
 
 void strinc(uint8_t * data, size_t len) {
+  if (!data) {
+    return;
+  }
+	
   while(--len) {
     if (0xFF == data[len]) {
       data[len] = 0x00;
@@ -43,6 +56,10 @@ void strinc(uint8_t * data, size_t len) {
 }
 
 void strdec(uint8_t * data, size_t len) {
+  if (!data) {
+    return;
+  }
+	
   while(--len) {
     if (0x00 == data[len]) {
       data[len] = 0xFF;
@@ -61,15 +78,15 @@ int genrand(const int min, const int max) {
 
 /* "meminit" always upload in memory and executed */
 void * meminit(void * data, const uint8_t simbol, size_t length) {
-  volatile uint8_t * temp = (uint8_t *)data;
-
   if (!data) {
     return data;
   }
+	
+  volatile uint8_t * temp = (uint8_t *)data;
 
   while (length--) {
     *temp = simbol;
-     temp++;
+     ++temp;
   }
 
   return data;
@@ -77,8 +94,11 @@ void * meminit(void * data, const uint8_t simbol, size_t length) {
 
 
 size_t x_strnlen(const char * string, size_t boundary) {
-
   size_t result = 0;
+
+  if (!string) {
+    return result;
+  }
 
   while (boundary && string[result]) {
     boundary--;
@@ -165,8 +185,12 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     return;
   }
 
+  if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
+    tumbler = HEX_TABLE;
+  }
+
   if (stream != stdin || stream != stdout || stream != stderr) {
-    stream = stderr;
+    stream = stdout;
   }
 
   int left, right, symbol;
@@ -190,14 +214,18 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     putc('\n', stream);
 }
 
-size_t printhex(const int tumbler, const void * data, size_t length) {
-
+size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
-  const uint8_t * temp = (uint8_t *)data;
 
   if (!data || 0 == length) {
     return i;
   }
+
+  if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
+    tumbler = HEX_TABLE;
+  }
+
+  const uint8_t * temp = (uint8_t *)data;
 
   if (HEX_TABLE == tumbler) {
     for (i = 0; i < length; ++i) {
