@@ -1,10 +1,10 @@
 /*
-  Plexus Technology Cybernetic Laboratories;
+  Plexus Technology Cybernetic Laboratory;
   Console Cryptography Software v5.03;
 
   Developer:         ARR0III;
-  Modification date: 10 AUG 2022;
-  Modification:      Testing;
+  Modification date: 12 AUG 2022;
+  Modification:      Release;
   Language:          English;
 */
 
@@ -61,7 +61,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.02 21MAY22 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.03 12AUG22 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -129,21 +129,25 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
-  if (NULL != ctx->sha256sum) {
+  if (!ctx) {
+    return;
+  }	
+	
+  if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
       meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
     }
     free((void *)ctx->sha256sum);
   }
 
-  if (NULL != ctx->vector) {
+  if (ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
     }
     free((void *)ctx->vector);
   }
 
-  if (NULL != ctx->temp_buffer) {
+  if (ctx->temp_buffer) {
     if (ctx->temp_buffer_length > 0) {
       meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
@@ -157,6 +161,10 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
 }
 
 void NAME_CIPHER_ERROR(const char * name) {
+  if (!name) {
+    return;
+  }
+  
   printf("[!] Name cipher \"%s\" incorrect!\n", name);
 }
 
@@ -190,6 +198,10 @@ double sizetodoubleprint(const int status, const double size) {
 void KDFCLOMUL(GLOBAL_MEMORY * ctx,
               const uint8_t  * password, const size_t password_len,
                     uint8_t  * key,      const size_t key_length) {
+
+  if (!ctx || !password || !key) {
+    return;
+  }
 
   uint32_t i, j, k;
   uint32_t count = 0;
@@ -239,6 +251,10 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 }
 
 void cent(int * number) {
+  if (!number) {
+    return;
+  }	
+	
   if (*number > 100) {
     *number = 100;
   }
@@ -250,6 +266,10 @@ int operation_variant(const int operation) {
 }
 
 int32_t size_of_file(FILE * f) {
+  if (!f) {
+    return (-1);
+  }
+	
   if (fseek(f, 0, SEEK_END) != 0) {
     return (-1);
   }
@@ -264,12 +284,20 @@ int32_t size_of_file(FILE * f) {
 }
 
 void cipher_free(void * ctx, size_t ctx_length) {
+  if (!ctx) {
+    return;
+  }
+	
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
   ctx = NULL;
 }
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+  if (!ctx) {
+    return;
+  }
+	
   uint8_t hash[SHA256_BLOCK_SIZE];
 
   uint8_t K0[SHA256_BLOCK_SIZE];
@@ -335,6 +363,10 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 }
 
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
+  if (!ctx) {
+    return;
+  }
+
   size_t       i = 0;
   size_t remnant = count;
 
@@ -359,13 +391,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
 
-  if (NULL == fi) {
+  if (!fi) {
     return READ_FILE_NOT_OPEN;
   }
 
   FILE * fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
 
-  if (NULL == fo) {
+  if (!fo) {
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
     else
@@ -620,6 +652,10 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 }
 
 size_t vector_init(uint8_t * data, size_t size) {
+  if (!data) {
+    return 0;
+  }	
+	
   size_t i;
   size_t stack_trash; /* NOT initialized == ALL OK */
 
@@ -696,7 +732,7 @@ int main(int argc, char * argv[]) {
   size_t ctx_length = sizeof(GLOBAL_MEMORY);
   GLOBAL_MEMORY * ctx = (GLOBAL_MEMORY *)calloc(ctx_length, 1);
 
-  if (NULL == ctx) {
+  if (!ctx) {
     MEMORY_ERROR();
     return (-1);
   }
@@ -843,7 +879,7 @@ int main(int argc, char * argv[]) {
 
   ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
 
-  if (NULL == ctx->temp_buffer) {
+  if (!ctx->temp_buffer) {
     free_global_memory(ctx, ctx_length);
 
     MEMORY_ERROR();
@@ -881,7 +917,7 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
 #endif
 
-      if (NULL != ctx->sha256sum) {
+      if (ctx->sha256sum) {
         /* password -> crypt key; Pseudo PBKDF2 */
         KDFCLOMUL(ctx, (uint8_t *)(ctx->keyfile), real_read,
                   ctx->temp_buffer,
@@ -941,7 +977,7 @@ int main(int argc, char * argv[]) {
 
   ctx->vector = (uint8_t*)calloc(ctx->vector_length, 1);
 
-  if (NULL == ctx->vector) {
+  if (!ctx->vector) {
     free_global_memory(ctx, ctx_length);
 
     MEMORY_ERROR();
@@ -977,7 +1013,7 @@ int main(int argc, char * argv[]) {
     rijndael_ctx = (uint32_t *) calloc(cipher_ctx_len, 1);
     cipher_pointer = (void *)rijndael_ctx;
 
-    if (NULL == rijndael_ctx) {
+    if (!rijndael_ctx) {
       free_global_memory(ctx, ctx_length);
 
       MEMORY_ERROR();
@@ -993,7 +1029,7 @@ int main(int argc, char * argv[]) {
     twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)twofish_ctx;
 
-    if (NULL == twofish_ctx) {
+    if (!twofish_ctx) {
       free_global_memory(ctx, ctx_length);
 
       MEMORY_ERROR();
@@ -1007,7 +1043,7 @@ int main(int argc, char * argv[]) {
     serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)serpent_ctx;
 
-    if (NULL == serpent_ctx) {
+    if (!serpent_ctx) {
       free_global_memory(ctx, ctx_length);
 
       MEMORY_ERROR();
@@ -1021,7 +1057,7 @@ int main(int argc, char * argv[]) {
     blowfish_ctx = (BLOWFISH_CTX *)calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)blowfish_ctx;
 
-    if (NULL == blowfish_ctx) {
+    if (!blowfish_ctx) {
       free_global_memory(ctx, ctx_length);
 
       MEMORY_ERROR();
@@ -1035,7 +1071,7 @@ int main(int argc, char * argv[]) {
     threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_ctx_len);
     cipher_pointer = (void *)threefish_ctx;
 
-    if (NULL == threefish_ctx) {
+    if (!threefish_ctx) {
       free_global_memory(ctx, ctx_length);
 
       MEMORY_ERROR();
