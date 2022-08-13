@@ -660,7 +660,7 @@ size_t vector_init(uint8_t * data, size_t size) {
   size_t stack_trash; /* NOT initialized == ALL OK */
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] stack_trash: %ld\n", stack_trash);
+  printf("[DEBUG] stack_trash: %u\n", stack_trash);
 #endif
 
   for (i = 0; i < size; i++) {
@@ -739,7 +739,7 @@ int main(int argc, char * argv[]) {
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] compile date and time:   %s, %s\n", __DATE__, __TIME__);
-  printf("[DEBUG] global memory allocated: %ld byte\n", ctx_length);
+  printf("[DEBUG] global memory allocated: %u byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
 #endif
 
@@ -748,8 +748,8 @@ int main(int argc, char * argv[]) {
   ctx->finput  = argv[argc - 3];
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] input filename: %s\n", ctx->finput);
-  printf("[DEBUG] output filename: %s\n", ctx->foutput);
+  printf("[DEBUG] input filename:      %s\n", ctx->finput);
+  printf("[DEBUG] output filename:     %s\n", ctx->foutput);
   printf("[DEBUG] keyfile or password: %s\n", ctx->keyfile);
 #endif
 
@@ -863,7 +863,7 @@ int main(int argc, char * argv[]) {
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
-  printf("[DEBUG] key length: %ld bist\n", ctx->temp_buffer_length);
+  printf("[DEBUG] key length: %u bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
 #endif
 
@@ -887,7 +887,7 @@ int main(int argc, char * argv[]) {
   }
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] temp memory allocated: %ld byte\n", ctx->temp_buffer_length);
+  printf("[DEBUG] temp memory allocated: %u byte\n", ctx->temp_buffer_length);
   printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
 #endif
 
@@ -913,7 +913,7 @@ int main(int argc, char * argv[]) {
       ctx->sha256sum        = (SHA256_CTX *)calloc(1, ctx->sha256sum_length);
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] size struct for sha256sum function: %ld byte\n", ctx->sha256sum_length);
+  printf("[DEBUG] size struct for sha256sum function: %u byte\n", ctx->sha256sum_length);
   printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
 #endif
 
@@ -985,7 +985,7 @@ int main(int argc, char * argv[]) {
   }
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] vector memory allocated: %ld byte\n", ctx->vector_length);
+  printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
   printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
 #endif
 
@@ -1086,7 +1086,7 @@ int main(int argc, char * argv[]) {
     ALGORITM_NAME[(ctx->cipher_number)]);
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] allocate byte for cipher struct: %ld\n", cipher_ctx_len);
+  printf("[DEBUG] allocate byte for cipher struct: %u\n", cipher_ctx_len);
   printf("[DEBUG] real data cipher struct:\n");
   printhex(HEX_TABLE, cipher_pointer, cipher_ctx_len);
 #endif
