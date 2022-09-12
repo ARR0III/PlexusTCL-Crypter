@@ -49,7 +49,7 @@
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
 
-#define DATA_SIZE           (1024*1024) /* 1 MiB */
+#define DATA_SIZE           (1024*1024*8) /* 8 MiB */
 
 #pragma hdrstop
 #pragma package(smart_init)
@@ -111,17 +111,16 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME   = "PlexusTCL Crypter 5.03 12AUG22 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.04 12SEP22 [RU]";
+const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
-const char * MEMORY_BLOCKED  = "Ошибка выделения памяти!";
+const char * OK_MSG           = PROGRAMM_NAME;
+const char * WARNING_MSG      = "Внимание!";
+const char * ERROR_MSG        = "!!! Ошибка !!!";
 
-const char * OK_MSG          = PROGRAMM_NAME;
-const char * WARNING_MSG     = "Внимание!";
-const char * ERROR_MSG       = "!!! Ошибка !!!";
-
-const char * INPUT_FILENAME  = "Файл для шифрования";
-const char * OUTPUT_FILENAME = "Файл назначения";
-const char * KEY_FILENAME    = "Ключ шифрования";
+const char * INPUT_FILENAME   = "Файл для шифрования";
+const char * OUTPUT_FILENAME  = "Файл назначения";
+const char * KEY_FILENAME     = "Ключ шифрования";
 
 uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -333,7 +332,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   float div = (float)(key_len) / 100.0;
 
-  for (i = 0; i < password_len; ++i) {  /* dynamic generate count */
+  for (i = 1; i <= password_len; ++i) { /* dynamic counter generate */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
     count -= (password_len + key_len + CLOMUL_CONST + i);
   }

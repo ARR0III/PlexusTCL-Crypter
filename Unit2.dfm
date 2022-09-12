@@ -98,11 +98,11 @@ object Form2: TForm2
       #1089#1074#1086#1073#1086#1076#1085#1086' '#1080' '#1073#1077#1089#1087#1083#1072#1090#1085#1086'.'
   end
   object Label1: TLabel
-    Left = 32
+    Left = 40
     Top = 30
-    Width = 276
+    Width = 266
     Height = 13
-    Caption = 'PLEXUS TECHNOLOGY CYBERNETIC LABORATORIES'
+    Caption = 'PLEXUS TECHNOLOGY CYBERNETIC LABORATORY'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11

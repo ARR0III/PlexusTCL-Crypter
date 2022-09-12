@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 821
-  Top = 125
+  Left = 351
+  Top = 320
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
