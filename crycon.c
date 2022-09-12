@@ -1,12 +1,12 @@
 /*
-  Plexus Technology Cybernetic Laboratory;
-  Console Cryptography Software v5.03;
-
-  Developer:         ARR0III;
-  Modification date: 12 AUG 2022;
-  Modification:      Release;
-  Language:          English;
-*/
+ * Plexus Technology Cybernetic Laboratory;
+ * Console Cryptography Software v5.04;
+ *
+ * Developer:         ARR0III;
+ * Modification date: 12 SEP 2022;
+ * Modification:      Release;
+ * Language:          English;
+ */
 
 /* if DEBUG_INFORMATION defined */
 #ifdef DEBUG_INFORMATION
@@ -57,11 +57,11 @@
 #define PROGRESS_BAR_LENGTH         26
 
 #define BOUNDARY                  2048
-#define DATA_SIZE           (1024*1024) /* 1 MB */
+#define DATA_SIZE        (1024*1024*8) /* READ AND WRITE FROM DRIVE 8 MB */
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.03 12AUG22 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.04 12SEP22 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -211,7 +211,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   clock_t min = clock();
 #endif
 
-  for (i = 0; i < password_len; ++i) {  /* dynamic generation count */
+  for (i = 1; i <= password_len; ++i) {  /* dynamic generation count */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
     count -= (password_len + key_length + CLOMUL_CONST + i);
   }
