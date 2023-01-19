@@ -79,7 +79,7 @@ typedef enum cipher_number_enum {
 
 static const uint32_t INT_SIZE_DATA[] = {
   (uint32_t)1 << 10, /* KiB */
-  (uint32_t)1 << 20, /* MeB */
+  (uint32_t)1 << 20, /* MiB */
   (uint32_t)1 << 30  /* GiB */
 };
 
