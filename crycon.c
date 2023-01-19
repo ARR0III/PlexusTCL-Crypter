@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Cryptography Software v5.04;
+ * Console Cryptography Software v5.05;
  *
  * Developer:         ARR0III;
- * Modification date: 12 SEP 2022;
+ * Modification date: 19 JAN 2023;
  * Modification:      Release;
  * Language:          English;
  */
@@ -14,7 +14,7 @@
 #endif
 
 /* if COMPILE_FOR_MS_WINDOWS defined */
-#ifdef COMPILE_FOR_MS_WINDOWS
+#ifdef MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
 #else
@@ -57,11 +57,11 @@
 #define PROGRESS_BAR_LENGTH         26
 
 #define BOUNDARY                  2048
-#define DATA_SIZE        (1024*1024*8) /* READ AND WRITE FROM DRIVE 8 MB */
+#define DATA_SIZE     ((1024*1024) * 8 /*MiB*/ ) /* READ AND WRITE FROM DRIVE */
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.04 12SEP22 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 19JAN23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -78,9 +78,9 @@ typedef enum cipher_number_enum {
 } cipher_t;
 
 static const uint32_t INT_SIZE_DATA[] = {
-  1024,      /* KiB */
-  1048576,   /* MeB */
-  1073741824 /* GiB */
+  (uint32_t)1 << 10, /* KiB */
+  (uint32_t)1 << 20, /* MeB */
+  (uint32_t)1 << 30  /* GiB */
 };
 
 static const char * CHAR_SIZE_DATA[] = {
@@ -197,7 +197,7 @@ double sizetodoubleprint(const int status, const double size) {
 
 void KDFCLOMUL(GLOBAL_MEMORY * ctx,
               const uint8_t  * password, const size_t password_len,
-                    uint8_t  * key,      const size_t key_length) {
+                    uint8_t  * key,      const size_t key_len) {
 
   if (!ctx || !password || !key) {
     return;
@@ -213,7 +213,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   for (i = 1; i <= password_len; ++i) {  /* dynamic generation count */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
-    count -= (password_len + key_length + CLOMUL_CONST + i);
+    count -= (password_len + key_len + CLOMUL_CONST + i);
   }
 
   count  &= CRC32(password, password_len);
@@ -227,7 +227,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   sha256_init(ctx->sha256sum);
 
-  for (i = k = 0; i < key_length; ++i, ++k) {
+  for (i = k = 0; i < key_len; ++i, ++k) {
     for (j = 0; j < count; ++j) {
       sha256_update(ctx->sha256sum, password, password_len);
     }
@@ -376,7 +376,7 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
                     (ctx->operation ? ctx->output : ctx->input) + i,
                     remnant);
     }
-    else { /* if remnant >= LENGTH_DATA_FOR_CHECK */
+    else {
       sha256_update(ctx->sha256sum,
                     (ctx->operation ? ctx->output : ctx->input) + i,
                     LENGTH_DATA_FOR_CHECK);
