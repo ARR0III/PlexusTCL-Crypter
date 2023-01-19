@@ -68,7 +68,7 @@ AutoIncBuild=0
 MajorVer=5
 MinorVer=0
 Release=0
-Build=4
+Build=5
 Debug=0
 PreRelease=0
 Special=0
@@ -80,7 +80,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Technology CL
 FileDescription=
-FileVersion=5.0.0.4
+FileVersion=5.0.0.5
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -88,6 +88,9 @@ OriginalFilename=PlexusTCL Crypter
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
+
+[Excluded Packages]
+d:\program\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
 
 [HistoryLists\hlIncludePath]
 Count=1
@@ -125,10 +128,5 @@ LinkCGLIB=0
 AddServerUnit=1
 AddClientUnit=1
 PrecompiledHeaders=1
-
-[Language]
-ActiveLang=
-ProjectLang=
-RootDir=
   </IDEOPTIONS>
 </PROJECT>

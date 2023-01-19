@@ -39,7 +39,6 @@
 #define STREAM_OUTPUT_CLOSE_ERROR   -7
 #define ERROR_ALLOCATE_MEMORY       -8
 #define SIZE_DECRYPT_FILE_INCORRECT -9
-
 #define SIZE_PASSWORD_GENERATE     512
 
 #define LENGTH_DATA_FOR_CHECK     1024
@@ -111,7 +110,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.04 12SEP22 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.05 18JAN23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -849,6 +848,18 @@ static size_t vector_init(uint8_t * data, size_t size) {
   return i;
 }
 
+  /*
+    AES       = (temp_buffer_length = 16 or 24 or 32;
+    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
+    SERPENT   = (temp_buffer_length = 16 or 24 or 32);
+    BLOWFISH  = (temp_buffer_length = 56);
+    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
+  */
+
+char * CharA_Or_CharOV(size_t length) {
+  return (24 == length || 128 == length) ? "а" : "ов";
+}
+
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /*
   не смог придумать ничего умнее, чем формировать строку простой конкатенацией
@@ -1239,9 +1250,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
     "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
     "Длина ключа:\t" + IntToStr(memory->temp_buffer_length * 8).c_str() + " бит" +
-                       (24 == memory->temp_buffer_length ||
-                        64 == memory->temp_buffer_length ||
-                       128 == memory->temp_buffer_length ? "а" : "ов");
+                       CharA_Or_CharOV(memory->temp_buffer_length);
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
@@ -1296,7 +1305,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       break;
   }
 
-  if ((result == 0) && (CheckBox1->Checked == True)) {
+  if ((result == OK) && (CheckBox1->Checked == True)) {
     UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
                  "Стертые данные будет невозможно восстановить!";
 
