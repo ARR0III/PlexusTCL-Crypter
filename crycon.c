@@ -723,7 +723,7 @@ size_t vector_init(uint8_t * data, size_t size) {
 
   size = size - 2; /* for check cycle bottom */
 
-  /* what the fuck this is ??? */
+  /* What the fuck is this ??? */
   for (i = 0; i < size; i++) {
     if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2])) {
       break;
