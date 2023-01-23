@@ -3,8 +3,8 @@
  * Console Cryptography Software v5.05;
  *
  * Developer:         ARR0III;
- * Modification date: 19 JAN 2023;
- * Modification:      Release;
+ * Modification date: 23 JAN 2023;
+ * Modification:      Testing;
  * Language:          English;
  */
 
@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stddef.h>
 
+#include "src/arc4.h"
 #include "src/crc32.h"
 #include "src/sha256.h"
 #include "src/serpent.h"
@@ -61,7 +62,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 19JAN23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 18JAN23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -651,6 +652,53 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   return OK;
 }
 
+void random_vector_init(uint8_t * data, size_t size) {
+  if (!data) {
+    return;
+  }
+  
+  size_t i;
+  size_t arc4_size   = sizeof(ARC4_CTX);
+  size_t vector_size = size;
+  
+  ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
+  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
+  
+  if ((!arc4_memory) || (!vector_memory)) {
+    if (NULL != arc4_memory) {
+	  free(arc4_memory);
+	}
+	
+	if (NULL != vector_memory) {
+	  free(vector_memory);
+	}
+	
+	return;
+  }
+  
+  /* generate trash for security and xor with random data from memory */
+  for (i = 0; i < vector_size; i++) {
+    vector_memory[i] ^= (uint8_t)genrand(0x00, 0xFF);
+  }
+  
+  /* encrypt data initialized vector for security */
+  arc4_init(arc4_memory, data, size);
+  arc4(arc4_memory, vector_memory, data, size);
+  
+  /* clear all data for security */
+  meminit(vector_memory, 0x00, vector_size);
+  meminit(arc4_memory, 0x00, arc4_size);
+  
+  free(vector_memory);
+  free(arc4_memory);
+  
+  vector_memory = NULL;
+  arc4_memory = NULL;
+  
+  vector_size = 0;
+  arc4_size   = 0;
+}
+
 size_t vector_init(uint8_t * data, size_t size) {
   if (!data) {
     return 0;
@@ -662,7 +710,7 @@ size_t vector_init(uint8_t * data, size_t size) {
 #if DEBUG_INFORMATION
   printf("[DEBUG] stack_trash: %u\n", stack_trash);
 #endif
-
+  
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
@@ -670,8 +718,12 @@ size_t vector_init(uint8_t * data, size_t size) {
   /* random data from stack xor initialized vector */
   (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
 
+  /* generate real vector with cryptography */
+  random_vector_init(data, size);
+
   size = size - 2;
 
+  /* what the fuck this is ??? */
   for (i = 0; i < size; i++) {
     if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2])) {
       break;
