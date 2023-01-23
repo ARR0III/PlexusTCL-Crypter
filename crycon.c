@@ -653,7 +653,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 }
 
 void random_vector_init(uint8_t * data, size_t size) {
-  if (!data) {
+  if ((!data) || (0 == size)) {
     return;
   }
   
@@ -721,7 +721,7 @@ size_t vector_init(uint8_t * data, size_t size) {
   /* generate real vector with cryptography */
   random_vector_init(data, size);
 
-  size = size - 2;
+  size = size - 2; /* for check cycle bottom */
 
   /* what the fuck this is ??? */
   for (i = 0; i < size; i++) {
