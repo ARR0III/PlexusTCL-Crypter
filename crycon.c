@@ -3,7 +3,7 @@
  * Console Cryptography Software v5.05;
  *
  * Developer:         ARR0III;
- * Modification date: 23 JAN 2023;
+ * Modification date: 26 JAN 2023;
  * Modification:      Testing;
  * Language:          English;
  */
@@ -62,7 +62,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 18JAN23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 19JAN23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -80,7 +80,7 @@ typedef enum cipher_number_enum {
 
 static const uint32_t INT_SIZE_DATA[] = {
   (uint32_t)1 << 10, /* KiB */
-  (uint32_t)1 << 20, /* MiB */
+  (uint32_t)1 << 20, /* MeB */
   (uint32_t)1 << 30  /* GiB */
 };
 
@@ -307,17 +307,17 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   int i;
 
   /* copy hash sum file in local buffer "hash" */
-  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
-  if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
+  if (ctx->temp_buffer_length > SHA256_BLOCK_SIZE) {
     /* generate two secret const for hash update */
-    memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
-    memcpy((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memmove((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memmove((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
   }
   else {
     /* generate two secret const for hash update */
-    memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
-    memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memmove((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memmove((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
 
     for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
@@ -346,7 +346,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
@@ -466,8 +466,14 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   while (position < fsize) {
     if (0 == position) {
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
+  printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
+#endif
+
       if (ENCRYPT == ctx->operation) {
-        switch (ctx->cipher_number) {
+        switch (ctx->cipher_number) { /* delete this code block or not */
           case AES:
             rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
             break;
@@ -486,7 +492,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             break;
         }
 
-        memmove(ctx->vector, ctx->output, ctx->vector_length);
+        memmove(ctx->vector, ctx->output, ctx->vector_length); /* delete this string or not */
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
+  printf("[DEBUG] vector real data:\n");
+  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
+#endif
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
           if (fclose(fi) == -1) {
@@ -516,6 +528,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
           return READ_FILE_ERROR;
         }
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] vector data read from file in pointer: %p\n", ctx->vector);
+  printf("[DEBUG] vector real data:\n");
+  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
+#endif
+
         position += (int32_t)ctx->vector_length;
       }
     }
@@ -1036,11 +1055,6 @@ int main(int argc, char * argv[]) {
     return (-1);
   }
 
-#if DEBUG_INFORMATION
-  printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
-  printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
-#endif
-
   if (ENCRYPT == ctx->operation) {
     srand((unsigned int)time(NULL));
 
@@ -1050,13 +1064,6 @@ int main(int argc, char * argv[]) {
       printf("[X] Critical error! System time stopped?\n");
       return (-1);
     }
-
-#if DEBUG_INFORMATION
-  printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
-  printf("[DEBUG] vector real data:\n");
-  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
-#endif
-
   }
 
   void * cipher_pointer = NULL;
