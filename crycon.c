@@ -496,8 +496,6 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
-  printf("[DEBUG] vector real data:\n");
-  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
 #endif
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
@@ -531,12 +529,16 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] vector data read from file in pointer: %p\n", ctx->vector);
-  printf("[DEBUG] vector real data:\n");
-  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
 #endif
 
         position += (int32_t)ctx->vector_length;
       }
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] vector real data:\n");
+  printhex(HEX_TABLE, ctx->vector, ctx->vector_length);
+#endif
+
     }
 
     realread = fread((void *)ctx->input, 1, DATA_SIZE, fi);
