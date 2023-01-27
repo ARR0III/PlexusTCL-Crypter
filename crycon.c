@@ -62,7 +62,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 19JAN23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 28JAN23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
