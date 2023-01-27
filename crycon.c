@@ -8,6 +8,8 @@
  * Language:          English;
  */
 
+/* Read NIST SP 800-38A */
+
 /* if DEBUG_INFORMATION defined */
 #ifdef DEBUG_INFORMATION
 #define DEBUG_INFORMATION 1
