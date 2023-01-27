@@ -3,7 +3,7 @@
  * Console Cryptography Software v5.05;
  *
  * Developer:         ARR0III;
- * Modification date: 27 JAN 2023;
+ * Modification date: 28 JAN 2023;
  * Modification:      Testing;
  * Language:          English;
  */
@@ -97,11 +97,11 @@ static const char * OPERATION_NAME[] = {
 };
 
 static const char * ALGORITM_NAME[]  = {
-  "AES-CFB",
-  "SERPENT-CFB",
-  "TWOFISH-CFB",
-  "BLOWFISH-CFB",
-  "THREEFISH-CFB"
+  "AES",
+  "SERPENT",
+  "TWOFISH",
+  "BLOWFISH",
+  "THREEFISH"
 };
 
 /* Global struct for data */
@@ -319,6 +319,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     memmove((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
     memmove((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
 
+    /* if length temp_buffer equal SHA256_BLOCK_SIZE then cycle NOT executable */
     for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
       K1[i] = 0x00;
@@ -326,8 +327,8 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    K0[i] ^= 0x55; /* simbol 'U' */
-    K1[i] ^= 0x66; /* simbol 'f' */
+    K0[i] ^= 0x55; /* simbol 'U', decimal  85 */
+    K1[i] ^= 0x66; /* simbol 'f', decimal 102 */
   }
 
 #if DEBUG_INFORMATION
@@ -360,7 +361,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   meminit((void *)K0,   0x00, SHA256_BLOCK_SIZE);
   meminit((void *)K1,   0x00, SHA256_BLOCK_SIZE);
-  /* now control sum in buffer pointer ctx->sha256sum->hash */
+  /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
 
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
@@ -936,6 +937,7 @@ int main(int argc, char * argv[]) {
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
+  printf("[DEBUG] block cipher mode of operation: CFB\n");
   printf("[DEBUG] key length: %u bist\n", ctx->temp_buffer_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
 #endif
