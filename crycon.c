@@ -688,14 +688,14 @@ void random_vector_init(uint8_t * data, size_t size) {
   
   if ((!arc4_memory) || (!vector_memory)) {
     if (NULL != arc4_memory) {
-	  free(arc4_memory);
-	}
+      free(arc4_memory);
+    }
 	
-	if (NULL != vector_memory) {
-	  free(vector_memory);
-	}
+    if (NULL != vector_memory) {
+      free(vector_memory);
+    }
 	
-	return;
+    return;
   }
   
   /* generate trash for security and xor with random data from memory */
