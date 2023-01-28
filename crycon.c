@@ -3,7 +3,7 @@
  * Console Cryptography Software v5.05;
  *
  * Developer:         ARR0III;
- * Modification date: 28 JAN 2023;
+ * Modification date: 29 JAN 2023;
  * Modification:      Testing;
  * Language:          English;
  */
@@ -64,7 +64,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.05 28JAN23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.06 29JAN23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
