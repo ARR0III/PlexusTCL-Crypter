@@ -39,16 +39,16 @@
 #define STREAM_OUTPUT_CLOSE_ERROR   -7
 #define ERROR_ALLOCATE_MEMORY       -8
 #define SIZE_DECRYPT_FILE_INCORRECT -9
-#define SIZE_PASSWORD_GENERATE     512
+
+#define SIZE_PASSWORD_GENERATE     512
+#define BLOCK_SIZE_FOR_ERASED      512
 
 #define LENGTH_DATA_FOR_CHECK     1024
-
-#define BLOCK_SIZE_FOR_ERASED      512
 
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
 
-#define DATA_SIZE           (1024*1024*8) /* 8 MiB */
+#define DATA_SIZE       (1024*1024 * 8) /* 8 MiB */
 
 #pragma hdrstop
 #pragma package(smart_init)
@@ -515,6 +515,10 @@ void cipher_free(void * ctx, size_t ctx_length) {
 }
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+  if (!ctx) {
+    return;
+  }
+	
   uint8_t hash[SHA256_BLOCK_SIZE];
 
   uint8_t K0[SHA256_BLOCK_SIZE];
@@ -523,18 +527,19 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   int i;
 
   /* copy hash sum file in local buffer "hash" */
-  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
-  if (ctx->temp_buffer_length >= SHA256_BLOCK_SIZE) {
+  if (ctx->temp_buffer_length > SHA256_BLOCK_SIZE) {
     /* generate two secret const for hash update */
-    memcpy((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
-    memcpy((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memmove((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
+    memmove((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
   }
   else {
     /* generate two secret const for hash update */
-    memcpy((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
-    memcpy((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memmove((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+    memmove((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
 
+    /* if length temp_buffer equal SHA256_BLOCK_SIZE then cycle NOT executable */
     for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
       K0[i] = 0x00;
       K1[i] = 0x00;
@@ -542,33 +547,35 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    K0[i] ^= 0x55; /* simbol 'U' */
-    K1[i] ^= 0x66; /* simbol 'f' */
+    K0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
+    K1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
   }
 
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
+  /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, K0, SHA256_BLOCK_SIZE);
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
+  /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, K1, SHA256_BLOCK_SIZE);
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
-  /* now control sum in buffer pointer ctx->sha256sum->hash */
 
   /* clear local buffers for security */
   meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
   meminit((void *)K0,   0x00, SHA256_BLOCK_SIZE);
   meminit((void *)K1,   0x00, SHA256_BLOCK_SIZE);
+  /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
 
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
