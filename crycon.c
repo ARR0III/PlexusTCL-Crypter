@@ -329,8 +329,8 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    K0[i] ^= 0x55; /* simbol 'U', decimal  85 */
-    K1[i] ^= 0x66; /* simbol 'f', decimal 102 */
+    K0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
+    K1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
   }
 
 #if DEBUG_INFORMATION
@@ -344,6 +344,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
+  /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, K0, SHA256_BLOCK_SIZE);
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
@@ -354,6 +355,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
+  /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, K1, SHA256_BLOCK_SIZE);
   sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
