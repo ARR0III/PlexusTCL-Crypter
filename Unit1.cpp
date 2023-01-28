@@ -825,20 +825,70 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     return OK;
 }
 
-static size_t vector_init(uint8_t * data, size_t size) {
+void random_vector_init(uint8_t * data, size_t size) {
+  if ((!data) || (0 == size)) {
+    return;
+  }
+  
+  size_t i;
+  size_t arc4_size   = sizeof(ARC4_CTX);
+  size_t vector_size = size;
+  
+  ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
+  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
+  
+  if ((!arc4_memory) || (!vector_memory)) {
+    if (NULL != arc4_memory) {
+      free(arc4_memory);
+    }
+	
+    if (NULL != vector_memory) {
+      free(vector_memory);
+    }
+	
+    return;
+  }
+  
+  /* generate trash for security and xor with random data from memory */
+  for (i = 0; i < vector_size; i++) {
+    vector_memory[i] ^= (uint8_t)genrand(0x00, 0xFF);
+  }
+  
+  /* encrypt data initialized vector for security */
+  arc4_init(arc4_memory, data, size);
+  arc4(arc4_memory, vector_memory, data, size);
+  
+  /* clear all data for security */
+  meminit(vector_memory, 0x00, vector_size);
+  meminit(arc4_memory, 0x00, arc4_size);
+  
+  free(vector_memory);
+  free(arc4_memory);
+}
+
+size_t vector_init(uint8_t * data, size_t size) {
+  if (!data) {
+    return 0;
+  }	
+	
   size_t i;
   size_t stack_trash; /* NOT initialized == ALL OK */
-
+  
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
+  /* random data from stack xor initialized vector */
   (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
 
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
-  size = size - 2;
+  /* generate real vector with cryptography */
+  random_vector_init(data, size);
 
+  size = size - 2; /* for check cycle bottom */
+
+  /* What the fuck is this ??? */
   for (i = 0; i < size; i++) {
     if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2])) {
       break;
@@ -847,14 +897,6 @@ static size_t vector_init(uint8_t * data, size_t size) {
 
   return i;
 }
-
-  /*
-    AES       = (temp_buffer_length = 16 or 24 or 32;
-    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
-    SERPENT   = (temp_buffer_length = 16 or 24 or 32);
-    BLOWFISH  = (temp_buffer_length = 56);
-    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
-  */
 
 char * CharA_Or_CharOV(size_t length) {
   return (24 == length || 128 == length) ? "а" : "ов";
@@ -1315,7 +1357,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "";
 
       if (erasedfile(Edit1->Text.c_str()) == 0) {
-        if ((DeleteFile(Edit1->Text) == True)) {
+        if (DeleteFile(Edit1->Text) == True) {
           MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
                         "Файл назначения был уничтожен!");
         }
