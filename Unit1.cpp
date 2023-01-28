@@ -85,9 +85,9 @@ const char * CHAR_KEY_LENGTH_THREEFISH[] ={
 };
 
 const uint32_t INT_SIZE_DATA[] = {
-  1024,
-  1048576,
-  1073741824
+  (uint32_t)1 << 10, /* KiB */
+  (uint32_t)1 << 20, /* MeB */
+  (uint32_t)1 << 30  /* GiB */
 };
 
 const char * CHAR_SIZE_DATA[] = {
@@ -110,7 +110,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.05 18JAN23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.06 29JAN23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -1312,26 +1312,39 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
       Button4->Enabled = false;
+      UnicodeMsg = "";
 
-      if ((erasedfile(Edit1->Text.c_str()) == 0) &&
-          (DeleteFile(Edit1->Text)         == True)) {
+      if (erasedfile(Edit1->Text.c_str()) == 0) {
+        if ((DeleteFile(Edit1->Text) == True)) {
+          MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                        "Файл назначения был уничтожен!");
+        }
+        else {
+          /* if file not delete then show error code for user */
+          unsigned long error_delete = GetLastError();
 
-        MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                       "Файл был уничтожен!");
+          UnicodeMsg = "Ошибка удаления файла!\n"
+                       "Файл:\n"
+                       + Form1->Edit1->Text + "\n\n"
+                       "был уничтожен но не был удален диска!\n\n"
+                       "Код ошибки: " + IntToStr(error_delete);
+
+          MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, UnicodeMsg.c_str());
+        }
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                       "Ошибка уничтожения файла!");
+                      "Ошибка уничтожения файла!");
       }
     }
-    UnicodeMsg = "";
   }
+
+  UnicodeMsg = "";
 
   Form1->Shape4->Width = 0;
   Application->ProcessMessages();
 
   cipher_free((void *)cipher_pointer, cipher_length);
-
   free_global_memory(memory, memory_length);
 
   Button4->Enabled = true;
