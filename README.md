@@ -1,4 +1,4 @@
-# PlexusTCL Crypter v5.05
+# PlexusTCL Crypter v5.06
 
 [ENGLISH LANGUAGE]
 
