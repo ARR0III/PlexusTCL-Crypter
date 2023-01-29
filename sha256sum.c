@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdint.h>
 
+#define SHA_2_256_SUM_FOR_FILE   0x00
+#define SHA_2_256_SUM_FOR_STRING 0x01
+
 #include "src/sha256.h"
 #include "src/xtalw.h"
 
@@ -10,7 +13,7 @@ int sha256(const int tumbler, SHA256_CTX * ctx,
 
   sha256_init(ctx);
 
-  if (tumbler == 1) {
+  if (SHA_2_256_SUM_FOR_STRING == tumbler) {
     sha256_update(ctx, data, data_length);
     sha256_final(ctx);
     
@@ -29,14 +32,14 @@ int sha256(const int tumbler, SHA256_CTX * ctx,
   long int filesize = ftell(f);
   fseek(f, 0, SEEK_SET);
 
-  if (filesize == -1L || filesize < 1) {
+  if ((-1L == filesize) || (filesize < 1)) {
     fclose(f);
     return -2;
   }
 
   uint8_t * buffer = (uint8_t*)calloc(1024, 1);
 
-  if (buffer == NULL) {
+  if (NULL == buffer) {
     fclose(f);
     return -3;
   }
@@ -108,7 +111,7 @@ int main (int argc, char * argv[]) {
   int ctx_length = sizeof(SHA256_CTX);
   SHA256_CTX * ctx = (SHA256_CTX*) calloc(1, ctx_length);
 
-  if (ctx == NULL) {
+  if (NULL == ctx) {
     printf("[#] Cannot allocate memory!\n");
     return 0;
   }
@@ -126,10 +129,10 @@ int main (int argc, char * argv[]) {
   }
 
   if ((strcmp(argv[2], "-f") == 0) || (strcmp(argv[2], "--file") == 0))
-    clark = 0;
+    clark = SHA_2_256_SUM_FOR_FILE;
   else
   if ((strcmp(argv[2], "-s") == 0) || (strcmp(argv[2], "--string") == 0))
-    clark = 1;
+    clark = SHA_2_256_SUM_FOR_STRING;
   else {
     printf("[#] Argument \"%s\" incorrect!\n", argv[2]);
     free(ctx);
@@ -148,7 +151,7 @@ int main (int argc, char * argv[]) {
              break;
   }
 
-  if (result == -1 || result == -2 || result == -3) {
+  if (result == -1 || result == -2 || result == -3) {                
     free(ctx);
     ctx = NULL;
     return 0;
