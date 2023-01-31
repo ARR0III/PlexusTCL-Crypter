@@ -115,7 +115,7 @@ const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
 const char * WARNING_MSG      = "Внимание!";
-const char * ERROR_MSG        = "!!! Ошибка !!!";
+const char * ERROR_MSG        = "Ошибка!";
 
 const char * INPUT_FILENAME   = "Файл для шифрования";
 const char * OUTPUT_FILENAME  = "Файл назначения";
@@ -1364,18 +1364,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "";
 
       if (erasedfile(Edit1->Text.c_str()) == 0) {
-        if (DeleteFile(Edit1->Text) == True) {
+        if (DeleteFile(Edit1->Text) != False) {
           MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
                         "Файл назначения был уничтожен!");
         }
         else {
-          /* if file not delete then show error code for user */
+          /* if file rewriting and not delete -> show error code for user */
           unsigned long error_delete = GetLastError();
 
           UnicodeMsg = "Ошибка удаления файла!\n"
                        "Файл:\n"
                        + Form1->Edit1->Text + "\n\n"
-                       "был уничтожен но не был удален диска!\n\n"
+                       "был перезаписан но не был удален с диска!\n"
                        "Код ошибки: " + IntToStr(error_delete);
 
           MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, UnicodeMsg.c_str());
@@ -1383,7 +1383,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                      "Ошибка уничтожения файла!");
+                      "Ошибка перезаписи файла!\n"
+					  "Возможно файл не существует или он защищен от записи!");
       }
     }
   }
