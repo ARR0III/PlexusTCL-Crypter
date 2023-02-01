@@ -111,21 +111,20 @@ void * meminit32(void * data, const unsigned int number, int len) {
 }
 
 /* "meminit" always upload in memory and executed */
-void * meminit(void * data, const uint8_t simbol, size_t length) {
-  if (!data) {
-    return data;
+void * meminit(void * data, const uint8_t number, size_t len) {
+  if (NULL == data) {
+    return NULL;
   }
 	
   volatile uint8_t * temp = (uint8_t *)data;
 
-  while (length--) {
-    *temp = simbol;
+  while (len--) {
+    *temp = number;
      ++temp;
   }
 
   return data;
 }
-
 
 size_t x_strnlen(const char * string, size_t boundary) {
   size_t result = 0;
