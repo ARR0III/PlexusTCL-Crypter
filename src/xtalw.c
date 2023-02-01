@@ -83,6 +83,7 @@ void * x_meminit32(void * data, const unsigned int number, int len) {
     return NULL;
   }
 	
+  /* volatile = always executable */
   volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
 
@@ -90,7 +91,8 @@ void * x_meminit32(void * data, const unsigned int number, int len) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
   }
-	
+
+  /* copy 4 byte in memory */
   while (len >= WIDTH_32_BIT_NUMBER) {
     (*(unsigned long *)temp) = u_dword;
 	  
@@ -98,6 +100,7 @@ void * x_meminit32(void * data, const unsigned int number, int len) {
     len  -= WIDTH_32_BIT_NUMBER;
   }
 	
+  /* if len < 4 or len % 4 NOT equal 0 then executable */
   while (len--) {
     *temp = (unsigned char)number;
      temp++;
