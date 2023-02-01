@@ -76,46 +76,40 @@ int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
 
+/* "x_meminit32" optimization and always executable standart function memset (meminit) */
 void * x_meminit32(void * data, const unsigned int number, int len) {
 #define WIDTH_32_BIT_NUMBER 4
+	
   if (NULL == data || 0 == len) {
     return NULL;
   }
 	
-  volatile unsigned char * temp = (unsigned char *)data;
-	
-  register unsigned char symbol  = (unsigned char)number;
+  volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
 	
-  while (1) {
-    if (len < WIDTH_32_BIT_NUMBER) {
-      while (len) {
-        *temp = symbol;
-
-         temp++;	   
-         len--;
-      }
-      break;
-    }
+  if (number < 0x00000100) { /* if number in [0x00..0xFF] */
+    u_dword ^= u_dword;
 	  
-    if (number < 0x00000100) { /* if number in 0x00..0xFF */
-      u_dword |= symbol;
-      u_dword |= symbol << 8;
-      u_dword |= symbol << 16;
-      u_dword |= symbol << 24;
-    }
-	  
-    (*(unsigned long *)temp)  = u_dword;
-                        temp += WIDTH_32_BIT_NUMBER;
+    u_dword |= number;
+    u_dword |= number <<  8;
+    u_dword |= number << 16;
+    u_dword |= number << 24;
+  }
 	
-    len -= WIDTH_32_BIT_NUMBER;
+  while (len >= WIDTH_32_BIT_NUMBER) {
+    (*(unsigned long *)temp) = u_dword;
 	  
-    if (len <= 0) {
-      break;
-    }
+    temp += WIDTH_32_BIT_NUMBER;
+    len  -= WIDTH_32_BIT_NUMBER;
+  }
+	
+  while (len--) {
+    *temp = (unsigned char)number;
+     temp++;
   }
 	
   return data;
+#undef WIDTH_32_BIT_NUMBER
 }
 
 /* "meminit" always upload in memory and executed */
