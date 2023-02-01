@@ -19,7 +19,9 @@ extern "C" {
 
 #include "xtalw.c"
 
+void * x_meminit32(void * data, const unsigned int number, int len);
 void * meminit(void * data, const uint8_t simbol, size_t length);
+
 void * strxormove(void * output, const void * input, size_t length);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
 
