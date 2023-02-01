@@ -79,21 +79,16 @@ int genrand(const int min, const int max) {
 /* "x_meminit32" optimization and always executable standart function memset (meminit) */
 void * x_meminit32(void * data, const unsigned int number, int len) {
 #define WIDTH_32_BIT_NUMBER 4
-	
   if (NULL == data || 0 == len) {
     return NULL;
   }
 	
   volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
-	
+
   if (number < 0x00000100) { /* if number in [0x00..0xFF] */
-    u_dword ^= u_dword;
-	  
-    u_dword |= number;
-    u_dword |= number <<  8;
-    u_dword |= number << 16;
-    u_dword |= number << 24;
+    u_dword |= u_dword <<  8;
+    u_dword |= u_dword << 16;
   }
 	
   while (len >= WIDTH_32_BIT_NUMBER) {
@@ -111,7 +106,6 @@ void * x_meminit32(void * data, const unsigned int number, int len) {
   return data;
 #undef WIDTH_32_BIT_NUMBER
 }
-
 
 /* "meminit" always upload in memory and executed */
 void * meminit(void * data, const uint8_t simbol, size_t length) {
