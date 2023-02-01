@@ -112,6 +112,7 @@ void * x_meminit32(void * data, const unsigned int number, int len) {
 #undef WIDTH_32_BIT_NUMBER
 }
 
+
 /* "meminit" always upload in memory and executed */
 void * meminit(void * data, const uint8_t simbol, size_t length) {
   if (!data) {
