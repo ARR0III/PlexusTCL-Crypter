@@ -4,7 +4,7 @@
  *
  * Developer:         ARR0III;
  * Modification date: 29 JAN 2023;
- * Modification:      Release;
+ * Modification:      Testing;
  * Language:          English;
  */
 
@@ -15,7 +15,7 @@
 #define DEBUG_INFORMATION 1
 #endif
 
-/* if COMPILE_FOR_MS_WINDOWS defined */
+/* if MS_WINDOWS defined */
 #ifdef MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
@@ -106,6 +106,12 @@ static const char * ALGORITM_NAME[]  = {
   "THREEFISH"
 };
 
+typedef struct {
+  uint8_t hash[SHA256_BLOCK_SIZE];
+  uint8_t KEY_0[SHA256_BLOCK_SIZE];
+  uint8_t KEY_1[SHA256_BLOCK_SIZE];
+} HMAC_CTX;
+
 /* Global struct for data */
 typedef struct {
 /* pointers for */
@@ -138,27 +144,27 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
 	
   if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
-      meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      meminit32((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
     }
     free((void *)ctx->sha256sum);
   }
 
   if (ctx->vector) {
     if (ctx->vector_length > 0) {
-      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+      meminit32((void *)ctx->vector, 0x00, ctx->vector_length);
     }
     free((void *)ctx->vector);
   }
 
   if (ctx->temp_buffer) {
     if (ctx->temp_buffer_length > 0) {
-      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+      meminit32((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
     free((void *)ctx->temp_buffer);
   }
 
   /* clear all memory and all pointers */
-  meminit((void *)ctx, 0x00, ctx_length);
+  meminit32((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
   ctx = NULL;
 }
@@ -248,7 +254,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
 #endif
 
-  meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit32((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
 
   count = i = j = k = 0;
 }
@@ -291,81 +297,78 @@ void cipher_free(void * ctx, size_t ctx_length) {
     return;
   }
 	
-  meminit(ctx, 0x00, ctx_length);
+  meminit32(ctx, 0x00, ctx_length);
   free(ctx);
   ctx = NULL;
 }
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+#define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
   if (!ctx) {
     return;
   }
 	
-  uint8_t hash[SHA256_BLOCK_SIZE];
+  size_t hmac_ctx_length = sizeof(HMAC_CTX);	
+  HMAC_CTX * hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
 
-  uint8_t K0[SHA256_BLOCK_SIZE];
-  uint8_t K1[SHA256_BLOCK_SIZE];
+  if (NULL == hmac_ctx) {
+    return;
+  }
 
-  int i;
+  size_t i;
+  size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
-  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
-  if (ctx->temp_buffer_length > SHA256_BLOCK_SIZE) {
-    /* generate two secret const for hash update */
-    memmove((void *)K0, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
-    memmove((void *)K1, (void *)ctx->temp_buffer, SHA256_BLOCK_SIZE);
-  }
-  else {
-    /* generate two secret const for hash update */
-    memmove((void *)K0, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
-    memmove((void *)K1, (void *)ctx->temp_buffer, ctx->temp_buffer_length);
+  /* generate two secret const for hash update */
+  memmove((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
+  memmove((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
 
-    /* if length temp_buffer equal SHA256_BLOCK_SIZE then cycle NOT executable */
-    for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
-      K0[i] = 0x00;
-      K1[i] = 0x00;
-    }
+    /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
+  for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
+    hmac_ctx->KEY_0[i] = 0x00;
+    hmac_ctx->KEY_1[i] = 0x00;
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    K0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
-    K1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
+    hmac_ctx->KEY_0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
+    hmac_ctx->KEY_1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
   }
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] authentification key \'U\':\n");
-  printhex(HEX_TABLE, K0, SHA256_BLOCK_SIZE);
+  printhex(HEX_TABLE, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
 
   printf("[DEBUG] authentification key \'f\':\n");
-  printhex(HEX_TABLE, K1, SHA256_BLOCK_SIZE);
+  printhex(HEX_TABLE, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
 #endif
 
   /* clear sha256sum struct */
-  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit32((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, K0, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memmove((void *)hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
-  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit32((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, K1, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac_ctx->KEY_1, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  /* clear local buffers for security */
-  meminit((void *)hash, 0x00, SHA256_BLOCK_SIZE);
-  meminit((void *)K0,   0x00, SHA256_BLOCK_SIZE);
-  meminit((void *)K1,   0x00, SHA256_BLOCK_SIZE);
+  /* clear memory for security */
+  meminit32((void *)hmac_ctx, 0x00, hmac_ctx_length);
+  free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
+#undef MINIMAL
 }
 
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
@@ -465,7 +468,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   int real_percent = 0;
   int past_percent = 0;
 
-  meminit((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
+  meminit32((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
   sha256_init(ctx->sha256sum);
 
@@ -601,7 +604,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     if (real_percent > past_percent) {
       /* if ((real_percent % 4) == 0) { */
-        meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
+        meminit32((void *)ctx->progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
@@ -712,8 +715,8 @@ void random_vector_init(uint8_t * data, size_t size) {
   arc4(arc4_memory, vector_memory, data, size);
   
   /* clear all data for security */
-  meminit(vector_memory, 0x00, vector_size);
-  meminit(arc4_memory, 0x00, arc4_size);
+  meminit32(vector_memory, 0x00, vector_size);
+  meminit32(arc4_memory, 0x00, arc4_size);
   
   free(vector_memory);
   free(arc4_memory);

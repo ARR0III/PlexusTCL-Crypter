@@ -10,7 +10,7 @@
 
 #include <time.h>
 
-#include "src/arc4.h"      /* only for password generator */
+#include "src/arc4.h"
 #include "src/serpent.h"
 #include "src/twofish.h"
 #include "src/rijndael.h"
@@ -533,7 +533,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     return;
   }
 
-  int i;
+  size_t i;
   size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
@@ -544,7 +544,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   memmove((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
 
     /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
-  for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
+  for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
     hmac_ctx->KEY_0[i] = 0x00;
     hmac_ctx->KEY_1[i] = 0x00;
   }
@@ -574,7 +574,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  /* clear  buffers for security */
+  /* clear memory for security */
   meminit32((void *)hmac_ctx, 0x00, hmac_ctx_length);
   free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
