@@ -93,8 +93,7 @@ void * meminit32(void * data, const unsigned int number, int len) {
     push ecx
 
     mov  eax, u_dword
-    xor  ecx, ecx
-    or   ecx, eax
+    mov  ecx, eax
     cmp  eax, 100h
     jnb  _copy
     
