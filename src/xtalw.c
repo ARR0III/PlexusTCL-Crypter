@@ -90,7 +90,7 @@ void * meminit32(void * data, const unsigned int number, int len) {
 /* push ecx         ; dword[esp] = ecx
  * mov  eax, number ; eax = 000000FFh
  * mov  ecx, eax    ; ecx = 000000FFh
- * cmp  eax, 100h   ; if eax <= 256 then goto _copy
+ * cmp  eax, 100h   ; if eax >= 256 then goto _copy
  * jnb  _copy       ;
  * shl  ecx, 8      ; ecx = 0000FF00h
  * or   eax, ecx    ; eax = 0000FFFFh
