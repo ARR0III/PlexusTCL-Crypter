@@ -95,16 +95,16 @@ void * meminit32(void * data, const unsigned int number, int len) {
     mov  eax, u_dword
     mov  ecx, eax
     cmp  eax, 100h
-    jnb  _copy
-    
+    jnb  _exit
+
     shl  ecx, 8
     or   eax, ecx
     or   ecx, eax
     shl  ecx, 16
     or   eax, ecx
+    mov  u_dword, eax
 
-  _copy:
-    mov u_dword, eax
+  _exit:
     pop ecx
     pop eax
  }
