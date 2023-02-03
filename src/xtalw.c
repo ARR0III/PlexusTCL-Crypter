@@ -87,26 +87,30 @@ void * meminit32(void * data, const unsigned int number, int len) {
   volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
 
-/* push ecx         ; dword[esp] = ecx
- * mov  eax, number ; eax = 000000FFh
- * mov  ecx, eax    ; ecx = 000000FFh
- * cmp  eax, 100h   ; if eax >= 256 then goto _copy
- * jnb  _copy       ;
- * shl  ecx, 8      ; ecx = 0000FF00h
- * or   eax, ecx    ; eax = 0000FFFFh
- * mov  ecx, eax    ; ecx = 0000FFFFh
- * shl  ecx, 16     ; ecx = FFFF0000h
- * or   eax, ecx    ; eax = FFFFFFFFh
- * pop  ecx         ; ecx = dword[esp]
- * _copy:
- */	
-	
+#ifdef __ASM_32_X86_CPP_BUILDER__
+  __asm {
+    mov  eax, u_dword
+    mov  ecx, eax
+    cmp  eax, 100h
+    jnb  _copy
+    
+    shl  ecx, 8
+    or   eax, ecx
+    or   ecx, eax
+    shl  ecx, 16
+    or   eax, ecx
+
+  _copy:
+    mov u_dword, eax
+  }
+#else
   if (u_dword < 0x00000100) { /* if number in [0x00..0xFF] */
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
   }
+#endif
 
-  /* copy 4 byte in memory */
+  /* if len >= 4 then copy 4 byte in memory */
   while (len >= WIDTH_32_BIT_NUMBER) {
     (*(unsigned long *)temp) = u_dword;
 	  
@@ -116,7 +120,7 @@ void * meminit32(void * data, const unsigned int number, int len) {
 	
   /* if len < 4 or len % 4 NOT equal 0 then executable */
   while (len--) {
-    *temp = (unsigned char)u_dword;
+    *temp = (unsigned char)number;
      temp++;
   }
 	
