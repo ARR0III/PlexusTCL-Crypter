@@ -87,6 +87,20 @@ void * meminit32(void * data, const unsigned int number, int len) {
   volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
 
+/* push ecx         ; dword[esp] = ecx
+ * mov  eax, number ; eax = 000000FFh
+ * mov  ecx, eax    ; ecx = 000000FFh
+ * cmp  eax, 100h   ; if eax <= 256 then goto _copy
+ * jnb  _copy       ;
+ * shl  ecx, 8      ; ecx = 0000FF00h
+ * or   eax, ecx    ; eax = 0000FFFFh
+ * mov  ecx, eax    ; ecx = 0000FFFFh
+ * shl  ecx, 16     ; ecx = FFFF0000h
+ * or   eax, ecx    ; eax = FFFFFFFFh
+ * pop  ecx         ; ecx = dword[esp]
+ * _copy:
+ */	
+	
   if (u_dword < 0x00000100) { /* if number in [0x00..0xFF] */
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
@@ -102,7 +116,7 @@ void * meminit32(void * data, const unsigned int number, int len) {
 	
   /* if len < 4 or len % 4 NOT equal 0 then executable */
   while (len--) {
-    *temp = (unsigned char)number;
+    *temp = (unsigned char)u_dword;
      temp++;
   }
 	
