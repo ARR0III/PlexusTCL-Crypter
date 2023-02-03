@@ -91,30 +91,55 @@ void * meminit32(void * data, const unsigned int number, int len) {
  __asm {
     push eax
     push ecx
+    push edx
+	    
+    mov eax, u_dword
+    mov ecx, eax
+    cmp eax, 100h
+    jnb _while
 
-    mov  eax, u_dword
-    mov  ecx, eax
-    cmp  eax, 100h
-    jnb  _exit
+    shl ecx, 8
+    or eax, ecx
+    or ecx, eax
+    shl ecx, 16
+    or eax, ecx
+	
+    mov u_dword, eax
 
-    shl  ecx, 8
-    or   eax, ecx
-    or   ecx, eax
-    shl  ecx, 16
-    or   eax, ecx
-    mov  u_dword, eax
+    mov edx, temp
+    mov ecx, len
 
-  _exit:
+ _while:
+    cmp ecx, 4
+    jl _while2   /* if ecx < 4 */
+
+    mov [edx], eax
+    add edx, 4
+    sub ecx, 4
+    mov len, ecx
+    jmp _while
+
+ _while2:
+    cmp ecx, 0
+    je _exit
+	
+    mov [edx], al
+    add edx, 1
+    sub ecx, 1
+    jmp _while2
+
+ _exit:
+    pop edx
     pop ecx
     pop eax
- }
+}
 #else
-  if (u_dword < 0x00000100) { /* if number in [0x00..0xFF] */
+  /* if number in [0x00..0xFF] */
+  if (u_dword < 0x00000100) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
   }
-#endif
-
+	
   /* if len >= 4 then copy 4 byte in memory */
   while (len >= WIDTH_32_BIT_NUMBER) {
     (*(unsigned long *)temp) = u_dword;
@@ -128,6 +153,7 @@ void * meminit32(void * data, const unsigned int number, int len) {
     *temp = (unsigned char)number;
      temp++;
   }
+#endif
 	
   return data;
 #undef WIDTH_32_BIT_NUMBER
