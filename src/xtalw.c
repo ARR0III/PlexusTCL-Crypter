@@ -88,9 +88,13 @@ void * meminit32(void * data, const unsigned int number, int len) {
   register unsigned long u_dword = number;
 
 #ifdef __ASM_32_X86_CPP_BUILDER__
-  __asm {
+ __asm {
+    push eax
+    push ecx
+
     mov  eax, u_dword
-    mov  ecx, eax
+    xor  ecx, ecx
+    or   ecx, eax
     cmp  eax, 100h
     jnb  _copy
     
@@ -102,7 +106,9 @@ void * meminit32(void * data, const unsigned int number, int len) {
 
   _copy:
     mov u_dword, eax
-  }
+    pop ecx
+    pop eax
+ }
 #else
   if (u_dword < 0x00000100) { /* if number in [0x00..0xFF] */
     u_dword |= u_dword <<  8;
