@@ -76,71 +76,76 @@ int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
 }
 
-/* "x_meminit32" optimization and always executable standart function memset (meminit) */
+/* "meminit32" optimization and always executable standart function "memset" */
 void * meminit32(void * data, const unsigned int number, int len) {
-#define WIDTH_32_BIT_NUMBER 4
-  if (NULL == data || 0 == len) {
-    return NULL;
-  }
-	
-  /* volatile = always executable */
-  volatile unsigned char * temp  = (unsigned char *)data;
-  register unsigned long u_dword = number;
-
 #ifdef __ASM_32_X86_CPP_BUILDER__
  __asm {
-    push eax
-    push ecx
-    push edx
-	    
-    mov eax, u_dword
-    mov ecx, eax
-    cmp eax, 100h
-    jnb _while
+    push eax  /* number */
+    push ecx  /* length data == counter */
+    push edx  /* pointer data */
 
-    shl ecx, 8
-    or eax, ecx
-    or ecx, eax
-    shl ecx, 16
-    or eax, ecx
-	
-    mov u_dword, eax
-
-    mov edx, temp
+    mov edx, data
+    cmp edx, 0
+    je _exit           /* if (NULL == data) goto _exit */
+    
     mov ecx, len
-
- _while:
-    cmp ecx, 4
-    jl _while2   /* if ecx < 4 */
-
-    mov [edx], eax
-    add edx, 4
-    sub ecx, 4
-    mov len, ecx
-    jmp _while
-
- _while2:
     cmp ecx, 0
-    je _exit
+    je _exit           /* if (0 == len) goto _exit */
+
+ _meminit32:
+    push ecx           /* save length data */
+ 
+    mov  eax, number
+    cmp  eax, 100h
+    jnb  _while_start
+
+    mov  ecx, eax
+    shl  ecx, 8
+    or   eax, ecx
+    or   ecx, eax
+    shl  ecx, 16
+    or   eax, ecx
+
+ _while_start:
+    pop ecx            /* load length data in register */
+	
+ _while_word:
+    cmp ecx, 4
+    jb _while_byte     /* if ecx < 4 */
+
+    mov [edx], eax     /* (*(unsigned int *)data) = number */
+    add edx, 4         /* data += 4 */
+    sub ecx, 4         /* len  -= 4 */
+    jmp _while_word
+
+ _while_byte:
+    cmp ecx, 0
+    je _exit           /* if ecx == 0 */
 	
     mov [edx], al
     add edx, 1
     sub ecx, 1
-    jmp _while2
+    jmp _while_byte
 
  _exit:
     pop edx
     pop ecx
     pop eax
-}
+ }
 #else
-  /* if number in [0x00..0xFF] */
+#define WIDTH_32_BIT_NUMBER 4
+  if (NULL == data || 0 == len) {
+    return NULL;
+  }
+	
+  volatile unsigned char * temp  = (unsigned char *)data;
+  register unsigned long u_dword = number;
+
   if (u_dword < 0x00000100) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
   }
 	
-  /* if len >= 4 then copy 4 byte in memory */
   while (len >= WIDTH_32_BIT_NUMBER) {
     (*(unsigned long *)temp) = u_dword;
 	  
@@ -148,30 +153,13 @@ void * meminit32(void * data, const unsigned int number, int len) {
     len  -= WIDTH_32_BIT_NUMBER;
   }
 	
-  /* if len < 4 or len % 4 NOT equal 0 then executable */
   while (len--) {
     *temp = (unsigned char)number;
      temp++;
   }
-#endif
 	
-  return data;
 #undef WIDTH_32_BIT_NUMBER
-}
-
-/* "meminit" always upload in memory and executed */
-void * meminit(void * data, const uint8_t number, size_t len) {
-  if (NULL == data) {
-    return NULL;
-  }
-	
-  volatile uint8_t * temp = (uint8_t *)data;
-
-  while (len--) {
-    *temp = number;
-     ++temp;
-  }
-
+#endif
   return data;
 }
 
