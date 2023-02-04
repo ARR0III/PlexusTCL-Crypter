@@ -123,7 +123,7 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
  _while_byte:
     cmp ecx, 0
     je _exit           /* if ecx == 0 */
-    mov [edx], al      /* (*(unsigned int *)data) = (unsigned char)number */
+    mov [edx], al      /* (*(unsigned char *)data) = (unsigned char)number */
     add edx, 1         /* data += 1 */
     sub ecx, 1         /* len  -= 1 */
     jmp _while_byte
