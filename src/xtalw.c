@@ -100,10 +100,10 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     jnb  _while_start
 
     mov  ecx, eax
-    shl  ecx, 8
+    shl  ecx, 08h
     or   eax, ecx
     or   ecx, eax
-    shl  ecx, 16
+    shl  ecx, 10h
     or   eax, ecx
 
  _while_start:
@@ -120,7 +120,7 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
 
  _while_byte:
     cmp ecx, 0
-    je _exit
+    je _exit           /* if ecx == 0 */
 	
     mov [edx], al      /* (*(unsigned int *)data) = (unsigned char)number */
     add edx, 1         /* data += 1 */
@@ -131,7 +131,7 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     pop edx
     pop ecx
     pop eax
- }	
+ }
 #else
 #define WIDTH_32_BIT_NUMBER 4
   if (NULL == data || 0 == len) {
