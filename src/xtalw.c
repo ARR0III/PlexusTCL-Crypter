@@ -77,7 +77,7 @@ int genrand(const int min, const int max) {
 }
 
 /* "meminit32" optimization and always executable standart function "memset" */
-void * meminit32(void * data, const unsigned int number, int len) {
+void * meminit32(void * data, const unsigned int number, const unsigned int len) {
 #ifdef __ASM_32_X86_CPP_BUILDER__
  __asm {
     push eax  /* number */
@@ -120,18 +120,18 @@ void * meminit32(void * data, const unsigned int number, int len) {
 
  _while_byte:
     cmp ecx, 0
-    je _exit           /* if ecx == 0 */
+    je _exit
 	
-    mov [edx], al
-    add edx, 1
-    sub ecx, 1
+    mov [edx], al      /* (*(unsigned int *)data) = (unsigned char)number */
+    add edx, 1         /* data += 1 */
+    sub ecx, 1         /* len  -= 1 */
     jmp _while_byte
 
  _exit:
     pop edx
     pop ecx
     pop eax
- }
+ }	
 #else
 #define WIDTH_32_BIT_NUMBER 4
   if (NULL == data || 0 == len) {
@@ -157,7 +157,6 @@ void * meminit32(void * data, const unsigned int number, int len) {
     *temp = (unsigned char)number;
      temp++;
   }
-	
 #undef WIDTH_32_BIT_NUMBER
 #endif
   return data;
