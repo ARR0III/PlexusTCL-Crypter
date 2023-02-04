@@ -79,7 +79,7 @@ int genrand(const int min, const int max) {
 /* "meminit32" optimization and always executable standart function "memset" */
 void * meminit32(void * data, const unsigned int number, const unsigned int len) {
 #ifdef __ASM_32_X86_CPP_BUILDER__
- __asm {
+  __asm {
     push eax  /* number */
     push ecx  /* length data == counter */
     push edx  /* pointer data */
@@ -91,20 +91,20 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     mov ecx, len
     cmp ecx, 0
     je _exit           /* if (0 == len) goto _exit */
-
- _meminit32:
+	
+/* START FUNCTIONAL */
     push ecx           /* save length data */
  
-    mov  eax, number
-    cmp  eax, 100h
+    mov eax, number
+    cmp eax, 100h
     jnb  _while_start
 
-    mov  ecx, eax
-    shl  ecx, 08h
-    or   eax, ecx
-    or   ecx, eax
-    shl  ecx, 10h
-    or   eax, ecx
+    mov ecx, eax
+    shl ecx, 08h
+    or  eax, ecx
+    or  ecx, eax
+    shl ecx, 10h
+    or  eax, ecx
 
  _while_start:
     pop ecx            /* load length data in register */
@@ -112,7 +112,7 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
  _while_word:
     cmp ecx, 4
     jb _while_byte     /* if ecx < 4 */
-
+	
     mov [edx], eax     /* (*(unsigned int *)data) = number */
     add edx, 4         /* data += 4 */
     sub ecx, 4         /* len  -= 4 */
@@ -121,7 +121,6 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
  _while_byte:
     cmp ecx, 0
     je _exit           /* if ecx == 0 */
-	
     mov [edx], al      /* (*(unsigned int *)data) = (unsigned char)number */
     add edx, 1         /* data += 1 */
     sub ecx, 1         /* len  -= 1 */
