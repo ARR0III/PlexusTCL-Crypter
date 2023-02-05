@@ -231,7 +231,56 @@ void * strxormove(void * output, const void * input, size_t length) {
 }
 
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
-
+#ifdef __ASM_32_X86_CPP_BUILDER__
+__asm {
+  push eax
+  push ebx
+  push ecx
+  push edx
+  
+  mov eax, output
+  cmp eax, 0
+  je _exit
+  
+  mov ebx, input
+  cmp ebx, 0
+  je _exit  
+  
+  mov ecx, length
+  cmp ecx, 0
+  je _exit
+  cmp ecx, 4
+  jb _while_byte
+  
+ _while:
+  mov edx, dword[ebx]
+  xor dword[eax], edx
+  
+  add eax, 4
+  add ebx, 4
+  sub ecx, 4
+  
+  cmp ecx, 0
+  je _exit
+  cmp ecx, 4
+  jb _while_byte
+  jmp _while
+  
+ _while_byte:
+  mov dl, byte[ebx]
+  xor byte[eax], dl
+  
+  add eax, 1
+  add ebx, 1
+  loop _while_byte
+  
+  _exit:
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
+}
+#else
   if (!input || !output || (input == output)) {
     return output;
   }
@@ -245,7 +294,7 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
     local_output++;
     local_input++;
   }
-  
+#endif
   return output;
 }
 
