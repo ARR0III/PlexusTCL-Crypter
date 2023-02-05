@@ -17,6 +17,8 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
+#define WIDTH_32_BIT_NUMBER 4
+
 void arraytobits(uint8_t * data, size_t len, FILE * stream) {
   if (!data) {
     return;
@@ -158,7 +160,6 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     *temp = (unsigned char)number;
      temp++;
   }
-#undef WIDTH_32_BIT_NUMBER
 #endif
   return data;
 }
@@ -230,7 +231,7 @@ void * strxormove(void * output, const void * input, size_t length) {
   return output;
 }
 
-void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
+void * strxor(uint8_t * output, const uint8_t * input, unsigned int length) {
 #ifdef __ASM_32_X86_CPP_BUILDER__
 __asm {
   push eax
@@ -281,19 +282,32 @@ __asm {
   pop eax
 }
 #else
+#define WIDTH_32_BIT_NUMBER 4
+        unsigned char * local_output = output;
+  const unsigned char * local_input  = input;
+
   if (!input || !output || (input == output)) {
     return output;
   }
 
-        uint8_t * local_output = output;
-  const uint8_t * local_input  = input;
+  while (length >= WIDTH_32_BIT_NUMBER) {
+    *((unsigned int *)local_output) ^= *((unsigned int *)local_input);
 
-  while (length--) {
+    local_output += WIDTH_32_BIT_NUMBER;
+    local_input  += WIDTH_32_BIT_NUMBER;
+
+    length       -= WIDTH_32_BIT_NUMBER;
+  }
+
+  while (length) {
     *local_output ^= *local_input;
     
     local_output++;
     local_input++;
+	
+    length--;
   }
+#undef WIDTH_32_BIT_NUMBER
 #endif
   return output;
 }
