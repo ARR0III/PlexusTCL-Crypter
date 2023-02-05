@@ -86,20 +86,20 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
 
     mov edx, data
     cmp edx, 0
-    je _exit           /* if (NULL == data) goto _exit */
+    je _exit            /* if (NULL == data) goto _exit */
     
     mov ecx, len
     cmp ecx, 0
-    je _exit           /* if (0 == len) goto _exit */
+    je _exit            /* if (0 == len) goto _exit */
 	
 /* START FUNCTIONAL */
-    push ecx           /* save length data */
+    push ecx            /* save length data */
  
     mov  eax, number
     cmp  eax, 0
-    je  _while_start   /* if 0 == number goto _while_start */
+    je  _while_start    /* if 0 == number goto _while_start */
     cmp  eax, 255
-    ja  _while_start   /* if (number > 255) goto _while_start */
+    ja  _while_start    /* if (number > 255) goto _while_start */
 
     mov  ecx, eax
     shl  ecx, 8
@@ -109,23 +109,23 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     or   eax, ecx
 
  _while_start:
-    pop ecx            /* load length data in register */
-	
+    pop ecx             /* load length data in register */
+
  _while_word:
     cmp ecx, 4
-    jb _while_byte     /* if ecx < 4 */
-	
-    mov [edx], eax     /* (*(unsigned int *)data) = number */
-    add edx, 4         /* data += 4 */
-    sub ecx, 4         /* len  -= 4 */
+    jb _while_byte      /* if ecx < 4 */
+
+    mov dword[edx], eax /* (*(unsigned int *)data) = number */
+    add edx, 4          /* data += 4 */
+    sub ecx, 4          /* len  -= 4 */
     jmp _while_word
 
  _while_byte:
     cmp ecx, 0
-    je _exit           /* if ecx == 0 */
-    mov [edx], al      /* (*(unsigned char *)data) = (unsigned char)number */
-    add edx, 1         /* data += 1 */
-    sub ecx, 1         /* len  -= 1 */
+    je _exit            /* if ecx == 0 */
+    mov byte[edx], al   /* (*(unsigned char *)data) = (unsigned char)number */
+    add edx, 1          /* data += 1 */
+    sub ecx, 1          /* len  -= 1 */
     jmp _while_byte
 
  _exit:
