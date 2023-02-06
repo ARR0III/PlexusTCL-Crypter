@@ -14,7 +14,8 @@
 #define XTALW_H
 
 /*
- WARNING: DO NOT CHANGE ASSEMBLER LANGUAGE CODE!
+ WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
+ DO NOT CHANGE ASSEMBLER CODE IF YOU WOODPECKER!
  
  If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (TRUE)
  then Borland C++ 6.0 compiling assembler langiage x86 code
