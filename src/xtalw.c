@@ -248,6 +248,9 @@ __asm {
   cmp ebx, 0
   je _exit  
   
+  cmp eax, ebx
+  je _exit  
+	  
   mov ecx, length
   cmp ecx, 0
   je _exit
