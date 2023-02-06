@@ -13,14 +13,23 @@
 #ifndef XTALW_H
 #define XTALW_H
 
+/*
+ WARNING: DO NOT CHANGE ASSEMBLER LANGUAGE CODE!
+ 
+ If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (TRUE)
+ then Borland C++ 6.0 compiling assembler langiage x86 code
+ for maximization program speed!
+*/
+#ifndef __ASM_32_X86_CPP_BUILDER__
+#define __ASM_32_X86_CPP_BUILDER__ 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "xtalw.c"
 
-void * meminit(void * data, const uint8_t number, size_t len);
-void * meminit32(void * data, const unsigned int number, int len);
+void * meminit(void * data, const unsigned int number, const unsigned int len);
   
 void * strxormove(void * output, const void * input, size_t length);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
@@ -39,4 +48,6 @@ int readfromfile(const char * filename, void * buffer, const size_t length);
 }
 #endif
 
-#endif
+#endif /* __ASM_32_X86_CPP_BUILDER__ */
+
+#endif /* XTALW_H */

@@ -79,8 +79,8 @@ int genrand(const int min, const int max) {
 }
 
 /* "meminit32" optimization and always executable standart function "memset" */
-void * meminit32(void * data, const unsigned int number, const unsigned int len) {
-#ifdef __ASM_32_X86_CPP_BUILDER__
+void * meminit(void * data, const unsigned int number, const unsigned int len) {
+#if __ASM_32_X86_CPP_BUILDER__
  __asm {
     push eax  /* number */
     push ecx  /* length data == counter */
@@ -160,6 +160,7 @@ void * meminit32(void * data, const unsigned int number, const unsigned int len)
     *temp = (unsigned char)number;
      temp++;
   }
+#undef WIDTH_32_BIT_NUMBER 4
 #endif
   return data;
 }
@@ -232,7 +233,7 @@ void * strxormove(void * output, const void * input, size_t length) {
 }
 
 void * strxor(uint8_t * output, const uint8_t * input, unsigned int length) {
-#ifdef __ASM_32_X86_CPP_BUILDER__
+#if __ASM_32_X86_CPP_BUILDER__
 __asm {
   push eax
   push ebx
