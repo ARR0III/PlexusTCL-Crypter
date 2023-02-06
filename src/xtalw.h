@@ -17,9 +17,12 @@
  WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
  DO NOT CHANGE ASSEMBLER CODE IF YOU WOODPECKER!
  
+ 1 - FOR C++ BUILDER 6.0
+ 0 - OTHER COMPILERS
+ 
  If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (TRUE)
- then Borland C++ 6.0 compiling assembler langiage x86 code
- for maximization program speed!
+ then Borland C++ 6.0 compiling assembler x86 code for
+ maximization program speed on 32 bits processor!
 */
 #ifndef __ASM_32_X86_CPP_BUILDER__
 #define __ASM_32_X86_CPP_BUILDER__ 1
