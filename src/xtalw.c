@@ -202,12 +202,64 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 }
 
 void * strxormove(void * output, const void * input, size_t length) {
+        unsigned char * local_output = (unsigned char *)output;
+  const unsigned char * local_input  = (const unsigned char *)input;
+#if __ASM_32_X86_CPP_BUILDER__
+/* I'am don't crazy, i'am programmer... */
+__asm {
+  push eax
+  push ebx
+  push ecx
+
+  mov eax, local_output
+  mov ebx, local_input
+
+  cmp eax, ebx
+  je _exit
+  cmp eax, 0
+  je _exit
+  cmp ebx, 0
+  je _exit
+	  
+  mov ecx, length
+  cmp eax, ebx
+  jb _normal            /* if eax < ebx */
+                        /* else continue */
+/***REVERSE*******************************************************************/
+  dec ecx
+  add eax, ecx    /* local_output = local_output + (len-1) */
+  add ebx, ecx    /* local_input  = local_input  + (len-1) */
+  inc ecx
+	  
+_reverse:
+  mov dl, byte[ebx]
+  xor byte[eax], dl
+  dec eax
+  dec ebx
+  loop _reverse
+  jmp _exit
+	  
+/***NORMAL*******************************************************************/
+_normal: 
+  mov dl, byte[ebx]
+  xor byte[eax], dl
+  inc eax
+  inc ebx
+  loop _normal
+	  
+/****************************************************************************/
+_exit:
+  pop ecx
+  pop ebx
+  pop eax
+}
+#else
+	unsigned char * last_output = local_output + (length - 1);
+  const unsigned char * last_input  = local_input  + (length - 1);
+	
   if (!output || !input || (output == input)) {
     return output;
   }
-
-        unsigned char * local_output = (unsigned char *)output;
-  const unsigned char * local_input  = (const unsigned char *)input;
 
   if (local_output < local_input) {
     while(length--) {
@@ -218,9 +270,6 @@ void * strxormove(void * output, const void * input, size_t length) {
     }
   }
   else {
-          unsigned char * last_output = local_output + (length - 1);
-    const unsigned char * last_input  = local_input  + (length - 1);
-     
      while (length--) {
        *last_output ^= *last_input;
 
@@ -228,6 +277,7 @@ void * strxormove(void * output, const void * input, size_t length) {
        --last_input;
      }
   }
+#endif
 
   return output;
 }
