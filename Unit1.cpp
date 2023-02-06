@@ -10,7 +10,7 @@
 
 #include <time.h>
 
-#include "src/arc4.h"
+#include "src/arc4.h"      /* only for password generator */
 #include "src/serpent.h"
 #include "src/twofish.h"
 #include "src/rijndael.h"
@@ -280,27 +280,27 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
 
   if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
-      meminit32((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
     }
     free((void *)ctx->sha256sum);
   }
 
   if (ctx->vector) {
     if (ctx->vector_length > 0) {
-      meminit32((void *)ctx->vector, 0x00, ctx->vector_length);
+      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
     }
     free((void *)ctx->vector);
   }
 
   if (ctx->temp_buffer) {
     if (ctx->temp_buffer_length > 0) {
-      meminit32((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
     free((void *)ctx->temp_buffer);
   }
 
   /* clear all memory and all pointers */
-  meminit32((void *)ctx, 0x00, ctx_length);
+  meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
 }
 
@@ -316,7 +316,7 @@ void cursorpos(uint8_t * data) {
   position->y = 0;
   function meminit32 this is analog system memset function!
 */
-  meminit32((void *)&position, 0x00, sizeof(TPoint));
+  meminit((void *)&position, 0x00, sizeof(TPoint));
 }
 
 void centreal(short * real_percent) {
@@ -382,7 +382,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     }
   }
 
-  meminit32((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 }
 
 int size_check(uint32_t size) {
@@ -444,8 +444,6 @@ int erasedfile(const char * filename) {
     return -1;
   }
 
-  meminit32((void *)data, 0x00, BLOCK_SIZE_FOR_ERASED);
-
   int   fsize_check = size_check(fsize);
   float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
 
@@ -466,7 +464,7 @@ int erasedfile(const char * filename) {
     }
 
     realread = fread((void *)data, 1, size_for_erased, f);
-    meminit32((void *)data, 0x00, realread);
+    meminit((void *)data, 0x00, realread);
     
     fseek(f, position, SEEK_SET);
     
@@ -516,7 +514,7 @@ int erasedfile(const char * filename) {
 }
 
 void cipher_free(void * ctx, size_t ctx_length) {
-  meminit32(ctx, 0x00, ctx_length);
+  meminit(ctx, 0x00, ctx_length);
   free(ctx);
 }
 
@@ -533,7 +531,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     return;
   }
 
-  size_t i;
+  int i;
   size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
@@ -544,7 +542,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   memmove((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
 
     /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
-  for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
+  for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
     hmac_ctx->KEY_0[i] = 0x00;
     hmac_ctx->KEY_1[i] = 0x00;
   }
@@ -555,7 +553,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   /* clear sha256sum struct */
-  meminit32((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
@@ -566,7 +564,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
-  meminit32((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
@@ -574,8 +572,8 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  /* clear memory for security */
-  meminit32((void *)hmac_ctx, 0x00, hmac_ctx_length);
+  /* clear  buffers for security */
+  meminit((void *)hmac_ctx, 0x00, hmac_ctx_length);
   free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 #undef MINIMAL
@@ -869,8 +867,8 @@ void random_vector_init(uint8_t * data, size_t size) {
   arc4(arc4_memory, vector_memory, data, size);
   
   /* clear all data for security */
-  meminit32(vector_memory, 0x00, vector_size);
-  meminit32(arc4_memory, 0x00, arc4_size);
+  meminit(vector_memory, 0x00, vector_size);
+  meminit(arc4_memory, 0x00, arc4_size);
   
   free(vector_memory);
   free(arc4_memory);
@@ -963,7 +961,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
-  meminit32((void *)memory, 0x00, memory_length);
+  meminit((void *)memory, 0x00, memory_length);
 
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) {
     memory->cipher_number = AES;
@@ -1139,14 +1137,14 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       if (memory->sha256sum) {
         Button4->Enabled = False;
         /* Crypt key generator; generate crypt key from password */
-        meminit32((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
+        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
 
         KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
                   memory->temp_buffer, memory->temp_buffer_length);
 
         Button4->Enabled = True;
 
-        meminit32((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
+        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
       }
       else {
         free_global_memory(memory, memory_length);
@@ -1199,7 +1197,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
-  meminit32((void *)memory->vector, 0x00, memory->vector_length);
+  meminit((void *)memory->vector, 0x00, memory->vector_length);
 
   if (ENCRYPT == memory->operation) {
     srand((unsigned int)time(NULL));
@@ -1457,7 +1455,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   arc4_init(arc4_ctx, memory->input, len);
   arc4(arc4_ctx, memory->input, memory->output, len);
 
-  meminit32((void *)memory->input, 0x00, len);
+  meminit((void *)memory->input, 0x00, len);
 
   base64encode(memory->output, memory->input, len);
   memory->input[len] = 0x00;
@@ -1465,8 +1463,8 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   Memo1->Clear();
   Memo1->Lines->Text = AnsiString((char*)memory->input);
 
-  meminit32((void *)arc4_ctx, 0x00, cipher_len);
-  meminit32((void *)memory, 0x00, password_memory_ctx_len);
+  meminit((void *)arc4_ctx, 0x00, cipher_len);
+  meminit((void *)memory, 0x00, password_memory_ctx_len);
 
   free((void *)memory);
   free((void *)arc4_ctx);
