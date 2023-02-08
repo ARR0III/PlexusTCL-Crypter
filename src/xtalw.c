@@ -202,83 +202,155 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 }
 
 void * strxormove(void * output, const void * input, size_t length) {
-        unsigned char * local_output = (unsigned char *)output;
-  const unsigned char * local_input  = (const unsigned char *)input;
+
+  uint8_t * local_output = (uint8_t *)output;
+  const uint8_t * local_input  = (const uint8_t *)input;
+
+  uint32_t corrector = 0;
+
 #if __ASM_32_X86_CPP_BUILDER__
-/* I'am don't crazy, i'am programmer... */
 __asm {
   push eax
   push ebx
   push ecx
+  push edx
 
   mov eax, local_output
   mov ebx, local_input
 
-  cmp eax, ebx
-  je _exit
   cmp eax, 0
   je _exit
   cmp ebx, 0
   je _exit
-	  
+
   mov ecx, length
+  cmp ecx, 0
+  je _exit
+
   cmp eax, ebx
-  jb _normal            /* if eax < ebx */
-                        /* else continue */
+  je _exit
+  jb _normal_word            /* if eax < ebx (jump if below) */
 /***REVERSE*******************************************************************/
   dec ecx
-  add eax, ecx    /* local_output = local_output + (len-1) */
-  add ebx, ecx    /* local_input  = local_input  + (len-1) */
+  add eax, ecx               /* local_output = local_output + (len-1) */
+  add ebx, ecx               /* local_input  = local_input  + (len-1) */
   inc ecx
-	  
-_reverse:
+
+_reverse_byte:
+  cmp ecx, 0
+  je _exit
+  test ecx, 03h
+  jz _reverse_word_init      /* if (length % 4) = 0 */
+  
   mov dl, byte[ebx]
   xor byte[eax], dl
+  
+  add corrector, 1
   dec eax
   dec ebx
-  loop _reverse
+  dec ecx
+  jmp _reverse_byte
+
+_reverse_word_init:
+  cmp corrector, 0
+  jz _reverse_word
+  
+/* if copy from end buffer -> correction
+   pointers input and output for read 4 byte from end */
+  sub eax, corrector
+  sub ebx, corrector
+
+_reverse_word:
+  mov edx, dword[ebx]
+  xor dword[eax], edx
+  sub eax, 4
+  sub ebx, 4
+  sub ecx, 4
+  jnz _reverse_word
   jmp _exit
-	  
 /***NORMAL*******************************************************************/
-_normal: 
+_normal_word:
+  cmp ecx, 4
+  jb _normal_byte
+  mov edx, dword[ebx]
+  xor dword[eax], edx
+  add eax, 4
+  add ebx, 4
+  sub ecx, 4
+  jmp _normal_word
+  
+_normal_byte:
+  cmp ecx, 0
+  je _exit
   mov dl, byte[ebx]
   xor byte[eax], dl
   inc eax
   inc ebx
-  loop _normal
-	  
+  dec ecx
+  jmp _normal_byte
 /****************************************************************************/
 _exit:
+  pop edx
   pop ecx
   pop ebx
   pop eax
 }
 #else
-	unsigned char * last_output = local_output + (length - 1);
-  const unsigned char * last_input  = local_input  + (length - 1);
-	
+#define WIDTH_32_BIT_NUMBER 4
+  uint8_t * last_output = local_output + (length - 1);
+  const uint8_t * last_input  = local_input  + (length - 1);
+
   if (!output || !input || (output == input)) {
-    return output;
+    return NULL;
   }
 
   if (local_output < local_input) {
-    while(length--) {
+    while (length >= WIDTH_32_BIT_NUMBER) {
+      (*(uint32_t *)local_output) ^= (*(uint32_t *)local_input);
+
+      local_output += WIDTH_32_BIT_NUMBER;
+      local_input  += WIDTH_32_BIT_NUMBER;
+	  
+      length       -= WIDTH_32_BIT_NUMBER;
+    }
+
+    while (length) {
       *local_output ^= *local_input;
 
-      ++local_output;
-      ++local_input;
+      local_output++;
+      local_input++;
+	  
+      length--;
     }
   }
   else {
-     while (length--) {
-       *last_output ^= *last_input;
+    while ((length) && (0 != (length % 4))) {
+      *last_output ^= *last_input;
 
-       --last_output;
-       --last_input;
-     }
+      last_output--;
+      last_input--;
+
+      length--;
+
+      corrector++;
+    }
+
+    if (corrector) {
+      last_output -= corrector;
+      last_input  -= corrector;
+    }
+
+    while (length) {
+      (*(uint32_t *)last_output) ^= (*(uint32_t *)last_input);
+
+      last_output -= WIDTH_32_BIT_NUMBER;
+      last_input  -= WIDTH_32_BIT_NUMBER;
+
+      length      -= WIDTH_32_BIT_NUMBER;
+    }
   }
+#undef WIDTH_32_BIT_NUMBER
 #endif
-
   return output;
 }
 
