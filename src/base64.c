@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include "base64.h"
 
 const
   uint8_t * base64table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -6,10 +6,11 @@ const
 void base64encode(const uint8_t * input, uint8_t * output, const int size) {
   int iptr = 0;
   int optr = 0;
+  int i;
 
   int length = size / 3;
 
-  for (int i = 0; i < length; i++) {
+  for (i = 0; i < length; i++) {
     output[optr]     = base64table[input[iptr] >> 2];
     output[optr + 1] = base64table[((input[iptr] & 3) << 4) + (input[iptr + 1] >> 4)];
     output[optr + 2] = base64table[((input[iptr + 1] & 15) << 2) + (input[iptr + 2] >> 6)];
@@ -39,12 +40,14 @@ void base64decode(const uint8_t * input, uint8_t * output, const int size) {
   int iptr = 0;
   int optr = 0;
 
+  int i, j;
+
   uint8_t temp[4] = {0};
 
   int length = size / 4;
 
-  for (int i = 0; i < length; i++) {
-    for (int j = 0; j < 4; j++) {
+  for (i = 0; i < length; i++) {
+    for (j = 0; j < 4; j++) {
       if ((input[iptr] >= 65) && (input[iptr] <= 90))
         temp[j] = input[iptr] - 'A';
       else

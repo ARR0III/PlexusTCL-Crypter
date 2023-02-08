@@ -10,9 +10,7 @@
   implemented into the program just in case.
 */
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "xtalw.h"
 
 #define HEX_TABLE  1
 #define HEX_STRING 0
@@ -399,6 +397,9 @@ _exit:
 }
 
 void arraytobits(uint8_t * data, size_t len, FILE * stream) {
+  size_t j;
+  int k;
+
   if (!data) {
     return;
   }
@@ -407,10 +408,10 @@ void arraytobits(uint8_t * data, size_t len, FILE * stream) {
     stream = stderr;
   }
 
-  for (size_t j = 0; j < len; j++) {
+  for (j = 0; j < len; j++) {
     uint8_t c = data[j];
 
-    for(int k = 7; k >= 0; --k) {
+    for(k = 7; k >= 0; --k) {
       putc((48 + ((c >> k) & 0x01)), stream);
     }
   }
@@ -479,6 +480,9 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 }
 
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
+  size_t i;
+  int left, right, symbol;
+  const char digits[] = "0123456789ABCDEF";
 
   if (!data) {
     return;
@@ -492,10 +496,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     stream = stdout;
   }
 
-  int left, right, symbol;
-  const char digits[] = "0123456789ABCDEF";
-
-  for (size_t i = 0; i < length; ++i) {
+  for (i = 0; i < length; ++i) {
     symbol = (int)data[i];
 
     left  = symbol >> 0x04; /* 11000011 >> 0x04 = 00001100 */
@@ -515,6 +516,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
 
 size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
+  const uint8_t * temp = (uint8_t *)data;
 
   if (!data || 0 == length) {
     return i;
@@ -523,8 +525,6 @@ size_t printhex(int tumbler, const void * data, size_t length) {
   if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
     tumbler = HEX_TABLE;
   }
-
-  const uint8_t * temp = (uint8_t *)data;
 
   if (HEX_TABLE == tumbler) {
     for (i = 0; i < length; ++i) {

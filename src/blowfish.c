@@ -1,9 +1,4 @@
-#include <stdint.h>
-
-typedef struct {
-  uint32_t P[18];
-  uint32_t S[4][256];
-} BLOWFISH_CTX;
+#include "blowfish.h"
 
 #define N 16
 

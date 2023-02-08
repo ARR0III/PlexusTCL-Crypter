@@ -1,18 +1,4 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define SHA256_BLOCK_SIZE 32
-
-typedef struct {
-  uint8_t  data[64];
-  uint32_t datalen;
-  uint64_t bitlen;
-  uint32_t state[8];
-
-  /* this is buffer for control sum */
-  uint8_t  hash[SHA256_BLOCK_SIZE];
-} SHA256_CTX;
+#include "sha256.h"
 
 #define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
 #define ROTRIGHT(a,b) (((a) >> (b)) | ((a) << (32-(b))))
@@ -126,7 +112,10 @@ void sha256_final(SHA256_CTX *ctx) {
     }
 
     sha256_transform(ctx, ctx->data);
-    memset((void*)(ctx->data), 0, 56);
+
+    for (i = 0; i < 56; i++) {
+      ctx->data[i] = 0;
+    }
   }
 
   ctx->bitlen += ctx->datalen * 8;

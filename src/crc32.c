@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include "crc32.h"
 
 uint32_t Crc32Table[256] = {
     0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
@@ -67,7 +67,7 @@ uint32_t Crc32Table[256] = {
     0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
 };
 
-uint32_t CRC32(const uint8_t * buffer, uint64_t len) {
+uint32_t CRC32(const uint8_t * buffer, size_t len) {
   uint32_t crc = 0xFFFFFFFF;
 
   while (len--) {

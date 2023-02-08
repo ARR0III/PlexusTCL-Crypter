@@ -1,20 +1,7 @@
-#include <stdint.h>
-#include <stdlib.h>
+#include "threefish.h"
 
 /* !!! do NOT change this const !!! */
 uint64_t C240 = 0x1BD11BDAA9FC1A22;
-
-typedef enum ThreefishSize {
-    Threefish256  = 256,
-    Threefish512  = 512,
-    Threefish1024 = 1024
-} threefishkeysize_t;
-
-typedef struct ThreefishKey {
-    uint64_t keysize;
-    uint64_t key[17];
-    uint64_t tweak[3];
-} THREEFISH_CTX;
 
 void threefish_init(THREEFISH_CTX * ctx, threefishkeysize_t keysize,
                      uint64_t * keydata, uint64_t * tweak) {

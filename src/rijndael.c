@@ -1,9 +1,8 @@
-#include <stdint.h>
-#include <stdlib.h>
-/*
- This variable stores the number of
- rounds of encryption/decryption. 
-*/
+#include "rijndael.h"
+
+/* This variable stores the number of
+   rounds of encryption/decryption. */
+   
 int AES_Rounds = 0;
 
 static const uint32_t Te0[256] = {

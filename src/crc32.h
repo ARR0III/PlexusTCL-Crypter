@@ -1,13 +1,14 @@
 #ifndef CRC32_H
 #define CRC32_H
 
+#include <stdint.h>
+#include <stddef.h> 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "crc32.c"
-
-uint32_t CRC32(const uint8_t * buffer, uint64_t len);
+uint32_t CRC32(const uint8_t * buffer, size_t len);
 
 #ifdef __cplusplus
 }

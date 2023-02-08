@@ -1,52 +1,29 @@
 /*
  * Copyright 1999 Dr. Brian Gladman <brian.gladman@btinternet.com>
  * Copyright 2001 Abhijit Menon-Sen <ams@wiw.org>
- *
-  
-  correct {
-    change by: ARR0III;
-    data:      10.04.2021
-  
-    optimized compiler - not good!!!
-  
-    key_size - this is byte const (not bits!!!);
-    key_len == (ONLY 128, 192, 256 / 8);
-  
-    TWOFISH_CTX - pointer to memory struct;
-  };
-  
-  USED {
-    #include <stdlib.h> - for call malloc function
-    
-    size_t twofish_ctx_len = sizeof(TWOFISH_CTX);
-    TWOFISH_CTX * ctx = (TWOFISH_CTX *)malloc(twofish_ctx_len);
-    
-    if (NULL == ctx) {
-      return (-1);
-    }
-    
-    twofish_setup(ctx, key_buffer, key_len); - init memory struct
-    
-    twofish_encrypt(ctx, input, output); - encrypt data in input
-    twofish_decrypt(ctx, output, input); - decrypt data in output
-    
-    memset(ctx, 0x00, twofish_ctx_len); - security >)
-    
-    free(ctx);
-    ctx = NULL;
-    
-    return 0;
-  };
-*/
+ */
 
 #ifndef TWOFISH_H
 #define TWOFISH_H
+
+#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "twofish.c"
+#ifndef _TWOFISH_H_
+#define _TWOFISH_H_
+  typedef struct {
+    int len;
+    uint32_t K[40];
+    uint32_t S[4][256];
+  } TWOFISH_CTX;
+#endif
+
+uint32_t mds_rem(uint32_t a, uint32_t b);
+uint32_t h(int len, const int x, uint8_t *key, int odd);
 
 void twofish_init(TWOFISH_CTX * ctx, uint8_t * key, int len);
 void twofish_encrypt(TWOFISH_CTX * ctx, uint8_t * input, uint8_t * output);

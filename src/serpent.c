@@ -1,15 +1,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "serpent.h"
 #include "serpentsboxes.h"
-
-typedef struct {
-  int32_t  keylen;
-
-  uint32_t key[8];
-  uint32_t w[132], k[132];
-  uint32_t subkeys[33][4];
-} SERPENT_CTX;
 
 void serpent_init(SERPENT_CTX * ctx, const int keylen, const uint8_t * keymaterial) {
   int i, j, tempkeylen;

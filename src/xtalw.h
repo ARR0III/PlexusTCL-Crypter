@@ -13,6 +13,12 @@
 #ifndef XTALW_H
 #define XTALW_H
 
+#include <time.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stddef.h>
+
 /*
  WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
  DO NOT CHANGE ASSEMBLER CODE IF YOU WOODPECKER!
@@ -29,7 +35,7 @@
 #define OFF 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ OFF
+#define __ASM_32_X86_CPP_BUILDER__ ON
 
 #define BIG_ENDING    1
 #define LITTLE_ENDING 0
@@ -37,8 +43,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "xtalw.c"
 
 /* 0 = LITTLE */
 /* 1 = BIG    */
@@ -58,6 +62,7 @@ void   arraytobits(uint8_t * data, size_t len, FILE * stream);
 void   phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 size_t printhex(const int tumbler, const void * data, size_t length);
 
+int genrand(const int min, const int max);
 int readfromfile(const char * filename, void * buffer, const size_t length);
 
 #ifdef __cplusplus

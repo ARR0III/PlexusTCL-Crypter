@@ -1,12 +1,12 @@
 #ifndef RIJNDAEL_H
 #define RIJNDAEL_H
 
+#include <stdint.h>
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-#include "rijndael.c"
 
 int rijndael_key_encrypt_init(uint32_t * table, const uint8_t * cipher_key, int key_bits);
 int rijndael_key_decrypt_init(uint32_t * table, const uint8_t * cipher_key, int key_bits);

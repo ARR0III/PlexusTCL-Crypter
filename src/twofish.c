@@ -2,16 +2,7 @@
  * Copyright 1999 Dr. Brian Gladman <brian.gladman@btinternet.com>
  * Copyright 2001 Abhijit Menon-Sen <ams@wiw.org>
  */
-#include <stdint.h>
-
-#ifndef _TWOFISH_H_
-#define _TWOFISH_H_
-  typedef struct {
-    int len;                    /* Key length in 64-bit units: 2, 3 or 4 */
-    uint32_t K[40];             /* Expanded key                          */
-    uint32_t S[4][256];         /* Key-dependent S-boxes                 */
-  } TWOFISH_CTX;
-#endif
+#include "twofish.h"
 
 #ifndef _TWOFISH_TABLES_H_
 #define _TWOFISH_TABLES_H_
@@ -286,9 +277,6 @@ const uint32_t m[4][256] = {
         *(s+3)=(uint8_t)((l) >> 24); \
     } while (0)
 
-uint32_t mds_rem(uint32_t a, uint32_t b);
-uint32_t h(int len, const int x, uint8_t *key, int odd);
-
 /* The key schedule takes a 128, 192, or 256-bit key, and provides 40
    32-bit words of expanded key K0,...,K39 and the 4 key-dependent
    S-boxes used in the g function. */
@@ -456,8 +444,9 @@ uint32_t h(int len, const int X, uint8_t * L, int odd) {
 uint32_t mds_rem(uint32_t a, uint32_t b) {
   uint32_t t, u;
   uint32_t G_MOD = 0x0000014d;
+  int i;
 
-  for (int i = 0; i < 8; i++) {
+  for (i = 0; i < 8; i++) {
     t = b >> 24;
     b = (b << 8) | (a >> 24);
     a <<= 8;
