@@ -10,7 +10,7 @@
 
 #include <time.h>
 
-#include "src/arc4.h"      /* only for password generator */
+#include "src/arc4.c"      /* only for password generator */
 #include "src/serpent.h"
 #include "src/twofish.h"
 #include "src/rijndael.h"

@@ -4,7 +4,9 @@
   <MACROS>
     <VERSION value="BCB.06.00"/>
     <PROJECT value="PlexusTCL_Crypter.exe"/>
-    <OBJFILES value="PlexusTCL_Crypter.obj Unit1.obj Unit2.obj"/>
+    <OBJFILES value="PlexusTCL_Crypter.obj Unit1.obj Unit2.obj src\arc4.obj src\base64.obj 
+      src\blowfish.obj src\crc32.obj src\rijndael.obj src\serpent.obj 
+      src\sha256.obj src\threefish.obj src\twofish.obj src\xtalw.obj"/>
     <RESFILES value="PlexusTCL_Crypter.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
@@ -20,7 +22,7 @@
       inetdbbde.bpi inetdbxpress.bpi inetdb.bpi nmfast.bpi webdsnap.bpi 
       bcbie.bpi websnap.bpi soaprtl.bpi dclocx.bpi dbexpress.bpi dbxcds.bpi 
       indy.bpi bcb2kaxserver.bpi"/>
-    <PATHCPP value=".;"/>
+    <PATHCPP value=".;src;src;src;src;src;src;src;src;src;src"/>
     <PATHPAS value=".;"/>
     <PATHRC value=".;"/>
     <PATHASM value=".;"/>
@@ -30,13 +32,13 @@
     <USERDEFINES value=""/>
     <SYSDEFINES value="NO_STRICT"/>
     <MAINSOURCE value="PlexusTCL_Crypter.cpp"/>
-    <INCLUDEPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot;;$(BCB)\include;$(BCB)\include\vcl"/>
-    <LIBPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot;;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <INCLUDEPATH value="src;&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot;;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="src;&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot;;$(BCB)\lib\obj;$(BCB)\lib"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
   <OPTIONS>
-    <IDLCFLAGS value="-I&quot;C:\Program Files\Borland\CBuilder6\Projects&quot; 
+    <IDLCFLAGS value="-Isrc -I&quot;C:\Program Files\Borland\CBuilder6\Projects&quot; 
       -I&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot; 
       -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa"/>
     <CFLAG1 value="-O2 -Vx -Ve -X- -a8 -b- -k- -vi -c -tW -tWM"/>
@@ -57,6 +59,16 @@
       <FILE FILENAME="PlexusTCL_Crypter.cpp" FORMNAME="" UNITNAME="PlexusTCL_Crypter" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="Unit1.cpp" FORMNAME="Form1" UNITNAME="Unit1" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
       <FILE FILENAME="Unit2.cpp" FORMNAME="Form2" UNITNAME="Unit2" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\arc4.c" FORMNAME="" UNITNAME="arc4" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\base64.c" FORMNAME="" UNITNAME="base64" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\blowfish.c" FORMNAME="" UNITNAME="blowfish" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\crc32.c" FORMNAME="" UNITNAME="crc32.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\rijndael.c" FORMNAME="" UNITNAME="rijndael.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\serpent.c" FORMNAME="" UNITNAME="serpent.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\sha256.c" FORMNAME="" UNITNAME="sha256.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\threefish.c" FORMNAME="" UNITNAME="threefish.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\twofish.c" FORMNAME="" UNITNAME="twofish.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="src\xtalw.c" FORMNAME="" UNITNAME="xtalw.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
@@ -68,7 +80,7 @@ AutoIncBuild=0
 MajorVer=5
 MinorVer=0
 Release=0
-Build=6
+Build=7
 Debug=0
 PreRelease=0
 Special=0
@@ -80,7 +92,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Technology CL
 FileDescription=
-FileVersion=5.0.0.6
+FileVersion=5.0.0.7
 InternalName=
 LegalCopyright=
 LegalTrademarks=
