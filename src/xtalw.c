@@ -17,16 +17,19 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
-#define WIDTH_32_BIT_NUMBER 4
+size_t little_or_big_ending(void) {
+  unsigned short x = 0x00FF;
+
+  return ((*(unsigned char *)(&x)) == 0 ? 1 : 0);
+}
 
 void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
-
   uint8_t * local_output = (uint8_t *)output;
   const uint8_t * local_input  = (const uint8_t *)input;
 
   uint32_t corrector = 0;
 
-#if __ASM_32_X86_CPP_BUILDER__ /* this is asm code = BAD!!! */
+#if __ASM_32_X86_CPP_BUILDER__
 __asm {
   push eax
   push ebx
@@ -180,92 +183,8 @@ _exit:
   return output;
 }
 
-void * strxor(uint8_t * output, const uint8_t * input, unsigned int length) {
-#if __ASM_32_X86_CPP_BUILDER__
-__asm {
-  push eax
-  push ebx
-  push ecx
-  push edx
-  
-  mov eax, output
-  cmp eax, 0
-  je _exit
-  
-  mov ebx, input
-  cmp ebx, 0
-  je _exit  
-  
-  cmp eax, ebx
-  je _exit  
-	  
-  mov ecx, length
-  cmp ecx, 0
-  je _exit
-  cmp ecx, 4
-  jb _while_byte
-  
- _while:
-  mov edx, dword[ebx]
-  xor dword[eax], edx
-  
-  add eax, 4
-  add ebx, 4
-  sub ecx, 4
-  
-  cmp ecx, 0
-  je _exit
-  cmp ecx, 4
-  jb _while_byte
-  jmp _while
-  
- _while_byte:
-  mov dl, byte[ebx]
-  xor byte[eax], dl
-  
-  add eax, 1
-  add ebx, 1
-  loop _while_byte
-  
-  _exit:
-  pop edx
-  pop ecx
-  pop ebx
-  pop eax
-}
-#else
-#define WIDTH_32_BIT_NUMBER 4
-        unsigned char * local_output = output;
-  const unsigned char * local_input  = input;
-
-  if (!input || !output || (input == output)) {
-    return output;
-  }
-
-  while (length >= WIDTH_32_BIT_NUMBER) {
-    *((unsigned int *)local_output) ^= *((unsigned int *)local_input);
-
-    local_output += WIDTH_32_BIT_NUMBER;
-    local_input  += WIDTH_32_BIT_NUMBER;
-
-    length       -= WIDTH_32_BIT_NUMBER;
-  }
-
-  while (length) {
-    *local_output ^= *local_input;
-    
-    local_output++;
-    local_input++;
-	
-    length--;
-  }
-#undef WIDTH_32_BIT_NUMBER
-#endif
-  return output;
-}
-
-/* "meminit32" optimization and always executable standart function "memset" */
-void * meminit(void * data, const unsigned int number, const unsigned int len) {
+/* "meminit32" optimization and always executable standart function memset */
+void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
  __asm {
     push eax  /* number */
@@ -292,7 +211,8 @@ void * meminit(void * data, const unsigned int number, const unsigned int len) {
     mov  ecx, eax
     shl  ecx, 8
     or   eax, ecx
-    or   ecx, eax
+    or   ecx, eax       /* if register CL == 0 -> OR operation */
+ /* mov  ecx, eax          if register CL  > 0 -> MOV operation */
     shl  ecx, 16
     or   eax, ecx
 
@@ -323,12 +243,12 @@ void * meminit(void * data, const unsigned int number, const unsigned int len) {
  }
 #else
 #define WIDTH_32_BIT_NUMBER 4
+  volatile unsigned char * temp  = (unsigned char *)data;
+  register unsigned long u_dword = number;
+
   if (NULL == data || 0 == len) {
     return NULL;
   }
-	
-  volatile unsigned char * temp  = (unsigned char *)data;
-  register unsigned long u_dword = number;
 
   if (u_dword < 0x00000100) {
     u_dword |= u_dword <<  8;
@@ -342,16 +262,100 @@ void * meminit(void * data, const unsigned int number, const unsigned int len) {
     len  -= WIDTH_32_BIT_NUMBER;
   }
 	
-  while (len--) {
-    *temp = (unsigned char)number;
+  while (len) {
+    *temp = (unsigned char)u_dword;
      temp++;
+     len--;
   }
-#undef WIDTH_32_BIT_NUMBER 4
+#undef WIDTH_32_BIT_NUMBER
 #endif
   return data;
 }
 
-size_t x_strnlen(const char * s, size_t b) {
+void * strxor(uint8_t * output, const uint8_t * input, size_t length) { /* DEBUG = OK */
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
+  push eax
+  push ebx
+  push ecx
+  push edx
+  
+  mov eax, output
+  cmp eax, 0
+  je _exit
+  
+  mov ebx, input
+  cmp ebx, 0
+  je _exit  
+  
+  mov ecx, length
+  cmp ecx, 0
+  je _exit             /* if length == 0 then */
+  cmp ecx, 4
+  jb _while_byte       /* if length  < 4 then */
+  
+ _while:
+  mov edx, dword[ebx]  /* temp   = input*/
+  xor dword[eax], edx  /* temp   = temp xor output */
+  
+  add eax, 4           /* output += 4 */
+  add ebx, 4           /* input  += 4 */
+  sub ecx, 4           /* length -= 4 */
+  
+  cmp ecx, 0
+  je _exit             /* if length == 0 then  */
+  cmp ecx, 4
+  jb _while_byte       /* if length  < 4 then */
+  jmp _while           /* else goto _while */
+  
+ _while_byte:
+  mov dl, byte[ebx]
+  xor byte[eax], dl
+  
+  add eax, 1
+  add ebx, 1
+  loop _while_byte
+  
+  _exit:
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
+}
+#else
+#define WIDTH_32_BIT_NUMBER 4
+
+        unsigned char * local_output = output;
+  const unsigned char * local_input  = input;
+
+  if (!input || !output || (input == output)) {
+    return output;
+  }
+
+  while (length >= WIDTH_32_BIT_NUMBER) {
+    *((uint32_t *)local_output) ^= *((uint32_t *)local_input);
+
+    local_output += WIDTH_32_BIT_NUMBER;
+    local_input  += WIDTH_32_BIT_NUMBER;
+
+    length       -= WIDTH_32_BIT_NUMBER;
+  }
+
+  while (length) {
+    *local_output ^= *local_input;
+    
+    local_output++;
+    local_input++;
+	
+    length--;
+  }
+#undef WIDTH_32_BIT_NUMBER
+#endif
+  
+  return output;
+}
+
+size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
   size_t r = 0;
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {

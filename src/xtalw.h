@@ -20,12 +20,19 @@
  1 - FOR C++ BUILDER 6.0
  0 - OTHER COMPILERS
  
- If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (TRUE)
+ If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (ON)
  then Borland C++ 6.0 compiling assembler x86 code for
  maximization program speed on 32 bits processor!
 */
+
+#define ON  1
+#define OFF 0
+
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ 1
+#define __ASM_32_X86_CPP_BUILDER__ OFF
+
+#define BIG_ENDING    1
+#define LITTLE_ENDING 0
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,17 +40,22 @@ extern "C" {
 
 #include "xtalw.c"
 
-void * meminit(void * data, const unsigned int number, const unsigned int len);
-  
+/* 0 = LITTLE */
+/* 1 = BIG    */
+size_t little_or_big_ending(void);
+
+/* ++Assembly code */
 void * strxormove(void * output, const void * input, size_t length);
+void * meminit(void * data, const unsigned int number, const unsigned int len);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
 
-void strinc(uint8_t * data, size_t len);
-void strdec(uint8_t * data, size_t len);
-void arraytobits(uint8_t * data, size_t len, FILE * stream);
-void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
-
 size_t x_strnlen(const char * string, size_t boundary);
+
+/* --Assembly language */
+void   strinc(uint8_t * data, size_t len);
+void   strdec(uint8_t * data, size_t len);
+void   arraytobits(uint8_t * data, size_t len, FILE * stream);
+void   phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 size_t printhex(const int tumbler, const void * data, size_t length);
 
 int readfromfile(const char * filename, void * buffer, const size_t length);
