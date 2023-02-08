@@ -19,188 +19,6 @@
 
 #define WIDTH_32_BIT_NUMBER 4
 
-void arraytobits(uint8_t * data, size_t len, FILE * stream) {
-  if (!data) {
-    return;
-  }
-
-  if (stream != stdin || stream != stdout || stream != stderr) {
-    stream = stderr;
-  }
-
-  for (size_t j = 0; j < len; j++) {
-    uint8_t c = data[j];
-
-    for(int k = 7; k >= 0; --k) {
-      putc((48 + ((c >> k) & 0x01)), stream);
-    }
-  }
-
-  if (len > 0)
-    putc('\n', stream);
-}
-
-void strinc(uint8_t * data, size_t len) {
-  if (!data) {
-    return;
-  }
-	
-  while(--len) {
-    if (0xFF == data[len]) {
-      data[len] = 0x00;
-      continue;
-    }
-    else {
-      data[len] += 1;
-      break;
-    }
-  }
-}
-
-void strdec(uint8_t * data, size_t len) {
-  if (!data) {
-    return;
-  }
-	
-  while(--len) {
-    if (0x00 == data[len]) {
-      data[len] = 0xFF;
-      continue;
-    }
-    else {
-      data[len] -= 1;
-      break;
-    }
-  }
-}
-
-int genrand(const int min, const int max) {
-  return (int)(rand() % (max - min + 1) + min);
-}
-
-/* "meminit32" optimization and always executable standart function "memset" */
-void * meminit(void * data, const unsigned int number, const unsigned int len) {
-#if __ASM_32_X86_CPP_BUILDER__
- __asm {
-    push eax  /* number */
-    push ecx  /* length data == counter */
-    push edx  /* pointer data */
-
-    mov edx, data
-    cmp edx, 0
-    je _exit            /* if (NULL == data) goto _exit */
-    
-    mov ecx, len
-    cmp ecx, 0
-    je _exit            /* if (0 == len) goto _exit */
-	
-/* START FUNCTIONAL */
-    push ecx            /* save length data */
- 
-    mov  eax, number
-    cmp  eax, 0
-    je  _while_start    /* if 0 == number goto _while_start */
-    cmp  eax, 255
-    ja  _while_start    /* if (number > 255) goto _while_start */
-
-    mov  ecx, eax
-    shl  ecx, 8
-    or   eax, ecx
-    or   ecx, eax
-    shl  ecx, 16
-    or   eax, ecx
-
- _while_start:
-    pop ecx             /* load length data in register */
-
- _while_word:
-    cmp ecx, 4
-    jb _while_byte      /* if ecx < 4 */
-
-    mov dword[edx], eax /* (*(unsigned int *)data) = number */
-    add edx, 4          /* data += 4 */
-    sub ecx, 4          /* len  -= 4 */
-    jmp _while_word
-
- _while_byte:
-    cmp ecx, 0
-    je _exit            /* if ecx == 0 */
-    mov byte[edx], al   /* (*(unsigned char *)data) = (unsigned char)number */
-    add edx, 1          /* data += 1 */
-    sub ecx, 1          /* len  -= 1 */
-    jmp _while_byte
-
- _exit:
-    pop edx
-    pop ecx
-    pop eax
- }
-#else
-#define WIDTH_32_BIT_NUMBER 4
-  if (NULL == data || 0 == len) {
-    return NULL;
-  }
-	
-  volatile unsigned char * temp  = (unsigned char *)data;
-  register unsigned long u_dword = number;
-
-  if (u_dword < 0x00000100) {
-    u_dword |= u_dword <<  8;
-    u_dword |= u_dword << 16;
-  }
-	
-  while (len >= WIDTH_32_BIT_NUMBER) {
-    (*(unsigned long *)temp) = u_dword;
-	  
-    temp += WIDTH_32_BIT_NUMBER;
-    len  -= WIDTH_32_BIT_NUMBER;
-  }
-	
-  while (len--) {
-    *temp = (unsigned char)number;
-     temp++;
-  }
-#undef WIDTH_32_BIT_NUMBER 4
-#endif
-  return data;
-}
-
-size_t x_strnlen(const char * string, size_t boundary) {
-  size_t result = 0;
-
-  if (!string) {
-    return result;
-  }
-
-  while (boundary && string[result]) {
-    boundary--;
-    result++;
-  }
-  
-  return result;
-}
-
-int readfromfile(const char * filename, void * buffer, const size_t length) {
-
-  FILE * f;
-  int result;
-
-  if (!filename || !buffer || 0 == length) {
-    return (-1);
-  }
-
-  f = fopen(filename, "rb");
-
-  if (!f) {
-    return (-1);
-  }
-
-  result = (int)fread(buffer, 1, length, f);
-  fclose(f);
-
-  return result;
-}
-
 void * strxormove(void * output, const void * input, size_t length) {
 
   uint8_t * local_output = (uint8_t *)output;
@@ -436,6 +254,216 @@ __asm {
 #undef WIDTH_32_BIT_NUMBER
 #endif
   return output;
+}
+
+/* "meminit32" optimization and always executable standart function "memset" */
+void * meminit(void * data, const unsigned int number, const unsigned int len) {
+#if __ASM_32_X86_CPP_BUILDER__
+ __asm {
+    push eax  /* number */
+    push ecx  /* length data == counter */
+    push edx  /* pointer data */
+
+    mov edx, data
+    cmp edx, 0
+    je _exit            /* if (NULL == data) goto _exit */
+    
+    mov ecx, len
+    cmp ecx, 0
+    je _exit            /* if (0 == len) goto _exit */
+	
+/* START FUNCTIONAL */
+    push ecx            /* save length data */
+ 
+    mov  eax, number
+    cmp  eax, 0
+    je  _while_start    /* if 0 == number goto _while_start */
+    cmp  eax, 255
+    ja  _while_start    /* if (number > 255) goto _while_start */
+
+    mov  ecx, eax
+    shl  ecx, 8
+    or   eax, ecx
+    or   ecx, eax
+    shl  ecx, 16
+    or   eax, ecx
+
+ _while_start:
+    pop ecx             /* load length data in register */
+
+ _while_word:
+    cmp ecx, 4
+    jb _while_byte      /* if ecx < 4 */
+
+    mov dword[edx], eax /* (*(unsigned int *)data) = number */
+    add edx, 4          /* data += 4 */
+    sub ecx, 4          /* len  -= 4 */
+    jmp _while_word
+
+ _while_byte:
+    cmp ecx, 0
+    je _exit            /* if ecx == 0 */
+    mov byte[edx], al   /* (*(unsigned char *)data) = (unsigned char)number */
+    add edx, 1          /* data += 1 */
+    sub ecx, 1          /* len  -= 1 */
+    jmp _while_byte
+
+ _exit:
+    pop edx
+    pop ecx
+    pop eax
+ }
+#else
+#define WIDTH_32_BIT_NUMBER 4
+  if (NULL == data || 0 == len) {
+    return NULL;
+  }
+	
+  volatile unsigned char * temp  = (unsigned char *)data;
+  register unsigned long u_dword = number;
+
+  if (u_dword < 0x00000100) {
+    u_dword |= u_dword <<  8;
+    u_dword |= u_dword << 16;
+  }
+	
+  while (len >= WIDTH_32_BIT_NUMBER) {
+    (*(unsigned long *)temp) = u_dword;
+	  
+    temp += WIDTH_32_BIT_NUMBER;
+    len  -= WIDTH_32_BIT_NUMBER;
+  }
+	
+  while (len--) {
+    *temp = (unsigned char)number;
+     temp++;
+  }
+#undef WIDTH_32_BIT_NUMBER 4
+#endif
+  return data;
+}
+
+size_t x_strnlen(const char * s, size_t b) {
+  size_t r = 0;
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
+  push eax
+  push ecx
+  push edx
+  
+  mov eax, r
+  
+  mov ecx, b
+  cmp ecx, 0
+  je _exit
+  
+  mov edx, s
+  cmp edx, 0
+  je _exit       /* check NULL pointer */
+  
+_strnlen:
+  cmp byte[edx], 0
+  je _exit
+  inc edx        /* str */
+  inc eax        /* result */
+  loop _strnlen  
+
+_exit:
+  mov r, eax
+  pop edx
+  pop ecx
+  pop eax
+}
+#else
+  if (s) {
+    while (b && s[r]) {
+      b--;
+      r++;
+    }
+  }
+#endif
+  
+  return r;
+}
+
+void arraytobits(uint8_t * data, size_t len, FILE * stream) {
+  if (!data) {
+    return;
+  }
+
+  if (stream != stdin || stream != stdout || stream != stderr) {
+    stream = stderr;
+  }
+
+  for (size_t j = 0; j < len; j++) {
+    uint8_t c = data[j];
+
+    for(int k = 7; k >= 0; --k) {
+      putc((48 + ((c >> k) & 0x01)), stream);
+    }
+  }
+
+  if (len > 0)
+    putc('\n', stream);
+}
+
+void strinc(uint8_t * data, size_t len) {
+  if (!data) {
+    return;
+  }
+	
+  while(--len) {
+    if (0xFF == data[len]) {
+      data[len] = 0x00;
+      continue;
+    }
+    else {
+      data[len] += 1;
+      break;
+    }
+  }
+}
+
+void strdec(uint8_t * data, size_t len) {
+  if (!data) {
+    return;
+  }
+	
+  while(--len) {
+    if (0x00 == data[len]) {
+      data[len] = 0xFF;
+      continue;
+    }
+    else {
+      data[len] -= 1;
+      break;
+    }
+  }
+}
+
+int genrand(const int min, const int max) {
+  return (int)(rand() % (max - min + 1) + min);
+}
+
+int readfromfile(const char * filename, void * buffer, const size_t length) {
+
+  FILE * f;
+  int result;
+
+  if (!filename || !buffer || 0 == length) {
+    return (-1);
+  }
+
+  f = fopen(filename, "rb");
+
+  if (!f) {
+    return (-1);
+  }
+
+  result = (int)fread(buffer, 1, length, f);
+  fclose(f);
+
+  return result;
 }
 
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
