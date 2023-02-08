@@ -19,14 +19,14 @@
 
 #define WIDTH_32_BIT_NUMBER 4
 
-void * strxormove(void * output, const void * input, size_t length) {
+void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
 
   uint8_t * local_output = (uint8_t *)output;
   const uint8_t * local_input  = (const uint8_t *)input;
 
   uint32_t corrector = 0;
 
-#if __ASM_32_X86_CPP_BUILDER__
+#if __ASM_32_X86_CPP_BUILDER__ /* this is asm code = BAD!!! */
 __asm {
   push eax
   push ebx
@@ -48,6 +48,7 @@ __asm {
   cmp eax, ebx
   je _exit
   jb _normal_word            /* if eax < ebx (jump if below) */
+  
 /***REVERSE*******************************************************************/
   dec ecx
   add eax, ecx               /* local_output = local_output + (len-1) */
@@ -71,10 +72,11 @@ _reverse_byte:
 
 _reverse_word_init:
   cmp corrector, 0
-  jz _reverse_word
+  jnz _corrector_not_zero
   
-/* if copy from end buffer -> correction
-   pointers input and output for read 4 byte from end */
+  mov corrector, 3     /* Align pointers to 32 bits for read from end! */
+
+_corrector_not_zero:
   sub eax, corrector
   sub ebx, corrector
 
@@ -86,6 +88,7 @@ _reverse_word:
   sub ecx, 4
   jnz _reverse_word
   jmp _exit
+
 /***NORMAL*******************************************************************/
 _normal_word:
   cmp ecx, 4
@@ -106,6 +109,7 @@ _normal_byte:
   inc ebx
   dec ecx
   jmp _normal_byte
+  
 /****************************************************************************/
 _exit:
   pop edx
@@ -156,6 +160,10 @@ _exit:
     if (corrector) {
       last_output -= corrector;
       last_input  -= corrector;
+    }
+    else {
+      last_output -= (WIDTH_32_BIT_NUMBER - 1);
+      last_input  -= (WIDTH_32_BIT_NUMBER - 1);
     }
 
     while (length) {
