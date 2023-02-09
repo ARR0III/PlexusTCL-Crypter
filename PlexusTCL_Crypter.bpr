@@ -80,7 +80,7 @@ AutoIncBuild=0
 MajorVer=5
 MinorVer=0
 Release=0
-Build=7
+Build=6
 Debug=0
 PreRelease=0
 Special=0
@@ -92,7 +92,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Technology CL
 FileDescription=
-FileVersion=5.0.0.7
+FileVersion=5.0.0.6
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -105,12 +105,14 @@ Comments=
 d:\program\borland\cbuilder6\Bin\dclite60.bpl=Borland Integrated Translation Environment
 
 [HistoryLists\hlIncludePath]
-Count=1
-Item0=C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\include;$(BCB)\include\vcl
+Count=2
+Item0=src;C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\include;$(BCB)\include\vcl
+Item1=C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\include;$(BCB)\include\vcl
 
 [HistoryLists\hlLibraryPath]
-Count=1
-Item0=C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\lib\obj;$(BCB)\lib
+Count=2
+Item0=src;C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\lib\obj;$(BCB)\lib
+Item1=C:\Program Files\Borland\CBuilder6\Projects;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2;$(BCB)\lib\obj;$(BCB)\lib
 
 [HistoryLists\hlDebugSourcePath]
 Count=1
