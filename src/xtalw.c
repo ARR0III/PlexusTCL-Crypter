@@ -22,10 +22,9 @@ size_t little_or_big_ending(void) {
 }
 
 void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
+
   uint8_t * local_output = (uint8_t *)output;
   const uint8_t * local_input  = (const uint8_t *)input;
-
-  uint32_t corrector = 0;
 
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
@@ -65,21 +64,14 @@ _reverse_byte:
   mov dl, byte[ebx]
   xor byte[eax], dl
   
-  add corrector, 1
   dec eax
   dec ebx
   dec ecx
   jmp _reverse_byte
 
-_reverse_word_init:
-  cmp corrector, 0
-  jnz _corrector_not_zero
-  
-  mov corrector, 3     /* Align pointers to 32 bits for read from end! */
-
-_corrector_not_zero:
-  sub eax, corrector
-  sub ebx, corrector
+_reverse_word_init:          /* Align pointers to 32 bits for read from end! */
+  sub eax, 3
+  sub ebx, 3
 
 _reverse_word:
   mov edx, dword[ebx]
@@ -119,7 +111,7 @@ _exit:
   pop eax
 }
 #else
-#define WIDTH_32_BIT_NUMBER 4
+#define WIDTH_32_BIT_NUMBER (32 / 8)
   uint8_t * last_output = local_output + (length - 1);
   const uint8_t * last_input  = local_input  + (length - 1);
 
@@ -154,18 +146,10 @@ _exit:
       last_input--;
 
       length--;
-
-      corrector++;
     }
 
-    if (corrector) {
-      last_output -= corrector;
-      last_input  -= corrector;
-    }
-    else {
-      last_output -= (WIDTH_32_BIT_NUMBER - 1);
-      last_input  -= (WIDTH_32_BIT_NUMBER - 1);
-    }
+    last_output -= (WIDTH_32_BIT_NUMBER - 1);
+    last_input  -= (WIDTH_32_BIT_NUMBER - 1);
 
     while (length) {
       (*(uint32_t *)last_output) ^= (*(uint32_t *)last_input);
@@ -240,7 +224,7 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
     pop eax
  }
 #else
-#define WIDTH_32_BIT_NUMBER 4
+#define WIDTH_32_BIT_NUMBER (32 / 8)
   volatile unsigned char * temp  = (unsigned char *)data;
   register unsigned long u_dword = number;
 
@@ -321,8 +305,7 @@ __asm {
   pop eax
 }
 #else
-#define WIDTH_32_BIT_NUMBER 4
-
+#define WIDTH_32_BIT_NUMBER (32 / 8)
         unsigned char * local_output = output;
   const unsigned char * local_input  = input;
 
