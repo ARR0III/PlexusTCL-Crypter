@@ -35,7 +35,7 @@
 #define OFF 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ ON
+#define __ASM_32_X86_CPP_BUILDER__ OFF
 
 #define BIG_ENDING    1
 #define LITTLE_ENDING 0

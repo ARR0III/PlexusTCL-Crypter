@@ -1,7 +1,7 @@
 #include "base64.h"
 
 const
-  uint8_t * base64table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  char * base64table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 void base64encode(const uint8_t * input, uint8_t * output, const int size) {
   int iptr = 0;
