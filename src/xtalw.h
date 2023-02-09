@@ -48,14 +48,14 @@ extern "C" {
 /* 1 = BIG    */
 size_t little_or_big_ending(void);
 
-/* ++Assembly code */
+/* C code + Assembly code */
 void * strxormove(void * output, const void * input, size_t length);
 void * meminit(void * data, const unsigned int number, const unsigned int len);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
 
 size_t x_strnlen(const char * string, size_t boundary);
 
-/* --Assembly language */
+/* C code */
 void   strinc(uint8_t * data, size_t len);
 void   strdec(uint8_t * data, size_t len);
 void   arraytobits(uint8_t * data, size_t len, FILE * stream);
