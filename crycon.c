@@ -15,7 +15,7 @@
 #define DEBUG_INFORMATION 1
 #endif
 
-/* if COMPILE_FOR_MS_WINDOWS defined */
+/* if MS_WINDOWS defined */
 #ifdef MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
