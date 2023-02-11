@@ -21,29 +21,18 @@ size_t little_or_big_ending(void) {
   return ((*(unsigned char *)(&x)) == 0 ? 1 : 0);
 }
 
-void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
-
-  uint8_t * local_output = (uint8_t *)output;
-  const uint8_t * local_input  = (const uint8_t *)input;
-
+void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = CHECK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  push eax
-  push ebx
-  push ecx
-  push edx
-
-  mov eax, local_output
-  mov ebx, local_input
-
+  mov eax, output
   cmp eax, 0
   je _exit
+
+  mov ebx, input
   cmp ebx, 0
   je _exit
 
   mov ecx, length
-  cmp ecx, 0
-  je _exit
 
   cmp eax, ebx
   je _exit
@@ -105,14 +94,14 @@ _normal_byte:
   
 /****************************************************************************/
 _exit:
-  pop edx
-  pop ecx
-  pop ebx
-  pop eax
 }
 #else
-#define WIDTH_32_BIT_NUMBER (32 / 8)
-  uint8_t * last_output = local_output + (length - 1);
+  const size_t width_register = sizeof(size_t);
+
+        uint8_t * local_output = (uint8_t *)output;
+  const uint8_t * local_input  = (const uint8_t *)input;
+
+        uint8_t * last_output = local_output + (length - 1);
   const uint8_t * last_input  = local_input  + (length - 1);
 
   if (!output || !input || (output == input)) {
@@ -120,13 +109,13 @@ _exit:
   }
 
   if (local_output < local_input) {
-    while (length >= WIDTH_32_BIT_NUMBER) {
-      (*(uint32_t *)local_output) ^= (*(uint32_t *)local_input);
+    while (length >= width_register) {
+      (*(size_t *)local_output) ^= (*(size_t *)local_input);
 
-      local_output += WIDTH_32_BIT_NUMBER;
-      local_input  += WIDTH_32_BIT_NUMBER;
+      local_output += width_register;
+      local_input  += width_register;
 	  
-      length       -= WIDTH_32_BIT_NUMBER;
+      length       -= width_register;
     }
 
     while (length) {
@@ -139,7 +128,7 @@ _exit:
     }
   }
   else {
-    while ((length) && (0 != (length % 4))) {
+    while ((length) && (0 != (length % width_register))) { /* max 7 iteration */
       *last_output ^= *last_input;
 
       last_output--;
@@ -148,31 +137,27 @@ _exit:
       length--;
     }
 
-    last_output -= (WIDTH_32_BIT_NUMBER - 1);
-    last_input  -= (WIDTH_32_BIT_NUMBER - 1);
+    /* Align pointers to 32 bits for read from end! */
+    last_output -= (width_register - 1);
+    last_input  -= (width_register - 1);
 
     while (length) {
-      (*(uint32_t *)last_output) ^= (*(uint32_t *)last_input);
+      (*(size_t *)last_output) ^= (*(size_t *)last_input);
 
-      last_output -= WIDTH_32_BIT_NUMBER;
-      last_input  -= WIDTH_32_BIT_NUMBER;
+      last_output -= width_register;
+      last_input  -= width_register;
 
-      length      -= WIDTH_32_BIT_NUMBER;
+      length      -= width_register;
     }
   }
-#undef WIDTH_32_BIT_NUMBER
 #endif
   return output;
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = OK */
+void * meminit(void * data, const size_t number, size_t len) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
  __asm {
-    push eax  /* number */
-    push ecx  /* length data == counter */
-    push edx  /* pointer data */
-
     mov edx, data
     cmp edx, 0
     je _exit            /* if (NULL == data) goto _exit */
@@ -194,7 +179,7 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
     shl  ecx, 8
     or   eax, ecx
     or   ecx, eax       /* if register CL == 0 -> OR operation */
- /* mov  ecx, eax          if register CL  > 0 -> MOV operation */
+                        /* if register CL  > 0 -> MOV operation */
     shl  ecx, 16
     or   eax, ecx
 
@@ -219,37 +204,37 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
     jmp _while_byte
 
  _exit:
-    pop edx
-    pop ecx
-    pop eax
  }
 #else
-#define WIDTH_32_BIT_NUMBER (32 / 8)
+  const size_t width_register = sizeof(size_t);
+
   volatile unsigned char * temp  = (unsigned char *)data;
-  register unsigned long u_dword = number;
+  register size_t u_dword = number;
 
   if (NULL == data || 0 == len) {
     return NULL;
   }
 
-  if (u_dword < 0x00000100) {
+  if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
+#if (SIZE_MAX > 0xFFFFFFFF)
+    u_dword |= u_dword << 32;
+#endif
   }
 	
-  while (len >= WIDTH_32_BIT_NUMBER) {
-    (*(unsigned long *)temp) = u_dword;
+  while (len >= width_register) {
+    (*(size_t *)temp) = u_dword;
 	  
-    temp += WIDTH_32_BIT_NUMBER;
-    len  -= WIDTH_32_BIT_NUMBER;
+    temp += width_register;
+    len  -= width_register;
   }
 	
   while (len) {
-    *temp = (unsigned char)u_dword;
+    *temp = (uint8_t)u_dword;
      temp++;
      len--;
   }
-#undef WIDTH_32_BIT_NUMBER
 #endif
   return data;
 }
@@ -257,11 +242,6 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  push eax
-  push ebx
-  push ecx
-  push edx
-  
   mov eax, output
   cmp eax, 0
   je _exit
@@ -288,7 +268,7 @@ __asm {
   je _exit             /* if length == 0 then  */
   cmp ecx, 4
   jb _while_byte       /* if length  < 4 then */
-  jmp _while           /* else goto _while */
+  jmp _while
   
  _while_byte:
   mov dl, byte[ebx]
@@ -299,13 +279,10 @@ __asm {
   loop _while_byte
   
   _exit:
-  pop edx
-  pop ecx
-  pop ebx
-  pop eax
 }
 #else
-#define WIDTH_32_BIT_NUMBER (32 / 8)
+  const size_t width_register = sizeof(size_t);
+
         unsigned char * local_output = output;
   const unsigned char * local_input  = input;
 
@@ -313,13 +290,13 @@ __asm {
     return output;
   }
 
-  while (length >= WIDTH_32_BIT_NUMBER) {
-    *((uint32_t *)local_output) ^= *((uint32_t *)local_input);
+  while (length >= width_register) {
+    *((size_t *)local_output) ^= *((size_t *)local_input);
 
-    local_output += WIDTH_32_BIT_NUMBER;
-    local_input  += WIDTH_32_BIT_NUMBER;
+    local_output += width_register;
+    local_input  += width_register;
 
-    length       -= WIDTH_32_BIT_NUMBER;
+    length       -= width_register;
   }
 
   while (length) {
@@ -330,7 +307,6 @@ __asm {
 	
     length--;
   }
-#undef WIDTH_32_BIT_NUMBER
 #endif
   
   return output;
@@ -340,10 +316,6 @@ size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
   size_t r = 0;
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  push eax
-  push ecx
-  push edx
-  
   mov eax, r
   
   mov ecx, b
@@ -355,17 +327,17 @@ __asm {
   je _exit       /* check NULL pointer */
   
 _strnlen:
+  cmp ecx, 0
+  je _exit
   cmp byte[edx], 0
   je _exit
   inc edx        /* str */
   inc eax        /* result */
-  loop _strnlen  
+  dec ecx
+  jmp _strnlen  
 
 _exit:
   mov r, eax
-  pop edx
-  pop ecx
-  pop eax
 }
 #else
   if (s) {
@@ -375,7 +347,6 @@ _exit:
     }
   }
 #endif
-  
   return r;
 }
 
