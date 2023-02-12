@@ -34,6 +34,9 @@
 #define ON  1
 #define OFF 0
 
+#define HEX_TABLE  1
+#define HEX_STRING 0
+
 #ifndef __ASM_32_X86_CPP_BUILDER__
 #define __ASM_32_X86_CPP_BUILDER__ OFF
 

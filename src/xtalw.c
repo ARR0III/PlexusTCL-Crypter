@@ -12,27 +12,31 @@
 
 #include "xtalw.h"
 
-#define HEX_TABLE  1
-#define HEX_STRING 0
-
 size_t little_or_big_ending(void) {
   unsigned short x = 0x00FF;
 
   return ((*(unsigned char *)(&x)) == 0 ? 1 : 0);
 }
 
-void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = CHECK */
+void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
+  push eax
+  push ebx
+  push ecx
+  push edx
+
   mov eax, output
+  mov ebx, input
+
   cmp eax, 0
   je _exit
-
-  mov ebx, input
   cmp ebx, 0
   je _exit
 
   mov ecx, length
+  cmp ecx, 0
+  je _exit
 
   cmp eax, ebx
   je _exit
@@ -94,6 +98,10 @@ _normal_byte:
   
 /****************************************************************************/
 _exit:
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
 }
 #else
   const size_t width_register = sizeof(size_t);
@@ -155,9 +163,13 @@ _exit:
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const size_t number, size_t len) { /* DEBUG = OK */
+void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
  __asm {
+    push eax  /* number */
+    push ecx  /* length data == counter */
+    push edx  /* pointer data */
+
     mov edx, data
     cmp edx, 0
     je _exit            /* if (NULL == data) goto _exit */
@@ -179,7 +191,7 @@ void * meminit(void * data, const size_t number, size_t len) { /* DEBUG = OK */
     shl  ecx, 8
     or   eax, ecx
     or   ecx, eax       /* if register CL == 0 -> OR operation */
-                        /* if register CL  > 0 -> MOV operation */
+ /* mov  ecx, eax          if register CL  > 0 -> MOV operation */
     shl  ecx, 16
     or   eax, ecx
 
@@ -204,6 +216,9 @@ void * meminit(void * data, const size_t number, size_t len) { /* DEBUG = OK */
     jmp _while_byte
 
  _exit:
+    pop edx
+    pop ecx
+    pop eax
  }
 #else
   const size_t width_register = sizeof(size_t);
@@ -242,6 +257,11 @@ void * meminit(void * data, const size_t number, size_t len) { /* DEBUG = OK */
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
+  push eax
+  push ebx
+  push ecx
+  push edx
+  
   mov eax, output
   cmp eax, 0
   je _exit
@@ -268,7 +288,7 @@ __asm {
   je _exit             /* if length == 0 then  */
   cmp ecx, 4
   jb _while_byte       /* if length  < 4 then */
-  jmp _while
+  jmp _while           /* else goto _while */
   
  _while_byte:
   mov dl, byte[ebx]
@@ -279,6 +299,10 @@ __asm {
   loop _while_byte
   
   _exit:
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
 }
 #else
   const size_t width_register = sizeof(size_t);
@@ -308,7 +332,6 @@ __asm {
     length--;
   }
 #endif
-  
   return output;
 }
 
