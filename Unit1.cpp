@@ -110,7 +110,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.06 29JAN23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.07 16FEB23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -205,6 +205,19 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
       Form1->Edit2->Text = SaveDialog1->FileName;
     }
   }
+}
+
+int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
+  if (fclose(file_input) == -1) {
+	fclose(file_output);
+    return STREAM_INPUT_CLOSE_ERROR;
+  }
+  
+  if (fclose(file_output) == -1) {
+    return STREAM_OUTPUT_CLOSE_ERROR;
+  }
+  
+  return return_code; /* All files close complete! */
 }
 
 int operation_variant(const int operation) {
@@ -702,13 +715,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         memmove(ctx->vector, ctx->output, ctx->vector_length);
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
-          if (fclose(fi) == -1)
-            return STREAM_INPUT_CLOSE_ERROR;
-          else
-          if (fclose(fo) == -1)
-            return STREAM_OUTPUT_CLOSE_ERROR;
-          else
-            return WRITE_FILE_ERROR;
+          return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
         }
         else {
           fflush(fo);
@@ -717,13 +724,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       else
       if (DECRYPT == ctx->operation) {
         if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
-          if (fclose(fi) == -1)
-            return STREAM_INPUT_CLOSE_ERROR;
-          else
-          if (fclose(fo) == -1)
-            return STREAM_OUTPUT_CLOSE_ERROR;
-          else
-            return READ_FILE_ERROR;
+          return close_in_out_files(fi, fo, READ_FILE_ERROR);
         }
         position += (int32_t)ctx->vector_length;
       }
@@ -768,13 +769,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     control_sum_buffer(ctx, realread);
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
-      if (fclose(fi) == -1)
-        return STREAM_INPUT_CLOSE_ERROR;
-      else
-      if (fclose(fo) == -1)
-        return STREAM_OUTPUT_CLOSE_ERROR;
-      else
-        return WRITE_FILE_ERROR;
+      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
     else {
       fflush(fo);
@@ -802,13 +797,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
-      if (fclose(fi) == -1)
-        return STREAM_INPUT_CLOSE_ERROR;
-      else
-      if (fclose(fo) == -1)
-        return STREAM_OUTPUT_CLOSE_ERROR;
-      else
-        return WRITE_FILE_ERROR;
+      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
     else {
       fflush(fo);
@@ -824,13 +813,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
 
-  if (fclose(fi) == -1)
-    return STREAM_INPUT_CLOSE_ERROR;
-  else
-  if (fclose(fo) == -1)
-    return STREAM_OUTPUT_CLOSE_ERROR;
-  else
-    return OK;
+  return close_in_out_files(fi, fo, OK);
 }
 
 void random_vector_init(uint8_t * data, size_t size) {
