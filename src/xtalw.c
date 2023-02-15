@@ -15,16 +15,12 @@
 size_t little_or_big_ending(void) {
   unsigned short x = 0x00FF;
 
-  return ((*(unsigned char *)(&x)) == 0 ? 1 : 0);
+  return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
 void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  push eax
-  push ebx
-  push ecx
-  push edx
 
   mov eax, output
   mov ebx, input
@@ -98,12 +94,12 @@ _normal_byte:
   
 /****************************************************************************/
 _exit:
-  pop edx
-  pop ecx
-  pop ebx
-  pop eax
 }
 #else
+  if (!output || !input || (output == input)) {
+    return NULL;
+  }
+  
   const size_t width_register = sizeof(size_t);
 
         uint8_t * local_output = (uint8_t *)output;
@@ -111,10 +107,6 @@ _exit:
 
         uint8_t * last_output = local_output + (length - 1);
   const uint8_t * last_input  = local_input  + (length - 1);
-
-  if (!output || !input || (output == input)) {
-    return NULL;
-  }
 
   if (local_output < local_input) {
     while (length >= width_register) {
@@ -163,12 +155,9 @@ _exit:
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = OK */
+void * meminit(void * data, const unsigned int number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
  __asm {
-    push eax  /* number */
-    push ecx  /* length data == counter */
-    push edx  /* pointer data */
 
     mov edx, data
     cmp edx, 0
@@ -216,19 +205,16 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
     jmp _while_byte
 
  _exit:
-    pop edx
-    pop ecx
-    pop eax
  }
 #else
+  if (NULL == data) {
+    return NULL;
+  }
+  
   const size_t width_register = sizeof(size_t);
 
   volatile unsigned char * temp  = (unsigned char *)data;
   register size_t u_dword = number;
-
-  if (NULL == data || 0 == len) {
-    return NULL;
-  }
 
   if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
@@ -238,17 +224,17 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
 #endif
   }
 	
-  while (len >= width_register) {
+  while (length >= width_register) {
     (*(size_t *)temp) = u_dword;
 	  
-    temp += width_register;
-    len  -= width_register;
+    temp   += width_register;
+    length -= width_register;
   }
 	
-  while (len) {
+  while (length) {
     *temp = (uint8_t)u_dword;
      temp++;
-     len--;
+     length--;
   }
 #endif
   return data;
@@ -257,10 +243,6 @@ void * meminit(void * data, const unsigned int number, size_t len) { /* DEBUG = 
 void * strxor(uint8_t * output, const uint8_t * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  push eax
-  push ebx
-  push ecx
-  push edx
   
   mov eax, output
   cmp eax, 0
@@ -299,20 +281,16 @@ __asm {
   loop _while_byte
   
   _exit:
-  pop edx
-  pop ecx
-  pop ebx
-  pop eax
 }
 #else
+  if (!input || !output || (input == output)) {
+    return output;
+  }
+
   const size_t width_register = sizeof(size_t);
 
         unsigned char * local_output = output;
   const unsigned char * local_input  = input;
-
-  if (!input || !output || (input == output)) {
-    return output;
-  }
 
   while (length >= width_register) {
     *((size_t *)local_output) ^= *((size_t *)local_input);
@@ -340,10 +318,7 @@ size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
   mov eax, r
-  
   mov ecx, b
-  cmp ecx, 0
-  je _exit
   
   mov edx, s
   cmp edx, 0
@@ -373,11 +348,12 @@ _exit:
   return r;
 }
 
-void arraytobits(uint8_t * data, size_t len, FILE * stream) {
+void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
+  uint8_t c;
   size_t j;
   int k;
 
-  if (!data) {
+  if (!data || 0 == length) {
     return;
   }
 
@@ -385,16 +361,15 @@ void arraytobits(uint8_t * data, size_t len, FILE * stream) {
     stream = stderr;
   }
 
-  for (j = 0; j < len; j++) {
-    uint8_t c = data[j];
+  for (j = 0; j < length; j++) {
+    c = data[j];
 
     for(k = 7; k >= 0; --k) {
       putc((48 + ((c >> k) & 0x01)), stream);
     }
   }
 
-  if (len > 0)
-    putc('\n', stream);
+  putc('\n', stream);
 }
 
 void strinc(uint8_t * data, size_t len) {
@@ -461,7 +436,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   int left, right, symbol;
   const char digits[] = "0123456789ABCDEF";
 
-  if (!data) {
+  if (!data || 0 == length) {
     return;
   }
 
@@ -470,7 +445,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   }
 
   if (stream != stdin || stream != stdout || stream != stderr) {
-    stream = stdout;
+    stream = stderr;
   }
 
   for (i = 0; i < length; ++i) {
@@ -487,17 +462,17 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     }
   }
 
-  if (length > 0)
-    putc('\n', stream);
+  putc('\n', stream);
 }
 
 size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
-  const uint8_t * temp = (uint8_t *)data;
-
+  
   if (!data || 0 == length) {
     return i;
   }
+  
+  const uint8_t * temp = (uint8_t *)data;
 
   if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
     tumbler = HEX_TABLE;
@@ -515,8 +490,7 @@ size_t printhex(int tumbler, const void * data, size_t length) {
     }
   }
 
-  if (length > 0)
-    putc('\n', stdout);
+  putc('\n', stdout);
 
   return i;
 }

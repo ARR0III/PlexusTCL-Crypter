@@ -21,28 +21,31 @@ typedef struct ThreefishKey {
 } THREEFISH_CTX;
 
 void threefish_init(THREEFISH_CTX * keyCtx, threefishkeysize_t stateSize,
-                    uint64_t * keyData, uint64_t * tweak);
+                    const uint64_t * keyData, const uint64_t * tweak);
+					
+					
+					
 void threefish_encrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out);          
+                       const uint64_t * in, uint64_t * out);          
 void threefish_decrypt(THREEFISH_CTX * ctx,
-                       uint64_t * in, uint64_t * out);
+                       const uint64_t * in, uint64_t * out);
 
  
  
 void threefishEncrypt256(THREEFISH_CTX * ctx,
-                         uint64_t * input, uint64_t * output);
+                         const uint64_t * input, uint64_t * output);
 void threefishEncrypt512(THREEFISH_CTX * ctx,
-                         uint64_t * input, uint64_t * output);
+                         const uint64_t * input, uint64_t * output);
 void threefishEncrypt1024(THREEFISH_CTX * ctx,
-                          uint64_t * input, uint64_t * output);
+                         const uint64_t * input, uint64_t * output);
 						  
 						  
 void threefishDecrypt256(THREEFISH_CTX * ctx,
-                         uint64_t * input, uint64_t * output);
+                         const uint64_t * input, uint64_t * output);
 void threefishDecrypt512(THREEFISH_CTX * ctx,
-                         uint64_t * input, uint64_t * output);
+                         const uint64_t * input, uint64_t * output);
 void threefishDecrypt1024(THREEFISH_CTX * ctx,
-                          uint64_t * input, uint64_t * output);   
+                         const uint64_t * input, uint64_t * output);   
 						 
 					   
 #ifdef __cplusplus
