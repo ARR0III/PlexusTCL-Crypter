@@ -38,7 +38,7 @@
 #define HEX_STRING 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ OFF
+#define __ASM_32_X86_CPP_BUILDER__ ON
 
 #define BIG_ENDING    1
 #define LITTLE_ENDING 0
@@ -53,7 +53,7 @@ size_t little_or_big_ending(void);
 
 /* C code + Assembly code */
 void * strxormove(void * output, const void * input, size_t length);
-void * meminit(void * data, const unsigned int number, const unsigned int length);
+void * meminit(void * data, const size_t number, const unsigned int length);
 void * strxor(uint8_t * output, const uint8_t * input, size_t length);
 
 size_t x_strnlen(const char * string, size_t boundary);
