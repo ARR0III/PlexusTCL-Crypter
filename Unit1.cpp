@@ -110,7 +110,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.07 16FEB23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.07 17FEB23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -209,7 +209,7 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
 
 int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
   if (fclose(file_input) == -1) {
-	fclose(file_output);
+    fclose(file_output);
     return STREAM_INPUT_CLOSE_ERROR;
   }
   
