@@ -66,6 +66,7 @@ typedef enum cipher_number_enum {
 
 const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 ??? / 100) */
 
+const char * PARAM_APPEND_BYTE  = "ab";
 const char * PARAM_READ_BYTE    = "rb";
 const char * PARAM_WRITE_BYTE   = "wb";
 const char * PARAM_REWRITE_BYTE = "r+b";
@@ -435,6 +436,45 @@ float sizetofloatprint(const int status, const float size) {
   return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
 }
 
+void resident_clear(const char * filename) {
+  FILE * fr;
+  size_t counter = 0;
+  size_t cluster = 17;
+  
+  void * data = (void *)malloc(BLOCK_SIZE_FOR_ERASED);
+  
+  if (!data) {
+    return;
+  }
+
+  meminit((void *)data, 0x00, BLOCK_SIZE_FOR_ERASED);
+  
+  while (counter < cluster) {
+    fr = fopen(filename, PARAM_APPEND_BYTE);  
+	
+    if (fr) {
+      if (fwrite((void *)data, 1, BLOCK_SIZE_FOR_ERASED, fr) != BLOCK_SIZE_FOR_ERASED) {
+        fclose(fr);
+        free((void *)data);
+
+        return;
+      }
+      else {
+        fflush(fr);
+      }
+
+      if ((cluster - 1) == counter) {
+        chsize(fileno(fr), 0);
+      }
+
+      fclose(fr);
+    }
+    counter++;
+  }
+
+  free((void *)data);
+}
+
 int erasedfile(const char * filename) {
   FILE * f = fopen(filename, PARAM_REWRITE_BYTE);
 
@@ -450,7 +490,7 @@ int erasedfile(const char * filename) {
     return -1;
   }
 
-  uint8_t * data = (uint8_t *)malloc(BLOCK_SIZE_FOR_ERASED);
+  uint8_t * data = (uint8_t *)malloc(DATA_SIZE);
 
   if (!data) {
     fclose(f);
@@ -472,8 +512,8 @@ int erasedfile(const char * filename) {
   while (position < fsize) {
     size_for_erased = (fsize - position);
 
-    if (size_for_erased > BLOCK_SIZE_FOR_ERASED) {
-      size_for_erased = BLOCK_SIZE_FOR_ERASED;
+    if (size_for_erased > DATA_SIZE) {
+      size_for_erased = DATA_SIZE;
     }
 
     realread = fread((void *)data, 1, size_for_erased, f);
@@ -522,6 +562,9 @@ int erasedfile(const char * filename) {
   if (check != 0) {
     return -1;
   }
+
+  /* write 16 KiB null data for rewriting resident copy in MFT table */
+  resident_clear(filename);
 
   return 0;
 }
@@ -1343,7 +1386,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                  "—тертые данные будет невозможно восстановить!";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
-                       UnicodeMsg.c_str()) == IDYES) {
+                                                  UnicodeMsg.c_str()) == IDYES) {
       Button4->Enabled = false;
       UnicodeMsg = "";
 
