@@ -15,7 +15,7 @@
 #define DEBUG_INFORMATION 1
 #endif
 
-/* if COMPILE_FOR_MS_WINDOWS defined */
+/* if MS_WINDOWS defined */
 #ifdef MS_WINDOWS
 #include <windows.h>
 #define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
@@ -166,6 +166,7 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   /* clear all memory and all pointers */
   meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
+  ctx = NULL;
 }
 
 void NAME_CIPHER_ERROR(const char * name) {
@@ -254,6 +255,8 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 #endif
 
   meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+
+  count = i = j = k = 0;
 }
 
 void cent(int * number) {
@@ -296,6 +299,7 @@ void cipher_free(void * ctx, size_t ctx_length) {
 	
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
+  ctx = NULL;
 }
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
@@ -392,19 +396,6 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   }
 }
 
-int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
-  if (fclose(file_input) == -1) {
-	fclose(file_output);
-    return STREAM_INPUT_CLOSE_ERROR;
-  }
-  
-  if (fclose(file_output) == -1) {
-    return STREAM_OUTPUT_CLOSE_ERROR;
-  }
-  
-  return return_code; /* All files close complete! */
-}
-
 int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
@@ -436,7 +427,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   /* fsize += (size initialized vector + size sha256 hash sum) */
   /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
   if (fsize <= 0L) {
-    return close_in_out_files(fi, fo, SIZE_FILE_ERROR);
+    if (fclose(fi) == -1) {
+      return STREAM_INPUT_CLOSE_ERROR;
+    }
+
+    if (fclose(fo) == -1) {
+      return STREAM_OUTPUT_CLOSE_ERROR;
+    }
+
+    return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
@@ -446,7 +445,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   if (DECRYPT == ctx->operation) {
     /* if fsize < minimal size file for decrypt */
     if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
-      return close_in_out_files(fi, fo, SIZE_DECRYPT_FILE_INCORRECT);
+      if (fclose(fi) == -1) {
+        return STREAM_INPUT_CLOSE_ERROR;
+      }
+
+      if (fclose(fo) == -1) {
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      }
+
+      return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
 
@@ -500,7 +507,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 #endif
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
-          return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
+          if (fclose(fi) == -1) {
+            return STREAM_INPUT_CLOSE_ERROR;
+          }
+
+          if (fclose(fo) == -1) {
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          }
+
+          return WRITE_FILE_ERROR;
         }
         else {
           fflush(fo);
@@ -509,13 +524,22 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       else
       if (DECRYPT == ctx->operation) {
         if (fread((void *)ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
-          return close_in_out_files(fi, fo, READ_FILE_ERROR);
+          if (fclose(fi) == -1) {
+            return STREAM_INPUT_CLOSE_ERROR;
+          }
+
+          if (fclose(fo) == -1) {
+            return STREAM_OUTPUT_CLOSE_ERROR;
+          }
+
+          return READ_FILE_ERROR;
         }
-		
-      position += (int32_t)ctx->vector_length;
+
 #if DEBUG_INFORMATION
   printf("[DEBUG] vector data read from file in pointer: %p\n", ctx->vector);
 #endif
+
+        position += (int32_t)ctx->vector_length;
       }
 
 #if DEBUG_INFORMATION
@@ -564,7 +588,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     control_sum_buffer(ctx, realread);
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
-      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);;
+      if (fclose(fi) == -1) {
+        return STREAM_INPUT_CLOSE_ERROR;
+      }
+
+      if (fclose(fo) == -1) {
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      }
+
+      return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
@@ -608,7 +640,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
-      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
+      if (fclose(fi) == -1) {
+        return STREAM_INPUT_CLOSE_ERROR;
+      }
+
+      if (fclose(fo) == -1) {
+        return STREAM_OUTPUT_CLOSE_ERROR;
+      }
+
+      return WRITE_FILE_ERROR;
     }
     else {
       fflush(fo);
@@ -630,7 +670,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   printhex(HEX_TABLE, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 #endif
 
-  return close_in_out_files(fi, fo, OK);
+  if (fclose(fi) == -1) {
+    return STREAM_INPUT_CLOSE_ERROR;
+  }
+
+  if (fclose(fo) == -1) {
+    return STREAM_OUTPUT_CLOSE_ERROR;
+  }
+
+  return OK;
 }
 
 void random_vector_init(uint8_t * data, size_t size) {
@@ -927,10 +975,10 @@ int main(int argc, char * argv[]) {
 
   int real_read = readfromfile(ctx->keyfile, ctx->temp_buffer, ctx->temp_buffer_length);
 
-  if (real_read == (int)ctx->temp_buffer_length)
+  if (real_read == ctx->temp_buffer_length)
     printf("[#] Crypt key read from file \"%s\"!\n", ctx->keyfile);
   else
-  if ((real_read > 0) && (real_read < (int)ctx->temp_buffer_length)) {
+  if ((real_read > 0) && (real_read < (ctx->temp_buffer_length))) {
 
     printf("[!] Data in key file %d byte; necessary %d byte!\n",
             real_read, (int32_t)ctx->temp_buffer_length);
@@ -1129,7 +1177,7 @@ int main(int argc, char * argv[]) {
         OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
       break;
     case WRITE_FILE_NOT_OPEN:
-      printf("[!] Output file \"%s\" not opened!\n", ctx->output);
+      printf("[!] Output file \"%s\" not opened!\n", ctx->foutput);
       break;
     case SIZE_FILE_ERROR:
       printf("[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
