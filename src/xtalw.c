@@ -106,16 +106,30 @@ _exit:
 
   if (!output || !input || (output == input)) {
     return NULL;
-  }	
+  }
 
   if (local_output < local_input) {
+
+	if ((local_input - local_output) < width_register) {
+	  while(length) {
+        *local_output ^= *local_input;
+
+		local_output++;
+		local_input++;
+		
+		length--;
+	  }
+
+	  return output;
+    }
+
     while (length >= width_register) {
       (*(size_t *)local_output) ^= (*(size_t *)local_input);
 
       local_output += width_register;
       local_input  += width_register;
 	  
-      length       -= width_register;
+      length -= width_register;
     }
 
     while (length) {
@@ -128,7 +142,20 @@ _exit:
     }
   }
   else {
-    while ((length) && (0 != (length % width_register))) { /* max 7 iteration */
+    if ((last_output - last_input) < width_register) {
+	  while(length) {
+        *last_output ^= *last_input;
+
+		last_output--;
+		last_input--;
+		
+		length--;
+	  }
+
+	  return output;
+    }
+
+    while (length && (length % width_register)) { /* max 7 iteration */
       *last_output ^= *last_input;
 
       last_output--;
@@ -147,7 +174,7 @@ _exit:
       last_output -= width_register;
       last_input  -= width_register;
 
-      length      -= width_register;
+      length -= width_register;
     }
   }
 #endif
@@ -289,7 +316,7 @@ __asm {
   const uint8_t * local_input  = input;	
 
   if (!input || !output || (input == output)) {
-    return output;
+    return NULL;
   }
 
   while (length >= width_register) {
