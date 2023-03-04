@@ -791,7 +791,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         }
 
-      strxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      memxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
       memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
