@@ -38,7 +38,7 @@
 #define HEX_STRING 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ ON
+#define __ASM_32_X86_CPP_BUILDER__ OFF
 
 #define BIG_ENDING    1
 #define LITTLE_ENDING 0
@@ -51,22 +51,22 @@ extern "C" {
 /* 1 = BIG    */
 size_t little_or_big_ending(void);
 
-/* C code + Assembly code */
-void * strxormove(void * output, const void * input, size_t length);
-void * meminit(void * data, const size_t number, const unsigned int length);
-void * strxor(uint8_t * output, const uint8_t * input, size_t length);
+void * memxor(void * output, const void * input, size_t length);
+void * memxormove(void * output, const void * input, size_t length);
+void * meminit(void * data, const size_t number, size_t length);
 
-size_t x_strnlen(const char * string, size_t boundary);
+size_t x_strnlen(const char * s, size_t b);
 
-/* C code */
-void   strinc(uint8_t * data, size_t length);
-void   strdec(uint8_t * data, size_t length);
 void   arraytobits(const uint8_t * data, const size_t length, FILE * stream);
-void   phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
-size_t printhex(const int tumbler, const void * data, size_t length);
 
-int genrand(const int min, const int max);
-int readfromfile(const char * filename, void * buffer, const size_t length);
+void   strinc(uint8_t * data, size_t len);
+void   strdec(uint8_t * data, size_t len);
+void   phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
+
+int    genrand(const int min, const int max);
+int    readfromfile(const char * filename, void * buffer, const size_t length);
+
+size_t printhex(int tumbler, const void * data, size_t length);
 
 #ifdef __cplusplus
 }

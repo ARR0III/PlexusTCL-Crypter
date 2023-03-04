@@ -1,14 +1,14 @@
 /*
-  Plexus Technology Cybernetic Laboratory;
-
-  This library of functions was created as a set of functions
-  that I need to replace some of the functions in the C
-  programming language standard library that I think could be
-  better implemented. Some functions are needed for debugging
-  programs, such as "phex", which prints the contents of memory
-  in hexadecimal. The functions were debugged, tested and
-  implemented into the program just in case.
-*/
+ * Plexus Technology Cybernetic Laboratory;
+ *
+ * This library of functions was created as a set of functions
+ * that I need to replace some of the functions in the C
+ * programming language standard library that I think could be
+ * better implemented. Some functions are needed for debugging
+ * programs, such as "phex", which prints the contents of memory
+ * in hexadecimal. The functions were debugged, tested and
+ * implemented into the program just in case.
+ */
 
 #include "xtalw.h"
 
@@ -18,84 +18,39 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
-void * strxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
-#if __ASM_32_X86_CPP_BUILDER__
-__asm {
+void * memxor(void * output, const void * input, size_t length) {
 
-  mov eax, output
-  cmp eax, 0
-  je _exit
-  
-  mov ebx, input
-  cmp ebx, 0
-  je _exit
+        uint8_t * local_output = (uint8_t *)output;
+  const uint8_t * local_input  = (const uint8_t *)input;
 
-  mov ecx, length
-  cmp ecx, 0
-  je _exit
+        uint8_t * last_output = local_output + (length - 1);
+  const uint8_t * last_input  = local_input  + (length - 1);
 
-  cmp eax, ebx
-  je _exit
-  jb _normal_word            /* if eax < ebx (jump if below) */
-  
-/***REVERSE*******************************************************************/
-  dec ecx
-  add eax, ecx               /* local_output = local_output + (len-1) */
-  add ebx, ecx               /* local_input  = local_input  + (len-1) */
-  inc ecx
+  if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
+    return NULL;
+  }
 
-_reverse_byte:
-  cmp ecx, 0
-  je _exit
-  test ecx, 03h
-  jz _reverse_word_init      /* if (length % 4) = 0 */
-  
-  mov dl, byte[ebx]
-  xor byte[eax], dl
-  
-  dec eax
-  dec ebx
-  dec ecx
-  jmp _reverse_byte
+  if (local_output < local_input) {
+    while(length--) {
+      *local_output ^= *local_input;
 
-_reverse_word_init:          /* Align pointers to 32 bits for read from end! */
-  sub eax, 3
-  sub ebx, 3
+       local_output++;
+       local_input++;
+    }
+  }
+  else {
+    while(length--) {
+      *last_output ^= *last_input;
 
-_reverse_word:
-  mov edx, dword[ebx]
-  xor dword[eax], edx
-  sub eax, 4
-  sub ebx, 4
-  sub ecx, 4
-  jnz _reverse_word
-  jmp _exit
+       last_output--;
+       last_input--;
+    }
+  }
 
-/***NORMAL*******************************************************************/
-_normal_word:
-  cmp ecx, 4
-  jb _normal_byte
-  mov edx, dword[ebx]
-  xor dword[eax], edx
-  add eax, 4
-  add ebx, 4
-  sub ecx, 4
-  jmp _normal_word
-  
-_normal_byte:
-  cmp ecx, 0
-  je _exit
-  mov dl, byte[ebx]
-  xor byte[eax], dl
-  inc eax
-  inc ebx
-  dec ecx
-  jmp _normal_byte
-  
-/****************************************************************************/
-_exit:
+  return output;
 }
-#else
+
+void * memxormove(void * output, const void * input, size_t length) {
   const size_t width_register = sizeof(size_t);
 
         uint8_t * local_output = (uint8_t *)output;
@@ -104,23 +59,13 @@ _exit:
         uint8_t * last_output = local_output + (length - 1);
   const uint8_t * last_input  = local_input  + (length - 1);
 
-  if (!output || !input || (output == input)) {
+  if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
     return NULL;
   }
 
   if (local_output < local_input) {
-
-	if ((local_input - local_output) < width_register) {
-	  while(length) {
-        *local_output ^= *local_input;
-
-		local_output++;
-		local_input++;
-		
-		length--;
-	  }
-
-	  return output;
+    if (((size_t)local_input - (size_t)local_output) < width_register) {
+      return memxor(output, input, length);
     }
 
     while (length >= width_register) {
@@ -128,7 +73,7 @@ _exit:
 
       local_output += width_register;
       local_input  += width_register;
-	  
+
       length -= width_register;
     }
 
@@ -137,22 +82,13 @@ _exit:
 
       local_output++;
       local_input++;
-	  
+
       length--;
     }
   }
   else {
-    if ((last_output - last_input) < width_register) {
-	  while(length) {
-        *last_output ^= *last_input;
-
-		last_output--;
-		last_input--;
-		
-		length--;
-	  }
-
-	  return output;
+    if (((size_t)last_output - (size_t)last_input) < width_register) {
+      return memxor(output, input, length);
     }
 
     while (length && (length % width_register)) { /* max 7 iteration */
@@ -177,78 +113,24 @@ _exit:
       length -= width_register;
     }
   }
-#endif
+
   return output;
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
-#if __ASM_32_X86_CPP_BUILDER__
- __asm {
-
-    mov edx, data
-    cmp edx, 0
-    je _exit            /* if (NULL == data) goto _exit */
-    
-    mov ecx, length
-    cmp ecx, 0
-    je _exit            /* if (0 == len) goto _exit */
-	
-/* START FUNCTIONAL */
-    push ecx            /* save length data */
- 
-    mov  eax, number
-    cmp  eax, 0
-    je  _while_start    /* if 0 == number goto _while_start */
-    cmp  eax, 255
-    ja  _while_start    /* if (number > 255) goto _while_start */
-
-    mov  ecx, eax
-    shl  ecx, 8
-    or   eax, ecx
-    or   ecx, eax       /* if register CL == 0 -> OR operation */
- /* mov  ecx, eax          if register CL  > 0 -> MOV operation */
-    shl  ecx, 16
-    or   eax, ecx
-
- _while_start:
-    pop ecx             /* load length data in register */
-
- _while_word:
-    cmp ecx, 4
-    jb _while_byte      /* if ecx < 4 */
-
-    mov dword[edx], eax /* (*(unsigned int *)data) = number */
-    add edx, 4          /* data += 4 */
-    sub ecx, 4          /* len  -= 4 */
-    jmp _while_word
-
- _while_byte:
-    cmp ecx, 0
-    je _exit            /* if ecx == 0 */
-    mov byte[edx], al   /* (*(unsigned char *)data) = (unsigned char)number */
-    add edx, 1          /* data += 1 */
-    sub ecx, 1          /* len  -= 1 */
-    jmp _while_byte
-
- _exit:
- }
-#else
+void * meminit(void * data, const size_t number, size_t length) {
   const size_t width_register = sizeof(size_t);
 
-  volatile uint8_t * temp  = (unsigned char *)data;
+  volatile uint8_t * temp  = (uint8_t *)data;
   register size_t u_dword = number;
 
-  if (NULL == data) {
+  if ((NULL == data) || (0 == length)) {
     return NULL;
   }
 
   if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
-#if (SIZE_MAX > 0xFFFFFFFF)
-    u_dword |= u_dword << 32;
-#endif
   }
 	
   while (length >= width_register) {
@@ -263,81 +145,8 @@ void * meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK 
      temp++;
      length--;
   }
-#endif
+
   return data;
-}
-
-void * strxor(uint8_t * output, const uint8_t * input, size_t length) { /* DEBUG = OK */
-#if __ASM_32_X86_CPP_BUILDER__
-__asm {
-  
-  mov eax, output
-  cmp eax, 0
-  je _exit
-  
-  mov ebx, input
-  cmp ebx, 0
-  je _exit  
-  
-  mov ecx, length
-  cmp ecx, 0
-  je _exit             /* if length == 0 then */
-  cmp ecx, 4
-  jb _while_byte       /* if length  < 4 then */
-  
- _while:
-  mov edx, dword[ebx]  /* temp   = input*/
-  xor dword[eax], edx  /* temp   = temp xor output */
-  
-  add eax, 4           /* output += 4 */
-  add ebx, 4           /* input  += 4 */
-  sub ecx, 4           /* length -= 4 */
-  
-  cmp ecx, 0
-  je _exit             /* if length == 0 then  */
-  cmp ecx, 4
-  jb _while_byte       /* if length  < 4 then */
-  jmp _while           /* else goto _while */
-  
- _while_byte:
-  mov dl, byte[ebx]
-  xor byte[eax], dl
-  
-  add eax, 1
-  add ebx, 1
-  loop _while_byte
-  
-  _exit:
-}
-#else
-  const size_t width_register = sizeof(size_t);
-
-        uint8_t * local_output = output;
-  const uint8_t * local_input  = input;	
-
-  if (!input || !output || (input == output)) {
-    return NULL;
-  }
-
-  while (length >= width_register) {
-    *((size_t *)local_output) ^= *((size_t *)local_input);
-
-    local_output += width_register;
-    local_input  += width_register;
-
-    length       -= width_register;
-  }
-
-  while (length) {
-    *local_output ^= *local_input;
-    
-    local_output++;
-    local_input++;
-	
-    length--;
-  }
-#endif
-  return output;
 }
 
 size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
@@ -349,16 +158,16 @@ __asm {
   
   mov edx, s
   cmp edx, 0
-  je _exit       /* check NULL pointer */
+  je _exit         /* check NULL pointer */
   
 _strnlen:
   cmp ecx, 0
   je _exit
   cmp byte[edx], 0
   je _exit
-  inc edx        /* str */
-  inc eax        /* result */
-  dec ecx
+  inc edx          /* str++ */
+  inc eax          /* result++ */
+  dec ecx          /* bounder-- */
   jmp _strnlen  
 
 _exit:
@@ -380,7 +189,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
   size_t j;
   int k;
 
-  if (!data || 0 == length) {
+  if ((NULL == data) || (0 == length)) {
     return;
   }
 
@@ -400,7 +209,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
 }
 
 void strinc(uint8_t * data, size_t len) {
-  if (!data) {
+  if (NULL == data) {
     return;
   }
 	
@@ -417,7 +226,7 @@ void strinc(uint8_t * data, size_t len) {
 }
 
 void strdec(uint8_t * data, size_t len) {
-  if (!data) {
+  if (NULL == data) {
     return;
   }
 	
@@ -442,7 +251,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if (!filename || !buffer || 0 == length) {
+  if ((NULL == filename) || (NULL == buffer) || (0 == length)) {
     return (-1);
   }
 
@@ -463,7 +272,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   int left, right, symbol;
   const char digits[] = "0123456789ABCDEF";
 
-  if (!data || 0 == length) {
+  if ((NULL == data) || (0 == length)) {
     return;
   }
 
@@ -496,7 +305,7 @@ size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
   const uint8_t * temp = (uint8_t *)data;
 
-  if (!data || 0 == length) {
+  if ((NULL == data) || (0 == length)) {
     return i;
   }
 
