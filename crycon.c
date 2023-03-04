@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Cryptography Software v5.06;
+ * Console Cryptography Software v5.07;
  *
  * Developer:         ARR0III;
- * Modification date: 01 MAR 2023;
+ * Modification date: 03 MAR 2023;
  * Modification:      Release;
  * Language:          English;
  */
@@ -62,7 +62,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.06 29JAN23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.07 03MAR23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -459,7 +459,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   int real_percent = 0;
   int past_percent = 0;
 
-  meminit((void *)ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
+  meminit(ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
   sha256_init(ctx->sha256sum);
 
@@ -545,7 +545,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         }
 
-      strxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      memxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
       memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
@@ -562,7 +562,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     control_sum_buffer(ctx, realread);
 
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
-      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);;
+      return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
     else {
       fflush(fo);
@@ -570,7 +570,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     if (real_percent > past_percent) {
       /* if ((real_percent % 4) == 0) { */
-        meminit((void *)ctx->progress_bar, '#', (real_percent / 4));
+        meminit(ctx->progress_bar, '#', (real_percent / 4));
 
         real_check = size_check(position);
 
