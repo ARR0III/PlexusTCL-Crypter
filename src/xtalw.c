@@ -119,6 +119,49 @@ void * memxormove(void * output, const void * input, size_t length) {
 
 /* "meminit32" optimization and always executable standart function memset */
 void * meminit(void * data, const size_t number, size_t length) {
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
+  mov eax, data
+  cmp eax, 0
+  je _exit
+  
+  mov ecx, length
+  cmp ecx, 0
+  je _exit
+
+  mov edx, number
+  cmp edx, 0xFF
+  ja _memset_x32
+
+  mov ebx, 0
+  or ebx, edx
+  shl ebx, 8
+  or edx, ebx
+  or ebx, edx
+  shl ebx, 16
+  or edx, ebx
+
+_memset_x32:
+  cmp ecx, 0
+  je _exit
+  cmp ecx, 4
+  jb _memset_x8
+  mov dword [eax], edx
+  add eax, 4
+  sub ecx, 4
+  jmp _memset_x32
+
+_memset_x8:
+  cmp ecx, 0
+  je _exit
+  mov byte [eax], dl
+  inc eax
+  dec ecx
+  jmp _memset_x8
+  
+_exit:
+}
+#else
   const size_t width_register = sizeof(size_t);
 
   volatile uint8_t * temp  = (uint8_t *)data;
@@ -145,7 +188,7 @@ void * meminit(void * data, const size_t number, size_t length) {
      temp++;
      length--;
   }
-
+#endif
   return data;
 }
 
