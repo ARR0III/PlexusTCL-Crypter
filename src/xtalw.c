@@ -133,8 +133,7 @@ __asm {
   cmp edx, 0xFF
   ja _memset_x32
 
-  mov ebx, 0
-  or ebx, edx
+  mov ebx, edx
   shl ebx, 8
   or edx, ebx
   or ebx, edx
@@ -142,8 +141,6 @@ __asm {
   or edx, ebx
 
 _memset_x32:
-  cmp ecx, 0
-  je _exit
   cmp ecx, 4
   jb _memset_x8
   mov dword [eax], edx
