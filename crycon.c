@@ -6,6 +6,7 @@
  * Modification date: 03 MAR 2023;
  * Modification:      Release;
  * Language:          English;
+ * License:           GNU version 3;
  */
 
 /* if DEBUG_INFORMATION defined */
