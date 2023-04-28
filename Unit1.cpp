@@ -111,7 +111,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.07 03MAR23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.08 28APR23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -255,7 +255,9 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 }
 
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
-  if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))    ||
+  int i;
+
+  if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))     ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) ) {
@@ -263,12 +265,12 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     ComboBox2->Items->Clear();
 
     if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
-      for (int i = 0; i < 3; i++) {
+      for (i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
       }
     }
     else {
-      for (int i = 0; i < 3; i++) {
+      for (i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
       }
     }
@@ -356,7 +358,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     count -= (password_len + key_len + CLOMUL_CONST + i);
   }
 
-  count  &= CRC32(password, password_len);;
+  count  &= CRC32(password, password_len);
   count >>= 18;
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
@@ -372,7 +374,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
     sha256_final(ctx->sha256sum);
 
-    if (k == SHA256_BLOCK_SIZE) {
+    if (SHA256_BLOCK_SIZE == k) {
       k = 0;
     }
 
@@ -438,7 +440,8 @@ float sizetofloatprint(const int status, const float size) {
 
 int erased_head_of_file(const char * filename) {
   size_t counter = 16;
-  FILE * f = NULL;
+  size_t result  = 0;  
+  FILE * f;
 
   unsigned char * data = (unsigned char *)malloc(BLOCK_SIZE_FOR_ERASED);
 
@@ -446,29 +449,34 @@ int erased_head_of_file(const char * filename) {
 
   meminit(data, 0x00, BLOCK_SIZE_FOR_ERASED);
 
-  while (counter--) {
+  while (counter) {
     f = fopen(filename, PARAM_APPEND_BYTE);
 
-    if (f) {
-      if (fwrite((void *)data, 1, BLOCK_SIZE_FOR_ERASED, f) != BLOCK_SIZE_FOR_ERASED) {
-        fclose(f);
-        free((void *)data);
-        return -1;
-      }
-
-      fflush(f);
-
-      if (1 == counter) {
-        chsize(fileno(f), 0);
-      }
-
-      fclose(f);
+    if (!f) { /* if not openned file */
+      result = (-1);
+      break;
     }
+
+    if (fwrite((void *)data, 1, BLOCK_SIZE_FOR_ERASED, f) != BLOCK_SIZE_FOR_ERASED) {
+      fclose(f);
+      result = (-1);
+      break;
+    }
+
+    fflush(f);
+
+    counter--;
+
+    if (0 == counter) { /* if old iteration */
+      chsize(fileno(f), 0);
+    }
+
+    fclose(f);
   }
 
   free(data);
 
-  return 0;
+  return result;
 }
 
 int erasedfile(const char * filename) {
@@ -1517,5 +1525,9 @@ void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
   Label7->Font->Color = clRed;        
 }
 //---------------------------------------------------------------------------
+
+
+
+
 
 
