@@ -438,39 +438,36 @@ float sizetofloatprint(const int status, const float size) {
 
 int erased_head_of_file(const char * filename) {
   size_t counter = 16;
-  FILE * f;
-  
+  FILE * f = NULL;
+
   unsigned char * data = (unsigned char *)malloc(BLOCK_SIZE_FOR_ERASED);
-  
+
   if (!data) return -1;
-  
+
   meminit(data, 0x00, BLOCK_SIZE_FOR_ERASED);
-  
-  while (counter) {
+
+  while (counter--) {
     f = fopen(filename, PARAM_APPEND_BYTE);
-  
+
     if (f) {
       if (fwrite((void *)data, 1, BLOCK_SIZE_FOR_ERASED, f) != BLOCK_SIZE_FOR_ERASED) {
         fclose(f);
         free((void *)data);
         return -1;
       }
-      else {
-        fflush(f);
-      }
-	  
-      counter--;
-	  
-      if (0 == counter) {
+
+      fflush(f);
+
+      if (1 == counter) {
         chsize(fileno(f), 0);
       }
-	  
+
       fclose(f);
     }
   }
-  
+
   free(data);
-  
+
   return 0;
 }
 
@@ -579,7 +576,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   size_t hmac_ctx_length = sizeof(HMAC_CTX);	
   HMAC_CTX * hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
 
-  if (NULL == hmac_ctx) {
+  if (!hmac_ctx) {
     return;
   }
 
