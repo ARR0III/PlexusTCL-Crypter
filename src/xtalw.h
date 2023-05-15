@@ -51,6 +51,8 @@ extern "C" {
 /* 1 = BIG    */
 size_t little_or_big_ending(void);
 
+void   select_sort(size_t * data, const size_t size);
+  
 void * memxor(void * output, const void * input, size_t length);
 void * memxormove(void * output, const void * input, size_t length);
 void * meminit(void * data, const size_t number, size_t length);
