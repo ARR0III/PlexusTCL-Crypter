@@ -42,6 +42,8 @@ void select_sort(size_t * data, const size_t size) {
       data[pos] = tmp;
     }
 
+    if (i == (size - 2)) return;
+
     i++;
   }
 }
