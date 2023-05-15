@@ -18,6 +18,34 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
+void select_sort(size_t * data, const size_t size) {
+  size_t j, i = 0;
+  size_t min, tmp, pos;
+
+  while (i < (size - 1)) {
+    min = data[i];
+    j   = i + 1;
+    pos = 0;
+
+    while (j < size) {     /* search minimal number in static array */
+      if (data[j] < min) {
+        min = data[j];
+        pos = j;
+      }
+
+      j++;
+    }
+
+    if (pos > i) {
+      tmp       = data[i];
+      data[i]   = data[pos];
+      data[pos] = tmp;
+    }
+
+    i++;
+  }
+}
+
 void * memxor(void * output, const void * input, size_t length) {
 
         uint8_t * local_output = (uint8_t *)output;
