@@ -19,21 +19,20 @@ size_t little_or_big_ending(void) {
 }
 
 void select_sort(size_t * data, const size_t size) {
-  size_t j, i = 0;
+  size_t j, i;
   size_t min, tmp, pos;
 
-  while (i < (size - 1)) {
+  if (!data || (0 == size)) return;
+	
+  for (i = 0; i < (size - 1); i++) {
     min = data[i];
-    j   = i + 1;
     pos = 0;
 
-    while (j < size) {     /* search minimal number in static array */
+    for (j = i + 1; j < size; j++) { /* search minimal number in static array */
       if (data[j] < min) {
         min = data[j];
         pos = j;
       }
-
-      j++;
     }
 
     if (pos > i) {
@@ -43,8 +42,6 @@ void select_sort(size_t * data, const size_t size) {
     }
 
     if (i == (size - 2)) return;
-
-    i++;
   }
 }
 
