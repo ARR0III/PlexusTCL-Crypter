@@ -53,25 +53,27 @@ void quick_sort(size_t * data, const size_t left, const size_t right) {
 
 void select_sort(size_t * data, const size_t size) {
   size_t j, i;
-  size_t tmp, pos;
+  size_t tmp, min;
 
-  if (!data || (0 == size)) return;
+  if (!data || (size < 2)) return;
 	
   for (i = 0; i < (size - 1); i++) {
-    pos = i;
+    min = i;
 
-    for (j = i + 1; j < size; j++) { /* search minimal number in static array */
-      if (data[j] < data[pos]) {
-        pos = j;
+    /* search minimal number in static array */
+    for (j = i + 1; j < size; j++) {
+      if (data[j] < data[min]) {
+        min = j;
       }
     }
 
+    /* if minimal element found then */
     if (pos > i) {
       tmp       = data[i];
-      data[i]   = data[pos];
-      data[pos] = tmp;
+      data[i]   = data[min];
+      data[min] = tmp;
     }
-
+	  
     if (i == (size - 2)) return;
   }
 }
