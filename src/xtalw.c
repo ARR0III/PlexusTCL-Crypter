@@ -28,7 +28,7 @@ size_t bin_search(size_t * data, size_t number, const size_t size) {
   first = 0;
   last  = (size-1);
 
-  while (first != last) {
+  while (last > first) {
     middle = (first + last) / 2;
       
     if (data[middle] > number) {
