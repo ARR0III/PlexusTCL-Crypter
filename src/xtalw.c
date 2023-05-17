@@ -68,7 +68,7 @@ void select_sort(size_t * data, const size_t size) {
     }
 
     /* if minimal element found then */
-    if (pos > i) {
+    if (min > i) {
       tmp       = data[i];
       data[i]   = data[min];
       data[min] = tmp;
