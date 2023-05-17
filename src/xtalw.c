@@ -18,15 +18,16 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
-size_t bin_search(size_t * data, size_t number, const size_t size) {
+long int bin_search(size_t * data, size_t number, const size_t size) {
   size_t first, last;
   size_t middle = 0;
-  size_t result = 0;
+  
+  long int result = -1;
 
   if (!data || size < 2) return result;
 
   first = 0;
-  last  = (size-1);
+  last = (size-1);
 
   while (last > first) {
     middle = (first + last) / 2;
@@ -36,7 +37,7 @@ size_t bin_search(size_t * data, size_t number, const size_t size) {
     }
     else {
       if (data[middle] == number) {
-        result = middle;
+        result = (long int)middle;
         break;
       }
       else {
