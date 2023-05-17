@@ -18,6 +18,36 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
+size_t bin_search(size_t * data, size_t number, const size_t size) {
+  size_t first, last;
+  size_t middle = 0;
+  size_t result = 0;
+
+  if (!data || size < 2) return result;
+
+  first = 0;
+  last  = (size-1);
+
+  while (first != last) {
+    middle = (first + last) / 2;
+      
+    if (data[middle] > number) {
+      last = middle - 1;
+    }
+    else {
+      if (data[middle] == number) {
+        result = middle;
+        break;
+      }
+      else {
+        first = middle + 1;
+      }
+    }
+  }
+  
+  return result;
+}
+
 void bubble_sort(size_t * data, const size_t size) {
   size_t first, last;
   size_t tmp;
