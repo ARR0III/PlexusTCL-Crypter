@@ -51,6 +51,7 @@ extern "C" {
 /* 1 = BIG    */
 size_t little_or_big_ending(void);
 
+void   bubble_sort(size_t * data, const size_t size) {
 void   select_sort(size_t * data, const size_t size);
 void   quick_sort(size_t * data, const size_t left, const size_t right);
 
