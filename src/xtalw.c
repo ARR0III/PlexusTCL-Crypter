@@ -27,7 +27,7 @@ void quick_sort(size_t * data, const size_t left, const size_t right) {
 
   i = left;
   j = right;
-  pivot = (left + right) >> 1; /* data[right] */
+  pivot = (left + right) / 2; /* data[right] */
 
   while (i <= j) {
     while (data[i] < data[pivot]) {
