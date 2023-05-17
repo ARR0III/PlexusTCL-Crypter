@@ -78,39 +78,34 @@ void bubble_sort(size_t * data, const size_t size) {
   }
 }
 
-void quick_sort(size_t * data, const size_t first, const size_t last) {
-  size_t tmp;
-  size_t pivot;
-  size_t i, j;
+#define DATA_TYPE long int
+void quick_sort(DATA_TYPE * data, DATA_TYPE first, DATA_TYPE last) {
+  if (first < last) {
+    DATA_TYPE left = first, right = last, middle = data[(left + right) / 2];
+	
+      do {
+        while (data[left] < middle) {
+          left++;
+        }
+        
+        while (data[right] > middle) {
+          right--;
+        }
+        
+        if (left <= right) {
+          DATA_TYPE tmp = data[left];
+          data[left] = data[right];
+          data[right] = tmp;
+          left++;
+          right--;
+        }
+      } while (left <= right);
 
-  if (!data || first >= last) return;
-
-  i = first;
-  j = last;
-
-  pivot = (size_t)((first + last) / 2); /* data[right] */
-
-  while (i <= j) {
-    while (data[i] < data[pivot]) {
-      i++;
-    }
-
-    while (data[j] > data[pivot]) {
-      j--;
-    }
-
-    if (i <= j) {
-      tmp = data[i];
-      data[i] = data[j];
-      data[j] = tmp;
-      i++;
-      j--;
-    }
+    quicksort(data, first, right);
+    quicksort(data, left, last);
   }
-
-  quick_sort(data, first, j);
-  quick_sort(data, i, last);
 }
+#undef DATA_TYPE
 
 void select_sort(size_t * data, const size_t size) {
   size_t j, i;
