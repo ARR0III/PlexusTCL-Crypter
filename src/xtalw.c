@@ -18,6 +18,29 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
+void bubble_sort(size_t * data, const size_t size) {
+  size_t first, last;
+  size_t tmp;
+
+  last = (size-1);
+
+  while (last > 0) {
+    first = 0;
+
+    while (first < last) {
+      if (data[first] > data[first + 1]) {
+        tmp = data[first];
+        data[first] = data[first + 1];
+        data[first + 1] = tmp;
+      }
+      
+      first++;
+    }
+
+    last--;
+  }
+}
+
 void quick_sort(size_t * data, const size_t left, const size_t right) {
   size_t tmp;
   size_t pivot;
