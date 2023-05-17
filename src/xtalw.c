@@ -18,19 +18,50 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
+void quick_sort(size_t * data, const size_t left, const size_t right) {
+  size_t tmp;
+  size_t pivot;
+  size_t i, j;
+
+  if (!data || right < 2 || left >= right) return;
+
+  i = left;
+  j = right;
+  pivot = data[(left + right) >> 1]; /* data[right] */
+
+  while (i <= j) {
+    while (data[i] < pivot) {
+      i++;
+    }
+
+    while (data[j] > pivot) {
+      j--;
+    }
+
+    if (i <= j) {
+      tmp = data[i];
+      data[i] = data[j];
+      data[j] = tmp;
+      i++;
+      j--;
+    }
+  }
+
+  quick_sort(data, left, j);
+  quick_sort(data, i, right);
+}
+
 void select_sort(size_t * data, const size_t size) {
   size_t j, i;
-  size_t min, tmp, pos;
+  size_t tmp, pos;
 
   if (!data || (0 == size)) return;
 	
   for (i = 0; i < (size - 1); i++) {
-    min = data[i];
-    pos = 0;
+    pos = i;
 
     for (j = i + 1; j < size; j++) { /* search minimal number in static array */
-      if (data[j] < min) {
-        min = data[j];
+      if (data[j] < data[pos]) {
         pos = j;
       }
     }
