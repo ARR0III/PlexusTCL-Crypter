@@ -81,7 +81,7 @@ void bubble_sort(size_t * data, const size_t size) {
 void quick_sort(long int * data, long int first, long int last) {
   if (first >= last) return;
 
-  long int tmp, pivot;
+  long int tmp;
   long int i = first, j = last;
   long int pivot = data[(first + last) / 2]; /* data[right] */
 
