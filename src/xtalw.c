@@ -18,6 +18,44 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
+int strmsk(const char * str, const char * msk, int str_len, int msk_len) {
+  int k;
+  int result = strlen(str);
+
+  if (!str || !msk) return (-1);
+
+  while (1) {
+    if (msk_len > strlen(msk)) {
+      if (str_len > result) {
+        return 0;
+      }
+      else
+        return (-1);
+    }
+
+    if (msk[msk_len] == '*') {
+      for (k = 0; k < (result - str_len); k++) {
+        if (!strmsk(str, msk, str_len + k, msk_len + 1)) {
+          return 0;
+        }
+      }
+
+      return (-1);
+    }
+
+    if ((str_len > result) ||
+       ((str[str_len] != msk[msk_len]) && (msk[msk_len] != '?'))) {
+
+      return (-1);
+    }
+
+    str_len++;
+    msk_len++;
+  }
+
+  return (-1);
+}
+
 long int bin_search(size_t * data, size_t number, const size_t size) {
   size_t first, last;
   size_t middle = 0;
