@@ -1,5 +1,8 @@
 /*
   Plexus Technology Cybernetic Laboratory;
+  
+  Developer:  ARR0III;
+  License:    GNU GPL version 3;
 
   This library of functions was created as a set of functions
   that I need to replace some of the functions in the C
