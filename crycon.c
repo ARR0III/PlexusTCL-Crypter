@@ -1,12 +1,12 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Cryptography Software v5.07;
+ * Console Cryptography Software v5.08;
  *
  * Developer:         ARR0III;
- * Modification date: 28 APR 2023;
+ * Modification date: 24 MAY 2023;
  * Modification:      Release;
  * Language:          English;
- * License:           GNU version 3;
+ * License:           GNU GPL version 3;
  */
 
 /* if DEBUG_INFORMATION defined */
@@ -336,7 +336,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   printhex(HEX_TABLE, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
 
   printf("[DEBUG] authentification key \'f\':\n");
-  printhex(HEX_TABLE, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
+  printhex(HEX_TABLE, hmac_ctx->KEY_1, SHA256_BLOCK_SIZE);
 #endif
 
   /* clear sha256sum struct */
