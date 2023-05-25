@@ -240,37 +240,37 @@ void * memxormove(void * output, const void * input, size_t length) {
 void * meminit(void * data, const size_t number, size_t length) {
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  mov eax, data			/* if (!data) return; */
+  mov eax, data		/* if (!data) return; */
   test eax, eax
   jz _exit
   
-  mov ecx, length		/* if (0 == length) return; */
+  mov ecx, length	/* if (0 == length) return; */
   test ecx, ecx
   jz _exit
 
-  mov edx, number		/* if (number > 255) goto _memset_x32; */
+  mov edx, number	/* if (number > 255) goto _memset_x32; */
   cmp edx, 0xFF
   ja _memset_x32
 
-  mov ebx, edx			/* else */
-  shl ebx, 8			/*   number |= number <<  8; */
-  or edx, ebx			/*   number |= number << 16; */
+  mov ebx, edx		/* else */
+  shl ebx, 8		/*   number |= number <<  8; */
+  or edx, ebx		/*   number |= number << 16; */
   or ebx, edx
   shl ebx, 16
   or edx, ebx
 
 _memset_x32:
-  cmp ecx, 4			/* while (length >= 4)				*/
-  jb _memset_x8			/*   *((uint32_t*)data) = number;	*/
-  mov dword [eax], edx	/*   data += 4;						*/
-  add eax, 4			/*   length -= 4;					*/
+  cmp ecx, 4		/* while (length >= 4)			*/
+  jb _memset_x8		/*   *((uint32_t*)data) = number;	*/
+  mov dword [eax], edx	/*   data += 4;				*/
+  add eax, 4		/*   length -= 4;			*/
   sub ecx, 4
   jmp _memset_x32
 
 _memset_x8:
-  test ecx, ecx			/* while (length--)					*/
-  jz _exit				/*   *((uint8_t*)data) = number;	*/
-  mov byte [eax], dl	/*   data++;						*/
+  test ecx, ecx		/* while (length--)			*/
+  jz _exit		/*   *((uint8_t*)data) = number;	*/
+  mov byte [eax], dl	/*   data++;				*/
   inc eax
   dec ecx
   jmp _memset_x8
