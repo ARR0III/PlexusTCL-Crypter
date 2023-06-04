@@ -139,22 +139,20 @@ void select_sort(size_t * data, const size_t size) {
 
 void * memxor(void * output, const void * input, size_t length) {
 
-        uint8_t * local_output = (uint8_t *)output;
-  const uint8_t * local_input  = (const uint8_t *)input;
-
-        uint8_t * last_output = local_output + (length - 1);
-  const uint8_t * last_input  = local_input  + (length - 1);
+        uint8_t * last_output = output + (length - 1);
+  const uint8_t * last_input  = input  + (length - 1);
+  const uint8_t * t_input  = (const uint8_t *)input;
 
   if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
     return NULL;
   }
 
-  if (local_output < local_input) {
+  if (output < input) {
     while(length--) {
-      *local_output ^= *local_input;
+      *output ^= *t_input;
 
-       local_output++;
-       local_input++;
+       output++;
+       t_input++;
     }
   }
   else {
