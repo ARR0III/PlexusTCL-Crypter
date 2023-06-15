@@ -457,11 +457,11 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     return;
   }
 
-  if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
-    tumbler = HEX_TABLE;
+  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
+    tumbler = HEX_STRING;
   }
 
-  if (stream != stdin || stream != stdout || stream != stderr) {
+  if (stream != stdin && stream != stdout && stream != stderr) {
     stream = stderr;
   }
 
@@ -490,8 +490,8 @@ size_t printhex(int tumbler, const void * data, size_t length) {
     return i;
   }
 
-  if (tumbler != HEX_STRING || tumbler != HEX_TABLE) {
-    tumbler = HEX_TABLE;
+  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
+    tumbler = HEX_STRING;
   }
 
   if (HEX_TABLE == tumbler) {
