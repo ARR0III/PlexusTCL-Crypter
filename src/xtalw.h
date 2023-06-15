@@ -1,8 +1,5 @@
 /*
   Plexus Technology Cybernetic Laboratory;
-  
-  Developer:  ARR0III;
-  License:    GNU GPL version 3;
 
   This library of functions was created as a set of functions
   that I need to replace some of the functions in the C
@@ -41,7 +38,7 @@
 #define HEX_STRING 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ OFF
+#define __ASM_32_X86_CPP_BUILDER__ ON
 
 #define BIG_ENDING    1
 #define LITTLE_ENDING 0
@@ -54,15 +51,11 @@ extern "C" {
 /* 1 = BIG    */
 size_t little_or_big_ending(void);
 
-size_t bin_search(size_t * data, size_t number, const size_t size);
-void   bubble_sort(size_t * data, const size_t size) {
-void   select_sort(size_t * data, const size_t size);
-void   quick_sort(size_t * data, const size_t left, const size_t right);
-
 void * memxor(void * output, const void * input, size_t length);
 void * memxormove(void * output, const void * input, size_t length);
 void * meminit(void * data, const size_t number, size_t length);
 
+int genrand(const int min, const int max);
 size_t x_strnlen(const char * s, size_t b);
 
 void   arraytobits(const uint8_t * data, const size_t length, FILE * stream);
@@ -71,7 +64,6 @@ void   strinc(uint8_t * data, size_t len);
 void   strdec(uint8_t * data, size_t len);
 void   phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 
-int    genrand(const int min, const int max);
 int    readfromfile(const char * filename, void * buffer, const size_t length);
 
 size_t printhex(int tumbler, const void * data, size_t length);

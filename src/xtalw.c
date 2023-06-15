@@ -1,17 +1,14 @@
 /*
-  Plexus Technology Cybernetic Laboratory;
-  
-  Developer:  ARR0III;
-  License:    GNU GPL version 3;
-
-  This library of functions was created as a set of functions
-  that I need to replace some of the functions in the C
-  programming language standard library that I think could be
-  better implemented. Some functions are needed for debugging
-  programs, such as "phex", which prints the contents of memory
-  in hexadecimal. The functions were debugged, tested and
-  implemented into the program just in case.
-*/
+ * Plexus Technology Cybernetic Laboratory;
+ *
+ * This library of functions was created as a set of functions
+ * that I need to replace some of the functions in the C
+ * programming language standard library that I think could be
+ * better implemented. Some functions are needed for debugging
+ * programs, such as "phex", which prints the contents of memory
+ * in hexadecimal. The functions were debugged, tested and
+ * implemented into the program just in case.
+ */
 
 #include "xtalw.h"
 
@@ -21,138 +18,137 @@ size_t little_or_big_ending(void) {
   return (*((unsigned short *)&x) == 0 ? 1 : 0);
 }
 
-long int bin_search(size_t * data, size_t number, const size_t size) {
-  size_t first, last;
-  size_t middle = 0;
+void * memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
+  mov esi, input
+  mov edi, output
+  mov ecx, length
+  mov ebx, 4
+
+  test esi, edi
+  jz _exit
+
+  cmp edi, esi
+  jb _memxor_16_normal /* if edi < esi */
   
-  long int result = -1;
-
-  if (!data || size < 2) return result;
-
-  first = 0;
-  last = (size-1);
-
-  while (last > first) {
-    middle = (first + last) / 2;
-      
-    if (data[middle] > number) {
-      last = middle - 1;
-    }
-    else {
-      if (data[middle] == number) {
-        result = (long int)middle;
-        break;
-      }
-      else {
-        first = middle + 1;
-      }
-    }
-  }
+/****************************************************************************/
+  add esi, ecx
+  add edi, ecx
+  dec esi
+  dec edi
   
-  return result;
+_memxor_byte_reverse:
+  test ecx, ecx
+  jz _exit
+  mov eax, ecx
+  xor edx, edx
+  div ebx
+  test edx, edx
+  jz _memxor_16_reverse_normal
+  mov al, byte [esi]
+  xor byte [edi], al
+  dec esi
+  dec edi
+  dec ecx
+  jmp _memxor_byte_reverse  
+  
+_memxor_16_reverse_normal:
+  sub esi, 3
+  sub edi, 3
+  
+_memxor_16_reverse:
+  cmp ecx, 16
+  jb _memxor_4_reverse
+  
+  mov eax, dword [esi]
+  xor dword [edi], eax
+  mov eax, dword [esi-4]
+  xor dword [edi-4], eax
+  mov eax, dword [esi-8]
+  xor dword [edi-8], eax
+  mov eax, dword [esi-12]
+  xor dword [edi-12], eax
+
+  sub esi, 16
+  sub edi, 16
+  sub ecx, 16
+  jmp _memxor_16_reverse
+
+_memxor_4_reverse:
+  test ecx, ecx
+  jz _exit
+  mov eax, dword [esi]
+  xor dword [edi], eax
+  sub esi, 4
+  sub edi, 4
+  sub ecx, 4
+  jmp _memxor_4_reverse
+/****************************************************************************/  
+  
+_memxor_16_normal:
+  mov ebx, esi
+  sub ebx, edi
+  cmp ebx, 4
+  jb _memxor_byte
+  
+_memxor_16:
+  cmp ecx, 16
+  jb _memxor_4
+  
+  mov eax, dword [esi]
+  xor dword [edi], eax
+  mov eax, dword [esi+4]
+  xor dword [edi+4], eax
+  mov eax, dword [esi+8]
+  xor dword [edi+8], eax
+  mov eax, dword [esi+12]
+  xor dword [edi+12], eax
+
+  add esi, 16
+  add edi, 16
+  sub ecx, 16
+  jmp _memxor_16
+
+_memxor_4:
+  cmp ecx, 4
+  jb _memxor_byte
+  mov eax, dword [esi]
+  xor dword [edi], eax
+  add esi, 4
+  add edi, 4
+  sub ecx, 4
+  jmp _memxor_4
+
+_memxor_byte:
+  test ecx, ecx
+  jz _exit
+  mov al, byte [esi]
+  xor byte [edi], al
+  inc esi
+  inc edi
+  dec ecx
+  jmp _memxor_byte
+
+_exit:
 }
+#else
+        uint8_t * local_output = (uint8_t *)output;
+  const uint8_t * local_input  = (const uint8_t *)input;
 
-void bubble_sort(size_t * data, const size_t size) {
-  size_t first, last;
-  size_t tmp;
-  size_t swap;
-
-  last = (size-1);
-
-  while (last > 0) {
-    first = 0;
-    swap = 0;
-
-    while (first < last) {
-      if (data[first] > data[first + 1]) {
-        tmp = data[first];
-        data[first] = data[first + 1];
-        data[first + 1] = tmp;
-        
-        swap = 1;
-      }
-      
-      first++;
-    }
-
-    last--;
-    
-    if (!swap) break;
-  }
-}
-
-void quick_sort(long int * data, long int first, long int last) {
-  if (first >= last) return;
-
-  long int tmp;
-  long int i = first, j = last;
-  long int pivot = data[(first + last) / 2]; /* data[right] */
-
-  while (i <= j) {
-    while (data[i] < pivot) {
-      i++;
-    }
-
-    while (data[j] > pivot) {
-      j--;
-    }
-
-    if (i <= j) {
-      tmp     = data[i];
-      data[i] = data[j];
-      data[j] = tmp;
-      i++;
-      j--;
-    }
-  }
-
-  quick_sort(data, first, j);
-  quick_sort(data, i, last);
-}
-
-void select_sort(size_t * data, const size_t size) {
-  size_t j, i;
-  size_t tmp, min;
-
-  if (!data || (size < 2)) return;
-	
-  for (i = 0; i < (size - 1); i++) {
-    min = i;
-
-    /* search minimal number in static array */
-    for (j = i + 1; j < size; j++) {
-      if (data[j] < data[min]) {
-        min = j;
-      }
-    }
-
-    /* if minimal element found then */
-    if (min > i) {
-      tmp       = data[i];
-      data[i]   = data[min];
-      data[min] = tmp;
-    }
-	  
-    if (i == (size - 2)) return;
-  }
-}
-
-void * memxor(void * output, const void * input, size_t length) {
-
-        uint8_t * last_output = output + (length - 1);
-  const uint8_t * last_input  = input  + (length - 1);
-  const uint8_t * t_input  = (const uint8_t *)input;
+        uint8_t * last_output = local_output + (length - 1);
+  const uint8_t * last_input  = local_input  + (length - 1);
 
   if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
     return NULL;
   }
-
-  if (output < input) {
+  
+  if (local_output < local_input) {
     while(length--) {
-      *output ^= *t_input;
+      *local_output ^= *local_input;
 
-       output++;
-       t_input++;
+       local_output++;
+       local_input++;
     }
   }
   else {
@@ -163,11 +159,11 @@ void * memxor(void * output, const void * input, size_t length) {
        last_input--;
     }
   }
-
+#endif  
   return output;
 }
 
-void * memxormove(void * output, const void * input, size_t length) {
+void * memxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
   const size_t width_register = sizeof(size_t);
 
         uint8_t * local_output = (uint8_t *)output;
@@ -235,45 +231,71 @@ void * memxormove(void * output, const void * input, size_t length) {
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const size_t number, size_t length) {
+void * meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  mov eax, data		/* if (!data) return; */
-  test eax, eax
-  jz _exit
+  mov ecx, length
+  mov edx, number
+  mov eax, data
   
-  mov ecx, length	/* if (0 == length) return; */
-  test ecx, ecx
-  jz _exit
-
-  mov edx, number	/* if (number > 255) goto _memset_x32; */
   cmp edx, 0xFF
   ja _memset_x32
 
-  push ebx  
-  mov ebx, edx		/* else */
-  shl ebx, 8		/*   number |= number <<  8; */
-  or edx, ebx		/*   number |= number << 16; */
-  or ebx, edx
+  mov dh, dl
+  mov ebx, edx
   shl ebx, 16
   or edx, ebx
-  pop ebx
-	  
+
 _memset_x32:
-  cmp ecx, 4		/* while (length >= 4)			*/
-  jb _memset_x8		/*   *((uint32_t*)data) = number;	*/
-  mov dword [eax], edx	/*   data += 4;				*/
-  add eax, 4		/*   length -= 4;			*/
-  sub ecx, 4
+  cmp ecx, 32
+  jb _memset_x16
+  mov dword [eax+0],  edx
+  mov dword [eax+4],  edx
+  mov dword [eax+8],  edx
+  mov dword [eax+12], edx
+  mov dword [eax+16], edx
+  mov dword [eax+20], edx
+  mov dword [eax+24], edx
+  mov dword [eax+28], edx
+  add eax, 32
+  sub ecx, 32
   jmp _memset_x32
+  
+_memset_x16:
+  cmp ecx, 16
+  jb _memset_x8
+  mov dword [eax+0],  edx
+  mov dword [eax+4],  edx
+  mov dword [eax+8],  edx
+  mov dword [eax+12], edx
+  add eax, 16
+  sub ecx, 16
+  jmp _memset_x16
 
 _memset_x8:
-  test ecx, ecx		/* while (length--)			*/
-  jz _exit		/*   *((uint8_t*)data) = number;	*/
-  mov byte [eax], dl	/*   data++;				*/
+  cmp ecx, 8
+  jb _memset_x4
+  mov dword [eax+0], edx
+  mov dword [eax+4], edx
+  add eax, 8
+  sub ecx, 8
+  jmp _memset_x8
+
+_memset_x4:
+  cmp ecx, 4
+  jb _memset_xb
+  mov dword [eax], edx
+  add eax, 4
+  sub ecx, 4
+  jmp _memset_x4
+
+_memset_xb:
+  test ecx, ecx
+  jz _exit
+  mov byte [eax], dl
   inc eax
   dec ecx
-  jmp _memset_x8
+  jmp _memset_xb
   
 _exit:
 }
@@ -316,12 +338,12 @@ __asm {
   mov ecx, b
   
   mov edx, s
-  cmp edx, 0
-  je _exit         /* check NULL pointer */
+  test edx, edx
+  jz _exit         /* check NULL pointer */
   
 _strnlen:
-  cmp ecx, 0
-  je _exit
+  test ecx, ecx
+  jz _exit
   cmp byte[edx], 0
   je _exit
   inc edx          /* str++ */
@@ -410,7 +432,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if ((NULL == filename) || (NULL == buffer) || (0 == length)) {
+  if ((filename == buffer) || (NULL == filename) || (NULL == buffer) || (0 == length)) {
     return (-1);
   }
 

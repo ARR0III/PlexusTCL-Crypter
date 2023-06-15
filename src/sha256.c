@@ -114,7 +114,7 @@ void sha256_final(SHA256_CTX *ctx) {
     sha256_transform(ctx, ctx->data);
 
     for (i = 0; i < 56; i++) {
-      ctx->data[i] = 0;
+      ctx->data[i] = 0x00;
     }
   }
 
