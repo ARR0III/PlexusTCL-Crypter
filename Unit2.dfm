@@ -1,9 +1,9 @@
 object Form2: TForm2
-  Left = 416
-  Top = 327
+  Left = 311
+  Top = 396
   BorderStyle = bsNone
   Caption = #1057#1055#1056#1040#1042#1050#1040
-  ClientHeight = 132
+  ClientHeight = 155
   ClientWidth = 346
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -63,16 +63,15 @@ object Form2: TForm2
     Left = 1
     Top = 23
     Width = 344
-    Height = 108
+    Height = 130
     Align = alCustom
     Brush.Color = clBtnFace
   end
   object Label3: TLabel
     Left = 8
-    Top = 110
-    Width = 152
-    Height = 13
-    Caption = #1056#1072#1079#1088#1072#1073#1086#1090#1082#1072' '#1080' '#1076#1080#1079#1072#1081#1085': ARR0III'
+    Top = 134
+    Width = 329
+    Height = 14
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
@@ -84,18 +83,14 @@ object Form2: TForm2
     Left = 8
     Top = 50
     Width = 329
-    Height = 54
+    Height = 79
     Shape = bsFrame
   end
   object Label2: TLabel
-    Left = 16
+    Left = 14
     Top = 56
-    Width = 311
-    Height = 39
-    Caption = 
-      #1053#1072#1089#1090#1086#1103#1097#1077#1077' '#1087#1088#1086#1075#1088#1072#1084#1084#1085#1086#1077' '#1086#1073#1077#1089#1087#1077#1095#1077#1085#1080#1077' '#1089#1086#1079#1076#1072#1085#1086' '#1076#1083#1103#13#10#1082#1088#1080#1087#1090#1086#1075#1088#1072#1092#1080#1095#1077#1089#1082#1086#1081 +
-      ' '#1079#1072#1097#1080#1090#1099' '#1080#1085#1092#1086#1088#1084#1072#1094#1080#1080' '#1087#1091#1090#1077#1084' '#1096#1080#1092#1088#1086#1074#1072#1085#1080#1103#13#10#1092#1072#1081#1083#1086#1074', '#1080' '#1088#1072#1089#1087#1088#1086#1089#1090#1088#1072#1085#1103#1077#1090#1089#1103' ' +
-      #1089#1074#1086#1073#1086#1076#1085#1086' '#1080' '#1073#1077#1089#1087#1083#1072#1090#1085#1086'.'
+    Width = 315
+    Height = 13
   end
   object Label1: TLabel
     Left = 40

@@ -27,6 +27,8 @@
 #include "Unit1.h"
 #include "Unit2.h"
 
+#include "LICENSE.h"
+
 #define EXT_CRYCON ".crycon"
 
 #define OK                           0
@@ -111,7 +113,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.08 28APR23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.08 15JUN23 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -363,6 +365,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
 
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
   sha256_init(ctx->sha256sum);
 
   i = k = 0;
@@ -592,11 +595,11 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
-  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memmove((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
-  memmove((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
+  memcpy((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
+  memcpy((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
 
     /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
   for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
@@ -618,7 +621,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
@@ -732,6 +735,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   Form1->Shape4->Width = 0;
 
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
   sha256_init(ctx->sha256sum);
 
   while (position < fsize) {
@@ -748,7 +752,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
             break;
           case BLOWFISH:
-            memmove(ctx->output, ctx->vector, ctx->vector_length);
+            memcpy(ctx->output, ctx->vector, ctx->vector_length);
             blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
             break;
           case THREEFISH:
@@ -756,7 +760,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             break;
         }
 
-        memmove(ctx->vector, ctx->output, ctx->vector_length);
+        memcpy(ctx->vector, ctx->output, ctx->vector_length);
 
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
           return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
@@ -789,15 +793,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         case BLOWFISH:
           blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->vector + 4));
-          memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
+          memcpy(ctx->output + nblock, ctx->vector, ctx->vector_length);
           break;
         case THREEFISH:
           threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
           break;
         }
 
-      memxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
-      memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
+      memxor(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
+      memcpy(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
        position  += (int32_t)realread;
@@ -857,6 +861,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
 
+  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
   return close_in_out_files(fi, fo, OK);
 }
 
@@ -936,6 +941,15 @@ size_t vector_init(uint8_t * data, size_t size) {
 char * CharA_Or_CharOV(size_t length) {
   return (24 == length || 128 == length) ? "а" : "ов";
 }
+
+int GeneratingCryptKey(const char * message) {
+  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, message) == IDNO) {
+    return IDNO;
+  }
+  
+  return IDYES;
+}
+
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /*
@@ -1116,16 +1130,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     UnicodeMsg = "";
   }
 
-  UnicodeMsg = "Сгенерировать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования?";
-
-  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDNO) {
-    free_global_memory(memory, memory_length);
-
-    UnicodeMsg = "";
-
-    return;
-  }
-
   UnicodeMsg = "";
 
   memory->temp_buffer = (uint8_t*)malloc(memory->temp_buffer_length);
@@ -1138,8 +1142,29 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
+  memory->sha256sum_length = sizeof(SHA256_CTX);
+  memory->sha256sum = (SHA256_CTX *)malloc(memory->sha256sum_length);
+
+  if (!memory->sha256sum) {
+    free_global_memory(memory, memory_length);
+
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+
+    return;
+  }
+  
   int real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
 
+  if (real_read == (int)(memory->temp_buffer_length)) {
+    UnicodeMsg = "Использовать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из файла?\n"; 
+	
+    if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
+      free_global_memory(memory, memory_length);
+      UnicodeMsg = "";
+      return;
+    }
+  }
+  else
   if ((real_read > 0) && (real_read < (int)(memory->temp_buffer_length))) {
     free_global_memory(memory, memory_length);
 
@@ -1154,32 +1179,24 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
   else
-  if ((real_read == 0) || (real_read == -1)) {
+  if ((real_read == 0) || (real_read == -1)) {	
     real_read = (int)x_strnlen(Memo1->Text.c_str(), 256);
 
     if ((real_read > 7) && (real_read < 257)) {
-      memory->sha256sum_length = sizeof(SHA256_CTX);
-      memory->sha256sum = (SHA256_CTX *)malloc(memory->sha256sum_length);
-
-      if (memory->sha256sum) {
-        Button4->Enabled = False;
-        /* Crypt key generator; generate crypt key from password */
-        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
-
-        KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
-                  memory->temp_buffer, memory->temp_buffer_length);
-
-        Button4->Enabled = True;
-
-        meminit((void *)memory->sha256sum, 0x00, memory->sha256sum_length);
-      }
-      else {
+      UnicodeMsg = "Сгенерировать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из пароля?\n";
+	
+      if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
         free_global_memory(memory, memory_length);
-
-        MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
+        UnicodeMsg = "";
         return;
       }
+
+      Button4->Enabled = False;
+      /* Crypt key generator; generate crypt key from password */
+      KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
+                memory->temp_buffer, memory->temp_buffer_length);
+
+      Button4->Enabled = True;
     }
     else {
       free_global_memory(memory, memory_length);
@@ -1195,6 +1212,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       return;
     }
   }
+
+  UnicodeMsg = "";
 
   switch (memory->cipher_number) {
     case AES:
@@ -1442,6 +1461,10 @@ void __fastcall TForm1::Label7Click(TObject *Sender) {
 
   Form2->Label4->Color = FORM_HEAD_COLOR;
   Form2->Label5->Color = FORM_HEAD_COLOR;
+
+  Form2->Label2->Caption = PTCL_LICENSE_INFORMATION;
+  Form2->Label3->Caption = PTCL_AUTHORS_INFORMATION;
+
   Form2->Show();
 }
 
