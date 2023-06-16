@@ -94,15 +94,15 @@ const uint32_t INT_SIZE_DATA[] = {
 };
 
 const char * CHAR_SIZE_DATA[] = {
-  "Бт",
-  "КиБ",
-  "МеБ",
-  "ГиБ"
+  "ГЃГІ",
+  "ГЉГЁГЃ",
+  "ГЊГҐГЃ",
+  "ГѓГЁГЃ"
 };
 
 const char * OPERATION_NAME[] = {
-  "Шифрование",
-  "Расшифровка",
+  "ГГЁГґГ°Г®ГўГ Г­ГЁГҐ",
+  "ГђГ Г±ГёГЁГґГ°Г®ГўГЄГ ",
 };
 
 const char * ALGORITM_NAME[] = {
@@ -114,15 +114,15 @@ const char * ALGORITM_NAME[] = {
 };
 
 const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.08 15JUN23 [RU]";
-const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
+const char * MEMORY_BLOCKED   = "ГЋГёГЁГЎГЄГ  ГўГ»Г¤ГҐГ«ГҐГ­ГЁГї ГЇГ Г¬ГїГІГЁ!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
-const char * WARNING_MSG      = "Внимание!";
-const char * ERROR_MSG        = "Ошибка!";
+const char * WARNING_MSG      = "Г‚Г­ГЁГ¬Г Г­ГЁГҐ!";
+const char * ERROR_MSG        = "ГЋГёГЁГЎГЄГ !";
 
-const char * INPUT_FILENAME   = "Файл для шифрования";
-const char * OUTPUT_FILENAME  = "Файл назначения";
-const char * KEY_FILENAME     = "Ключ шифрования";
+const char * INPUT_FILENAME   = "Г”Г Г©Г« Г¤Г«Гї ГёГЁГґГ°Г®ГўГ Г­ГЁГї";
+const char * OUTPUT_FILENAME  = "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї";
+const char * KEY_FILENAME     = "ГЉГ«ГѕГ· ГёГЁГґГ°Г®ГўГ Г­ГЁГї";
 
 uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -392,9 +392,9 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
     if (real > past) {
       Form1->Shape4->Width   = (int)((float)real * cas) + 1;
-      Form1->Label9->Caption = "Генерация "
-                             + IntToStr(key_len * 8)  + "-битного ключа из "
-                             + IntToStr(password_len) + "-символьного пароля: "
+      Form1->Label9->Caption = "ГѓГҐГ­ГҐГ°Г Г¶ГЁГї "
+                             + IntToStr(key_len * 8)  + "-ГЎГЁГІГ­Г®ГЈГ® ГЄГ«ГѕГ·Г  ГЁГ§ "
+                             + IntToStr(password_len) + "-Г±ГЁГ¬ГўГ®Г«ГјГ­Г®ГЈГ® ГЇГ Г°Г®Г«Гї: "
                              + IntToStr(real) + " %";
       Application->ProcessMessages();
       past = real;
@@ -549,11 +549,11 @@ int erasedfile(const char * filename) {
 
       check = size_check(position);
     
-      Form1->Label9->Caption = "Уничтожение файла; обработано: " +
+      Form1->Label9->Caption = "Г“Г­ГЁГ·ГІГ®Г¦ГҐГ­ГЁГҐ ГґГ Г©Г«Г ; Г®ГЎГ°Г ГЎГ®ГІГ Г­Г®: " +
       (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
-               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
+               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " ГЁГ§ " +
       (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) +
-               " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+               " " + CHAR_SIZE_DATA[fsize_check] + "; ГЏГ°Г®ГЈГ°ГҐГ±Г±: " + IntToStr(real_percent) + " %" ;
 
       Application->ProcessMessages();
 
@@ -829,10 +829,10 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       check = size_check(position);
 
       Form1->Label9->Caption = AnsiString(OPERATION_NAME[ctx->operation ? 1 : 0 ]) +
-      ": " + AnsiString(ALGORITM_NAME[ctx->cipher_number]) + "; Обработано: " +
+      ": " + AnsiString(ALGORITM_NAME[ctx->cipher_number]) + "; ГЋГЎГ°Г ГЎГ®ГІГ Г­Г®: " +
       (check ? FloatToStrF(((float)position / (float)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
-               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " ГЁГ§ " +
+      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; ГЏГ°Г®ГЈГ°ГҐГ±Г±: " + IntToStr(real_percent) + " %" ;
 
       Application->ProcessMessages();
       past_percent = real_percent;
@@ -856,8 +856,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
                (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE) != 0) {
 
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Контрольная сумма файла НЕ совпадает с ожидаемой!\n"
-                     "Возможно файл поврежден или был использован неправильный ключ!");
+                     "ГЉГ®Г­ГІГ°Г®Г«ГјГ­Г Гї Г±ГіГ¬Г¬Г  ГґГ Г©Г«Г  ГЌГ… Г±Г®ГўГЇГ Г¤Г ГҐГІ Г± Г®Г¦ГЁГ¤Г ГҐГ¬Г®Г©!\n"
+                     "Г‚Г®Г§Г¬Г®Г¦Г­Г® ГґГ Г©Г« ГЇГ®ГўГ°ГҐГ¦Г¤ГҐГ­ ГЁГ«ГЁ ГЎГ»Г« ГЁГ±ГЇГ®Г«ГјГ§Г®ГўГ Г­ Г­ГҐГЇГ°Г ГўГЁГ«ГјГ­Г»Г© ГЄГ«ГѕГ·!");
     }
   }
 
@@ -939,58 +939,49 @@ size_t vector_init(uint8_t * data, size_t size) {
 }
 
 char * CharA_Or_CharOV(size_t length) {
-  return (24 == length || 128 == length) ? "а" : "ов";
+  return (24 == length || 128 == length) ? "Г " : "Г®Гў";
 }
-
-int GeneratingCryptKey(const char * message) {
-  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, message) == IDNO) {
-    return IDNO;
-  }
-  
-  return IDYES;
-}
-
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /*
-  не смог придумать ничего умнее, чем формировать строку простой конкатенацией
-  из языка C++, потому что в языке C формировать такую чушь сложно.
+  Г­ГҐ Г±Г¬Г®ГЈ ГЇГ°ГЁГ¤ГіГ¬Г ГІГј Г­ГЁГ·ГҐГЈГ® ГіГ¬Г­ГҐГҐ, Г·ГҐГ¬ ГґГ®Г°Г¬ГЁГ°Г®ГўГ ГІГј Г±ГІГ°Г®ГЄГі ГЇГ°Г®Г±ГІГ®Г© ГЄГ®Г­ГЄГ ГІГҐГ­Г Г¶ГЁГҐГ©
+  ГЁГ§ ГїГ§Г»ГЄГ  C++, ГЇГ®ГІГ®Г¬Гі Г·ГІГ® Гў ГїГ§Г»ГЄГҐ C ГґГ®Г°Г¬ГЁГ°Г®ГўГ ГІГј ГІГ ГЄГіГѕ Г·ГіГёГј Г±Г«Г®Г¦Г­Г®.
 */
   String UnicodeMsg = "";
 
   if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имя обрабатываемого файла не введено!");
+                   "Г€Г¬Гї Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  Г­ГҐ ГўГўГҐГ¤ГҐГ­Г®!");
     return;
   }
 
   if (x_strnlen(Edit2->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имя файла назначения не введено!");
+                   "Г€Г¬Гї ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г­ГҐ ГўГўГҐГ¤ГҐГ­Г®!");
     return;
   }
 
   if (x_strnlen(Memo1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Пароль или имя ключевого файла не введены!");
+                   "ГЏГ Г°Г®Г«Гј ГЁГ«ГЁ ГЁГ¬Гї ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г­ГҐ ГўГўГҐГ¤ГҐГ­Г»!");
     return;
   }
 
   if (Edit1->Text == Edit2->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена обрабатываемого файла и файла назначения совпадают!");
+                   "Г€Г¬ГҐГ­Г  Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  ГЁ ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
     return;
   }
 
   if (Edit1->Text == Memo1->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена обрабатываемого файла и ключевого файла совпадают!");
+                   "Г€Г¬ГҐГ­Г  Г®ГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г®ГЈГ® ГґГ Г©Г«Г  ГЁ ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
     return;
   }
 
   if (Edit2->Text == Memo1->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена файла назначения и ключевого файла совпадают!");
+                   "Г€Г¬ГҐГ­Г  ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї ГЁ ГЄГ«ГѕГ·ГҐГўГ®ГЈГ® ГґГ Г©Г«Г  Г±Г®ГўГЇГ Г¤Г ГѕГІ!");
     return;
   }
 
@@ -1027,7 +1018,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     free_global_memory(memory, memory_length);
 
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Алгоритм шифрования не был выбран!");
+                   "ГЂГ«ГЈГ®Г°ГЁГІГ¬ ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г« ГўГ»ГЎГ°Г Г­!");
     return;
   }
 
@@ -1061,7 +1052,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     else {
       free_global_memory(memory, memory_length);
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Длина ключа шифрования не была выбрана!");
+                     "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г  ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
       return;
     }
   }
@@ -1085,7 +1076,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     else {
       free_global_memory(memory, memory_length);
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Длина ключа шифрования не была выбрана!");
+                     "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г  ГёГЁГґГ°Г®ГўГ Г­ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
       return;
     }
   }
@@ -1112,18 +1103,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   else {
     free_global_memory(memory, memory_length);
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Операция не была выбрана!");
+                     "ГЋГЇГҐГ°Г Г¶ГЁГї Г­ГҐ ГЎГ»Г«Г  ГўГ»ГЎГ°Г Г­Г !");
     return;
   }
 
   if (FileExists(Edit2->Text) == True) {
-    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
-                 "Вы уверены что хотите перезаписать его?";
+    UnicodeMsg = "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г±ГіГ№ГҐГ±ГІГўГіГҐГІ! Г‘ГІГ Г°Г»ГҐ Г¤Г Г­Г­Г»ГҐ ГЎГіГ¤ГіГІ ГіГІГҐГ°ГїГ­Г»!\n"
+                 "Г‚Г» ГіГўГҐГ°ГҐГ­Г» Г·ГІГ® ГµГ®ГІГЁГІГҐ ГЇГҐГ°ГҐГ§Г ГЇГЁГ±Г ГІГј ГҐГЈГ®?";
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Измените имя файла назначения!");
+                     "Г€Г§Г¬ГҐГ­ГЁГІГҐ ГЁГ¬Гї ГґГ Г©Г«Г  Г­Г Г§Г­Г Г·ГҐГ­ГЁГї!");
       UnicodeMsg = "";
       return;
     }
@@ -1156,9 +1147,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   int real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
 
   if (real_read == (int)(memory->temp_buffer_length)) {
-    UnicodeMsg = "Использовать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из файла?\n"; 
+    UnicodeMsg = "Г€Г±ГЇГ®Г«ГјГ§Г®ГўГ ГІГј " + IntToStr(memory->temp_buffer_length * 8) + "-ГЎГЁГІГ­Г»Г© ГЄГ«ГѕГ· ГёГЁГґГ°Г®ГўГ Г­ГЁГї ГЁГ§ ГґГ Г©Г«Г ?\n"; 
 	
-    if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
+    if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDNO) {
       free_global_memory(memory, memory_length);
       UnicodeMsg = "";
       return;
@@ -1168,9 +1159,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if ((real_read > 0) && (real_read < (int)(memory->temp_buffer_length))) {
     free_global_memory(memory, memory_length);
 
-    UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
-                 "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                 "Необходимо:\t" + IntToStr(memory->temp_buffer_length) + " Бт";
+    UnicodeMsg = "ГЌГҐГ¤Г®Г±ГІГ ГІГ®Г·Г­Г® Г¤Г Г­Г­Г»Гµ Гў ГЄГ«ГѕГ·ГҐГўГ®Г¬ ГґГ Г©Г«ГҐ!\n\n"
+                 "ГЃГ»Г«Г® Г±Г·ГЁГІГ Г­Г®:\t" + IntToStr(real_read) + " ГЃГІ\n"
+                 "ГЌГҐГ®ГЎГµГ®Г¤ГЁГ¬Г®:\t" + IntToStr(memory->temp_buffer_length) + " ГЃГІ";
 
     Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
 
@@ -1183,9 +1174,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     real_read = (int)x_strnlen(Memo1->Text.c_str(), 256);
 
     if ((real_read > 7) && (real_read < 257)) {
-      UnicodeMsg = "Сгенерировать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из пароля?\n";
+      UnicodeMsg = "Г‘ГЈГҐГ­ГҐГ°ГЁГ°Г®ГўГ ГІГј " + IntToStr(memory->temp_buffer_length * 8) + "-ГЎГЁГІГ­Г»Г© ГЄГ«ГѕГ· ГёГЁГґГ°Г®ГўГ Г­ГЁГї ГЁГ§ ГЇГ Г°Г®Г«Гї?\n";
 	
-      if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
+      if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDNO) {
         free_global_memory(memory, memory_length);
         UnicodeMsg = "";
         return;
@@ -1201,9 +1192,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     else {
       free_global_memory(memory, memory_length);
 
-      UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
-                   "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                   "Необходимо:\tот 8 до 256 Бт";
+      UnicodeMsg = "Г„Г«ГЁГ­Г  Г±ГІГ°Г®ГЄГ®ГўГ®ГЈГ® ГЄГ«ГѕГ·Г  Г­ГҐГЄГ®Г°Г°ГҐГЄГІГ­Г !\n\n"
+                   "ГЃГ»Г«Г® Г±Г·ГЁГІГ Г­Г®:\t" + IntToStr(real_read) + " ГЃГІ\n"
+                   "ГЌГҐГ®ГЎГµГ®Г¤ГЁГ¬Г®:\tГ®ГІ 8 Г¤Г® 256 ГЃГІ";
 
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG, UnicodeMsg.c_str());
 
@@ -1252,8 +1243,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       free_global_memory(memory, memory_length);
 
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!"
-                     "\nСистемное время остановлено? Проверьте системные часы!");
+                     "ГЉГ°ГЁГІГЁГ·ГҐГ±ГЄГ Гї Г®ГёГЁГЎГЄГ  ГѓГЏГ‘Г—! Г„Г Г«ГјГ­ГҐГ©ГёГЁГҐ Г®ГЇГҐГ°Г Г¶ГЁГЁ Г­ГҐ ГЇГ®Г§ГўГ®Г«ГҐГ­Г»!"
+                     "\nГ‘ГЁГ±ГІГҐГ¬Г­Г®ГҐ ГўГ°ГҐГ¬Гї Г®Г±ГІГ Г­Г®ГўГ«ГҐГ­Г®? ГЏГ°Г®ГўГҐГ°ГјГІГҐ Г±ГЁГ±ГІГҐГ¬Г­Г»ГҐ Г·Г Г±Г»!");
 
       Form1->Close();
     }
@@ -1342,10 +1333,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   int result = 0xDE;
 
   UnicodeMsg =
-    "Приступить к выбранной операции? Остановить операцию будет невозможно!\n\n"
-    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
-    "Длина ключа:\t" + IntToStr(memory->temp_buffer_length * 8).c_str() + " бит" +
+    "ГЏГ°ГЁГ±ГІГіГЇГЁГІГј ГЄ ГўГ»ГЎГ°Г Г­Г­Г®Г© Г®ГЇГҐГ°Г Г¶ГЁГЁ? ГЋГ±ГІГ Г­Г®ГўГЁГІГј Г®ГЇГҐГ°Г Г¶ГЁГѕ ГЎГіГ¤ГҐГІ Г­ГҐГўГ®Г§Г¬Г®Г¦Г­Г®!\n\n"
+    "ГЋГЇГҐГ°Г Г¶ГЁГї:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "ГЂГ«ГЈГ®Г°ГЁГІГ¬:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
+    "Г„Г«ГЁГ­Г  ГЄГ«ГѕГ·Г :\t" + IntToStr(memory->temp_buffer_length * 8).c_str() + " ГЎГЁГІ" +
                        CharA_Or_CharOV(memory->temp_buffer_length);
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
@@ -1359,51 +1350,51 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   switch (result) {
     case  0xDE:
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Операция была отменена!");
+                     "ГЋГЇГҐГ°Г Г¶ГЁГї ГЎГ»Г«Г  Г®ГІГ¬ГҐГ­ГҐГ­Г !");
       break;
     case OK:
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Файл успешно обработан!");
+                     "Г”Г Г©Г« ГіГ±ГЇГҐГёГ­Г® Г®ГЎГ°Г ГЎГ®ГІГ Г­!");
       break;
     case READ_FILE_NOT_OPEN:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Файл для обработки не был открыт!");
+                     "Г”Г Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ Г­ГҐ ГЎГ»Г« Г®ГІГЄГ°Г»ГІ!");
       break;
     case WRITE_FILE_NOT_OPEN:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Файл назначения не был открыт!");
+                     "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї Г­ГҐ ГЎГ»Г« Г®ГІГЄГ°Г»ГІ!");
       break;
     case SIZE_FILE_ERROR:
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Файл для обработки пуст или его размер"
-                     " превышает 2 ГиБ!");
+                     "Г”Г Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ ГЇГіГ±ГІ ГЁГ«ГЁ ГҐГЈГ® Г°Г Г§Г¬ГҐГ°"
+                     " ГЇГ°ГҐГўГ»ГёГ ГҐГІ 2 ГѓГЁГЃ!");
       break;
     case WRITE_FILE_ERROR:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Ошибка записи в файл!");
+                     "ГЋГёГЁГЎГЄГ  Г§Г ГЇГЁГ±ГЁ Гў ГґГ Г©Г«!");
       break;
     case READ_FILE_ERROR:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Ошибка чтения из файла!");
+                     "ГЋГёГЁГЎГЄГ  Г·ГІГҐГ­ГЁГї ГЁГ§ ГґГ Г©Г«Г !");
       break;
     case STREAM_INPUT_CLOSE_ERROR:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Поток ввода не был закрыт!");
+                     "ГЏГ®ГІГ®ГЄ ГўГўГ®Г¤Г  Г­ГҐ ГЎГ»Г« Г§Г ГЄГ°Г»ГІ!");
       break;
     case STREAM_OUTPUT_CLOSE_ERROR:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Поток вывода не был закрыт!");
+                     "ГЏГ®ГІГ®ГЄ ГўГ»ГўГ®Г¤Г  Г­ГҐ ГЎГ»Г« Г§Г ГЄГ°Г»ГІ!");
       break;
     case SIZE_DECRYPT_FILE_INCORRECT:
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Размер файла для расшифровки некорректен!\n"
-                     "Обрабатываемый файл ранее был зашифрован?");
+                     "ГђГ Г§Г¬ГҐГ° ГґГ Г©Г«Г  Г¤Г«Гї Г°Г Г±ГёГЁГґГ°Г®ГўГЄГЁ Г­ГҐГЄГ®Г°Г°ГҐГЄГІГҐГ­!\n"
+                     "ГЋГЎГ°Г ГЎГ ГІГ»ГўГ ГҐГ¬Г»Г© ГґГ Г©Г« Г°Г Г­ГҐГҐ ГЎГ»Г« Г§Г ГёГЁГґГ°Г®ГўГ Г­?");
       break;
   }
 
   if ((result == OK) && (CheckBox1->Checked == True)) {
-    UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
-                 "Стертые данные будет невозможно восстановить!";
+    UnicodeMsg = "Г‚Г» ГіГўГҐГ°ГҐГ­Г» Г·ГІГ® ГµГ®ГІГЁГІГҐ ГіГ­ГЁГ·ГІГ®Г¦ГЁГІГј ГґГ Г©Г« Г¤Г«Гї Г®ГЎГ°Г ГЎГ®ГІГЄГЁ?\n"
+                 "Г‘ГІГҐГ°ГІГ»ГҐ Г¤Г Г­Г­Г»ГҐ ГЎГіГ¤ГҐГІ Г­ГҐГўГ®Г§Г¬Г®Г¦Г­Г® ГўГ®Г±Г±ГІГ Г­Г®ГўГЁГІГј!";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
@@ -1413,25 +1404,25 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       if (erasedfile(Edit1->Text.c_str()) == 0) {
         if (DeleteFile(Edit1->Text) != False) {
           MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                        "Файл назначения был уничтожен!");
+                        "Г”Г Г©Г« Г­Г Г§Г­Г Г·ГҐГ­ГЁГї ГЎГ»Г« ГіГ­ГЁГ·ГІГ®Г¦ГҐГ­!");
         }
         else {
           /* if file rewriting and not delete -> show error code for user */
           unsigned long error_delete = GetLastError();
 
-          UnicodeMsg = "Ошибка удаления файла!\n"
-                       "Файл:\n"
+          UnicodeMsg = "ГЋГёГЁГЎГЄГ  ГіГ¤Г Г«ГҐГ­ГЁГї ГґГ Г©Г«Г !\n"
+                       "Г”Г Г©Г«:\n"
                        + Form1->Edit1->Text + "\n\n"
-                       "был перезаписан но не был удален с диска!\n"
-                       "Код ошибки: " + IntToStr(error_delete);
+                       "ГЎГ»Г« ГЇГҐГ°ГҐГ§Г ГЇГЁГ±Г Г­ Г­Г® Г­ГҐ ГЎГ»Г« ГіГ¤Г Г«ГҐГ­ Г± Г¤ГЁГ±ГЄГ !\n"
+                       "ГЉГ®Г¤ Г®ГёГЁГЎГЄГЁ: " + IntToStr(error_delete);
 
           MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, UnicodeMsg.c_str());
         }
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                      "Ошибка перезаписи файла!\n"
-                      "Возможно файл не существует или защищен от записи!");
+                      "ГЋГёГЁГЎГЄГ  ГЇГҐГ°ГҐГ§Г ГЇГЁГ±ГЁ ГґГ Г©Г«Г !\n"
+                      "Г‚Г®Г§Г¬Г®Г¦Г­Г® ГґГ Г©Г« Г­ГҐ Г±ГіГ№ГҐГ±ГІГўГіГҐГІ ГЁГ«ГЁ Г§Г Г№ГЁГ№ГҐГ­ Г®ГІ Г§Г ГЇГЁГ±ГЁ!");
       }
     }
   }
@@ -1473,7 +1464,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
 
   if ((len < 8) || (len > 256)) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Введите число от 8 до 256!");
+                   "Г‚ГўГҐГ¤ГЁГІГҐ Г·ГЁГ±Г«Г® Г®ГІ 8 Г¤Г® 256!");
     return;
   }
 
