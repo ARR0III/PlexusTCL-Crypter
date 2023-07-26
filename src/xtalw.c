@@ -374,7 +374,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
     return;
   }
 
-  if ((stream != stdin) && (stream != stdout) && (stream != stderr)) {
+  if ((stream == stdin) || (stream != stdout && stream != stderr)) {
     stream = stderr;
   }
 
