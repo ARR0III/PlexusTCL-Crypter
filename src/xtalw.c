@@ -12,13 +12,7 @@
 
 #include "xtalw.h"
 
-size_t little_or_big_ending(void) {
-  unsigned short x = 0x00FF;
-
-  return (*((unsigned short *)&x) == 0 ? 1 : 0);
-}
-
-void * memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
+void memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
   mov esi, input
@@ -31,7 +25,6 @@ __asm {
 
   cmp edi, esi
   jb _memxor_16_normal /* if edi < esi */
-  
 /****************************************************************************/
   add esi, ecx
   add edi, ecx
@@ -85,7 +78,6 @@ _memxor_4_reverse:
   sub ecx, 4
   jmp _memxor_4_reverse
 /****************************************************************************/  
-  
 _memxor_16_normal:
   mov ebx, esi
   sub ebx, edi
@@ -133,105 +125,112 @@ _memxor_byte:
 _exit:
 }
 #else
-        uint8_t * local_output = (uint8_t *)output;
-  const uint8_t * local_input  = (const uint8_t *)input;
-
-        uint8_t * last_output = local_output + (length - 1);
-  const uint8_t * last_input  = local_input  + (length - 1);
-
-  if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
-    return NULL;
+  if (!output || !input || output == input || 0 == length) {
+    return;
   }
-  
-  if (local_output < local_input) {
-    while(length--) {
-      *local_output ^= *local_input;
 
-       local_output++;
-       local_input++;
+  if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
+    return;
+
+  if (output < input) {
+    while(length) {
+      *((uint8_t*)output) ^= *((uint8_t*)input);
+
+       output++;
+       input++;
+       length--;
     }
   }
   else {
-    while(length--) {
-      *last_output ^= *last_input;
+    while(length) {
+      *((uint8_t*)output) ^= *((uint8_t*)input);
 
-       last_output--;
-       last_input--;
+       output--;
+       input--;
+       length--;
     }
   }
-#endif  
-  return output;
+#endif
 }
 
-void * memxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
-  const size_t width_register = sizeof(size_t);
-
-        uint8_t * local_output = (uint8_t *)output;
-  const uint8_t * local_input  = (const uint8_t *)input;
-
-        uint8_t * last_output = local_output + (length - 1);
-  const uint8_t * last_input  = local_input  + (length - 1);
-
-  if ((NULL == output) || (NULL == input) || (output == input) || (0 == length)) {
-    return NULL;
+void memxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
+  if (!output || !input || output == input || 0 == length) {
+    return;
   }
 
-  if (local_output < local_input) {
-    if (((size_t)local_input - (size_t)local_output) < width_register) {
-      return memxor(output, input, length);
+  if (output < input) {
+    if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
+      return;
+
+    if (((size_t)input - (size_t)output) < sizeof(size_t)) {
+      memxor(output, input, length);
+      return;
     }
 
-    while (length >= width_register) {
-      (*(size_t *)local_output) ^= (*(size_t *)local_input);
+    while (length >= (sizeof(size_t) * 4)) {
+      *((size_t *)output + 0) ^= *((size_t *)input + 0);
+      *((size_t *)output + 1) ^= *((size_t *)input + 1);
+      *((size_t *)output + 2) ^= *((size_t *)input + 2);
+      *((size_t *)output + 3) ^= *((size_t *)input + 3);
 
-      local_output += width_register;
-      local_input  += width_register;
+      output += (sizeof(size_t) * 4);
+      input  += (sizeof(size_t) * 4);
 
-      length -= width_register;
+      length -= (sizeof(size_t) * 4);
     }
 
     while (length) {
-      *local_output ^= *local_input;
+      *((uint8_t*)output) ^= *((uint8_t*)input);
 
-      local_output++;
-      local_input++;
+      output++;
+      input++;
 
       length--;
     }
   }
   else {
-    if (((size_t)last_output - (size_t)last_input) < width_register) {
-      return memxor(output, input, length);
+    if ((output - length) > output || (input - length) > input) /* IF POINTERS OWERFLOW */
+      return;
+
+    if (((size_t)output - (size_t)input) < sizeof(size_t)) {
+      memxor(output, input, length);
+      return;
     }
 
-    while (length && (length % width_register)) { /* max 7 iteration */
-      *last_output ^= *last_input;
+    output += (length - 1);
+    input  += (length - 1);
 
-      last_output--;
-      last_input--;
+    while (length) {
+      if (0 == length % sizeof(size_t)) /* max 3 or 7 iteration */
+        break;
+
+      *(uint8_t *)output ^= *(uint8_t *)input;
+
+      output--;
+      input--;
 
       length--;
     }
 
-    /* Align pointers to 32 bits for read from end! */
-    last_output -= (width_register - 1);
-    last_input  -= (width_register - 1);
+    /* Align pointers to 32 or 64 bits for read from end! */
+    output -= (sizeof(size_t) - 1);
+    input  -= (sizeof(size_t) - 1);
 
-    while (length) {
-      (*(size_t *)last_output) ^= (*(size_t *)last_input);
+    while (length >= (sizeof(size_t) * 4)) {
+      *((size_t *)output - 0) ^= *((size_t *)input - 0);
+      *((size_t *)output - 1) ^= *((size_t *)input - 1);
+      *((size_t *)output - 2) ^= *((size_t *)input - 2);
+      *((size_t *)output - 3) ^= *((size_t *)input - 3);
 
-      last_output -= width_register;
-      last_input  -= width_register;
-
-      length -= width_register;
+      output -= (sizeof(size_t) * 4);
+      input  -= (sizeof(size_t) * 4);
+      length -= (sizeof(size_t) * 4);
     }
   }
-
-  return output;
 }
 
 /* "meminit32" optimization and always executable standart function memset */
-void * meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
+void meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
   mov ecx, length
@@ -300,34 +299,54 @@ _memset_xb:
 _exit:
 }
 #else
-  const size_t width_register = sizeof(size_t);
-
-  volatile uint8_t * temp  = (uint8_t *)data;
+  volatile uint8_t * temp = (uint8_t *)data;
   register size_t u_dword = number;
 
-  if ((NULL == data) || (0 == length)) {
-    return NULL;
+  if (!data || 0 == length || (data + length) < data) {
+    return;
   }
 
   if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
+#if (SIZE_MAX > 0x0000FFFF)
     u_dword |= u_dword << 16;
+#endif
+#if (SIZE_MAX > 0xFFFFFFFF)
+    u_dword |= u_dword << 32;
+#endif
   }
-	
-  while (length >= width_register) {
-    (*(size_t *)temp) = u_dword;
-	  
-    temp   += width_register;
-    length -= width_register;
+
+  while (length >= (sizeof(size_t) * 8)) {
+    *((size_t *)temp + 0) = u_dword;
+    *((size_t *)temp + 1) = u_dword;
+    *((size_t *)temp + 2) = u_dword;
+    *((size_t *)temp + 3) = u_dword;
+
+    *((size_t *)temp + 4) = u_dword;
+    *((size_t *)temp + 5) = u_dword;
+    *((size_t *)temp + 6) = u_dword;
+    *((size_t *)temp + 7) = u_dword;
+
+    temp   += (sizeof(size_t) * 8);
+    length -= (sizeof(size_t) * 8);
   }
-	
+
+  while (length >= (sizeof(size_t) * 4)) {
+    *((size_t *)temp + 0) = u_dword;
+    *((size_t *)temp + 1) = u_dword;
+    *((size_t *)temp + 2) = u_dword;
+    *((size_t *)temp + 3) = u_dword;
+
+    temp   += (sizeof(size_t) * 4);
+    length -= (sizeof(size_t) * 4);
+  }
+
   while (length) {
-    *temp = (uint8_t)u_dword;
+    *temp = (uint8_t)number;
      temp++;
      length--;
   }
 #endif
-  return data;
 }
 
 size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
@@ -336,7 +355,6 @@ size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
 __asm {
   mov eax, r
   mov ecx, b
-  
   mov edx, s
   test edx, edx
   jz _exit         /* check NULL pointer */
@@ -366,23 +384,20 @@ _exit:
 }
 
 void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
-  uint8_t c;
   size_t j;
   int k;
 
-  if ((NULL == data) || (0 == length)) {
+  if (!data || 0 == length || (data + length) < data) {
     return;
   }
 
-  if ((stream == stdin) || (stream != stdout && stream != stderr)) {
+  if (stream == stdin || (stream != stdout && stream != stderr)) {
     stream = stderr;
   }
 
   for (j = 0; j < length; j++) {
-    c = data[j];
-
     for(k = 7; k >= 0; --k) {
-      putc((48 + ((c >> k) & 0x01)), stream);
+      putc(('0' + (((uint8_t)data[j] >> k) & 0x01)), stream);
     }
   }
 
@@ -390,7 +405,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
 }
 
 void strinc(uint8_t * data, size_t len) {
-  if (NULL == data) {
+  if (!data || (data + len) < data) {
     return;
   }
 	
@@ -407,7 +422,7 @@ void strinc(uint8_t * data, size_t len) {
 }
 
 void strdec(uint8_t * data, size_t len) {
-  if (NULL == data) {
+  if (!data || (data + len) < data) {
     return;
   }
 	
@@ -432,7 +447,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if ((filename == buffer) || (NULL == filename) || (NULL == buffer) || (0 == length)) {
+  if (!filename || !buffer || filename == buffer || 0 == length || (buffer + length) < buffer) {
     return (-1);
   }
 
@@ -450,26 +465,24 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   size_t i;
-  int left, right, symbol;
+  int left, right;
   const char digits[] = "0123456789ABCDEF";
 
-  if ((NULL == data) || (0 == length)) {
+  if (!data || 0 == length || (data + length) < data) {
     return;
   }
 
-  if ((tumbler != HEX_STRING) && (tumbler != HEX_TABLE)) {
-    tumbler = HEX_STRING;
+  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
+    tumbler = HEX_TABLE;
   }
 
-  if ((stream != stdin) && (stream != stdout) && (stream != stderr)) {
+  if (stream == stdin || (stream != stdout && stream != stderr)) {
     stream = stderr;
   }
 
   for (i = 0; i < length; ++i) {
-    symbol = (int)data[i];
-
-    left  = symbol >> 0x04; /* 11000011 >> 0x04 = 00001100 */
-    right = symbol  & 0x0F; /* 11000011  & 0x0F = 00000011 */
+    left  = (int)data[i] >> 0x04; /* 11000011 >> 0x04 = 00001100 */
+    right = (int)data[i]  & 0x0F; /* 11000011  & 0x0F = 00000011 */
 
     putc(digits[left],  stream);
     putc(digits[right], stream);
@@ -486,7 +499,7 @@ size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
   const uint8_t * temp = (uint8_t *)data;
 
-  if ((NULL == data) || (0 == length)) {
+  if (!data || 0 == length || (data + length) < data) {
     return i;
   }
 
