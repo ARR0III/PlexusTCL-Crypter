@@ -15,16 +15,33 @@
 void memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
+  mov ecx, length
   mov esi, input
   mov edi, output
-  mov ecx, length
   mov ebx, 4
+
+  cmp edi, 0
+  jz _exit
+  cmp esi, 0
+  jz _exit
+
+  push edi
+  add edi, ecx
+  cmp edi, output
+  pop edi
+  jb _exit  
+
+  push esi
+  add esi, ecx
+  cmp esi, input
+  pop esi
+  jb _exit  
 
   test esi, edi
   jz _exit
 
   cmp edi, esi
-  jb _memxor_16_normal /* if edi < esi */
+  jb _memxor_16_normal /* if edi < esi then goto */
 /****************************************************************************/
   add esi, ecx
   add edi, ecx
@@ -236,7 +253,13 @@ __asm {
   mov ecx, length
   mov edx, number
   mov eax, data
-  
+
+  push eax
+  add eax, length
+  cmp eax, data
+  pop eax
+  jb _exit        /* IF POINTER OVERFLOW */  
+
   cmp edx, 0xFF
   ja _memset_x32
 
