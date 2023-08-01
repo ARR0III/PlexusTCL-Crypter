@@ -24,7 +24,7 @@
 
 /*
  WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
- DO NOT CHANGE ASSEMBLER CODE IF YOU WOODPECKER!
+ DO NOT CHANGE ASSEMBLER CODE IF YOU ARE WOODPECKER!
  
  1 - FOR C++ BUILDER 6.0
  0 - OTHER COMPILERS
@@ -50,21 +50,23 @@
 extern "C" {
 #endif
 
+/* C language source code + assembler source code for Intel x86 */
 void memxor(void * output, const void * input, size_t length);
 void memxormove(void * output, const void * input, size_t length);
-void meminit(void * data, const size_t number, size_t length);
+void meminit(void * data, const size_t number, size_t length); /* <-- memset function analog */
 
-size_t x_strnlen(const char * s, size_t b);
-
+/* Only C language source code */
 void arraytobits(const uint8_t * data, const size_t length, FILE * stream);
 
 void strinc(uint8_t * data, size_t len);
 void strdec(uint8_t * data, size_t len);
+
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 
 int  genrand(const int min, const int max);
 int  readfromfile(const char * filename, void * buffer, const size_t length);
 
+size_t x_strnlen(const char * s, size_t b);
 size_t printhex(int tumbler, const void * data, size_t length);
 
 #ifdef __cplusplus
