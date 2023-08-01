@@ -142,6 +142,9 @@ _exit:
     }
   }
   else {
+    output += (length - 1);
+    input  += (length - 1);
+	  
     while(length) {
       *((uint8_t*)output) ^= *((uint8_t*)input);
 
@@ -158,10 +161,10 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
     return;
   }
 
+  if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
+    return;
+	
   if (output < input) {
-    if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
-      return;
-
     if (((size_t)input - (size_t)output) < sizeof(size_t)) {
       memxor(output, input, length);
       return;
@@ -189,9 +192,6 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
     }
   }
   else {
-    if ((output - length) > output || (input - length) > input) /* IF POINTERS OWERFLOW */
-      return;
-
     if (((size_t)output - (size_t)input) < sizeof(size_t)) {
       memxor(output, input, length);
       return;
