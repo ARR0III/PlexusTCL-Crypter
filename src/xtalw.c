@@ -462,7 +462,7 @@ void strdec(uint8_t * data, size_t len) {
 }
 
 int genrand(const int min, const int max) {
-  return (int)(rand() % (max - min + 1) + min);
+  return min + (int)((double)max * rand() / (RAND_MAX + (double)min));
 }
 
 int readfromfile(const char * filename, void * buffer, const size_t length) {
