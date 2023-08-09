@@ -1,25 +1,12 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Cryptography Software v5.07;
+ * Console Cryptography Software v5.08;
  *
  * Developer:         ARR0III;
- * Modification date: 03 MAR 2023;
- * Modification:      Release;
+ * Modification date: 10 AUG 2023;
+ * Modification:      Testing;
  * Language:          English;
  */
-
-/* if DEBUG_INFORMATION defined */
-#ifdef DEBUG_INFORMATION
-#define DEBUG_INFORMATION 1
-#endif
-
-/* if MS_WINDOWS defined */
-#ifdef MS_WINDOWS
-#include <windows.h>
-#define STRCMP(S_ONE,S_TWO) strcmpi(S_ONE,S_TWO) /* WINDOWS */
-#else
-#define STRCMP(S_ONE,S_TWO) strcmp(S_ONE,S_TWO)  /* LINUX */
-#endif
 
 #include <time.h>
 #include <stdio.h>
@@ -40,6 +27,25 @@
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
+/* if DEBUG_INFORMATION defined */
+#ifndef DEBUG_INFORMATION
+#  define DEBUG_INFORMATION 0
+#else
+#  define DEBUG_INFORMATION 1
+#endif
+
+/* if MS_WINDOWS defined */
+#ifdef MS_WINDOWS
+#  include <windows.h>
+#  define STRCMP(S_ONE,S_TWO) strcmpi((S_ONE), (S_TWO)) /* WINDOWS */
+#else
+#  define STRCMP(S_ONE,S_TWO) strcmp((S_ONE), (S_TWO))  /* LINUX */
+#endif
+
+#define MEMORY_ERROR do \
+    fprintf(stderr, "[!] Cannot allocate memory!\n"); \
+  while(0)
+
 #define OK                           0
 #define READ_FILE_NOT_OPEN          -1
 #define WRITE_FILE_NOT_OPEN         -2
@@ -57,12 +63,12 @@
 
 #define PROGRESS_BAR_LENGTH         26
 
-#define BOUNDARY                  2048
+#define STRING_MAX_LENGTH         2048
 #define DATA_SIZE     ((1024*1024) * 8 /*MiB*/ ) /* READ AND WRITE FROM DRIVE */
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.07 03MAR23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 10AUG23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -135,7 +141,7 @@ typedef struct {
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
 } GLOBAL_MEMORY;
 
-void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (!ctx) {
     return;
   }	
@@ -166,20 +172,8 @@ void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free((void *)ctx);
 }
 
-void NAME_CIPHER_ERROR(const char * name) {
-  if (!name) {
-    return;
-  }
-  
-  printf("[!] Name cipher \"%s\" incorrect!\n", name);
-}
-
-void MEMORY_ERROR(void) {
-  printf("[!] Cannot allocate memory!\n");
-}
-
 /* Function size_check checked size = Bt, Kb, Mb or Gb */
-int size_check(uint32_t size) {
+static int size_check(uint32_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
@@ -197,11 +191,11 @@ int size_check(uint32_t size) {
   return result;
 }
 
-double sizetodoubleprint(const int status, const double size) {
+static double sizetodoubleprint(const int status, const double size) {
   return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
 }
 
-void KDFCLOMUL(GLOBAL_MEMORY * ctx,
+static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
               const uint8_t  * password, const size_t password_len,
                     uint8_t  * key,      const size_t key_len) {
 
@@ -254,22 +248,12 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
 }
 
-void cent(int * number) {
-  if (!number) {
-    return;
-  }	
-	
-  if (*number > 100) {
-    *number = 100;
-  }
-}
-
 /* return encrypt, decrypt or stream */
-int operation_variant(const int operation) {
+static int operation_variant(const int operation) {
   return (operation ? 1 : 0);
 }
 
-int32_t size_of_file(FILE * f) {
+static int32_t size_of_file(FILE * f) {
   if (!f) {
     return (-1);
   }
@@ -287,7 +271,7 @@ int32_t size_of_file(FILE * f) {
   return result;
 }
 
-void cipher_free(void * ctx, size_t ctx_length) {
+static void cipher_free(void * ctx, size_t ctx_length) {
   if (!ctx) {
     return;
   }
@@ -296,7 +280,7 @@ void cipher_free(void * ctx, size_t ctx_length) {
   free(ctx);
 }
 
-void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
   if (!ctx) {
     return;
@@ -313,11 +297,11 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
-  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memmove((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
-  memmove((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
+  memcpy((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
+  memcpy((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
 
     /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
   for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
@@ -347,7 +331,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memmove((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
@@ -365,7 +349,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 #undef MINIMAL
 }
 
-void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
+static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   if (!ctx) {
     return;
   }
@@ -390,7 +374,7 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   }
 }
 
-int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
+static int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
   if (fclose(file_input) == -1) {
     fclose(file_output);
     return STREAM_INPUT_CLOSE_ERROR;
@@ -403,7 +387,7 @@ int close_in_out_files(FILE * file_input, FILE * file_output, const int return_c
   return return_code; /* All files close complete! */
 }
 
-int filecrypt(GLOBAL_MEMORY * ctx) {
+static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
 
@@ -483,7 +467,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
             break;
           case BLOWFISH:
-            memmove(ctx->output, ctx->vector, ctx->vector_length);
+            memcpy(ctx->output, ctx->vector, ctx->vector_length);
             blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
             break;
           case THREEFISH:
@@ -491,7 +475,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
             break;
         }
 
-        memmove(ctx->vector, ctx->output, ctx->vector_length); /* delete this string or not */
+        memcpy(ctx->vector, ctx->output, ctx->vector_length); /* delete this string or not */
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] vector generator write data in pointer: %p\n", ctx->vector);
@@ -500,9 +484,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         if (fwrite((void *)ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
           return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
         }
-        else {
-          fflush(fo);
-        }
+
+        fflush(fo);
+
       }
       else
       if (DECRYPT == ctx->operation) {
@@ -538,7 +522,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           break;
         case BLOWFISH:
           blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->vector + 4));
-          memmove(ctx->output + nblock, ctx->vector, ctx->vector_length);
+          memcpy(ctx->output + nblock, ctx->vector, ctx->vector_length);
           break;
         case THREEFISH:
           threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
@@ -546,13 +530,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         }
 
       memxormove(ctx->output + nblock, ctx->input + nblock, ctx->vector_length);
-      memmove(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
+      memcpy(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
        position  += (int32_t)realread;
     real_percent  = (int)((double)position / div + 0.1);
 
-    cent(&real_percent);
+    if (real_percent > 100) {
+      real_percent = 100;
+    }
 
     if ((position == fsize) && (DECRYPT == ctx->operation)) {
       realread -= SHA256_BLOCK_SIZE;
@@ -564,9 +550,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     if (fwrite((void *)ctx->output, 1, realread, fo) != realread) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
-    else {
-      fflush(fo);
-    }
+
+    fflush(fo);
 
     if (real_percent > past_percent) {
       /* if ((real_percent % 4) == 0) { */
@@ -608,9 +593,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
-    else {
-      fflush(fo);
-    }
+
+    fflush(fo);
+
   }
   else {
     if (memcmp((void *)(ctx->input + realread),
@@ -631,7 +616,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   return close_in_out_files(fi, fo, OK);
 }
 
-void random_vector_init(uint8_t * data, size_t size) {
+static void random_vector_init(uint8_t * data, size_t size) {
   if ((!data) || (0 == size)) {
     return;
   }
@@ -678,7 +663,7 @@ void random_vector_init(uint8_t * data, size_t size) {
   arc4_size   = 0;
 }
 
-size_t vector_init(uint8_t * data, size_t size) {
+static size_t vector_init(uint8_t * data, size_t size) {
   if (!data) {
     return 0;
   }	
@@ -716,15 +701,15 @@ int main(int argc, char * argv[]) {
 
   if (argc > 1 && argc < 8) {
     for (int i = 1; i < (argc - 1); i++) {
-      if (x_strnlen(argv[i], BOUNDARY) == BOUNDARY) { /* if length argument >= 2048 */
-        printf("[!] Warning: argument \"%d\" length more \"%d\"!\n", i, BOUNDARY);
+      if (x_strnlen(argv[i], STRING_MAX_LENGTH) == STRING_MAX_LENGTH) { /* if length argument >= 2048 */
+        fprintf(stderr, "[!] Warning: argument \"%d\" length more \"%d\"!\n", i, STRING_MAX_LENGTH);
         return (-1);
       }
     }
   }
   else
   if (1 == argc || argc >= 8) {
-    printf("[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
+    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
     return 0;
   }
 
@@ -750,13 +735,13 @@ int main(int argc, char * argv[]) {
       return 0;
     }
     else {
-      printf("[!] Incorrect parameter \"%s\"! Only \"-h\" or \"--help\".\n", argv[1]);
+      fprintf(stderr, "[!] Incorrect parameter \"%s\"! Only \"-h\" or \"--help\".\n", argv[1]);
       return (-1);
     }
   }
 
   if (argc < 5) {
-    printf("[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
+    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
     return 0;
   }
 
@@ -764,7 +749,7 @@ int main(int argc, char * argv[]) {
   GLOBAL_MEMORY * ctx = (GLOBAL_MEMORY *)calloc(ctx_length, 1);
 
   if (!ctx) {
-    MEMORY_ERROR();
+    MEMORY_ERROR;
     return (-1);
   }
 
@@ -787,21 +772,21 @@ int main(int argc, char * argv[]) {
   if (STRCMP(ctx->finput, ctx->foutput) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    printf("[!] Names input and output files equal!\n");
+    fprintf(stderr, "[!] Names input and output files equal!\n");
     return (-1);
   }
   else
   if (STRCMP(ctx->foutput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    printf("[!] Names keyfile and output files equal!\n");
+    fprintf(stderr, "[!] Names keyfile and output files equal!\n");
     return (-1);
   }
   else
   if (STRCMP(ctx->finput, ctx->keyfile) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    printf("[!] Names keyfile and input files equal!\n");
+    fprintf(stderr, "[!] Names keyfile and input files equal!\n");
     return (-1);
   }
 
@@ -822,7 +807,7 @@ int main(int argc, char * argv[]) {
   else {
     free_global_memory(ctx, ctx_length);
 
-    NAME_CIPHER_ERROR(argv[1]);
+    fprintf(stderr, "[!] Name cipher \"%s\" incorrect!\n", argv[1]);
     return (-1);
   }
 
@@ -836,7 +821,7 @@ int main(int argc, char * argv[]) {
   else {
     free_global_memory(ctx, ctx_length);
 
-    printf("[!] Operation \"%s\" incorrect!\n", argv[2]);
+    fprintf(stderr, "[!] Operation \"%s\" incorrect!\n", argv[2]);
     return (-1);
   }
 
@@ -869,7 +854,7 @@ int main(int argc, char * argv[]) {
     else {
       free_global_memory(ctx, ctx_length);
 
-      printf("[!] Key length \"%s\" incorrect!\n", argv[3]);
+      fprintf(stderr, "[!] Key length \"%s\" incorrect!\n", argv[3]);
       return (-1);
     }
   }
@@ -914,7 +899,7 @@ int main(int argc, char * argv[]) {
   if (!ctx->temp_buffer) {
     free_global_memory(ctx, ctx_length);
 
-    MEMORY_ERROR();
+    MEMORY_ERROR;
     return (-1);
   }
 
@@ -960,14 +945,14 @@ int main(int argc, char * argv[]) {
       else {
         free_global_memory(ctx, ctx_length);
 
-        MEMORY_ERROR();
+        MEMORY_ERROR;
         return (-1);
       }
     }
     else {
       free_global_memory(ctx, ctx_length);
 
-      printf("[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
+      fprintf(stderr, "[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
       return (-1);
     }
   }
@@ -1012,7 +997,7 @@ int main(int argc, char * argv[]) {
   if (!ctx->vector) {
     free_global_memory(ctx, ctx_length);
 
-    MEMORY_ERROR();
+    MEMORY_ERROR;
     return (-1);
   }
 
@@ -1022,7 +1007,7 @@ int main(int argc, char * argv[]) {
     if (vector_init(ctx->vector, ctx->vector_length) < (ctx->vector_length - 2)) {
       free_global_memory(ctx, ctx_length);
 
-      printf("[X] Critical error! System time stopped?\n");
+      fprintf(stderr, "[X] Critical error! System time stopped?\n");
       return (-1);
     }
   }
@@ -1036,7 +1021,7 @@ int main(int argc, char * argv[]) {
     if (!rijndael_ctx) {
       free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR();
+      MEMORY_ERROR;
       return (-1);
     }
     /* This function return real iteration count encrypt operation */
@@ -1052,7 +1037,7 @@ int main(int argc, char * argv[]) {
     if (!twofish_ctx) {
       free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR();
+      MEMORY_ERROR;
       return (-1);
     }
 
@@ -1066,7 +1051,7 @@ int main(int argc, char * argv[]) {
     if (!serpent_ctx) {
       free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR();
+      MEMORY_ERROR;
       return (-1);
     }
 
@@ -1080,7 +1065,7 @@ int main(int argc, char * argv[]) {
     if (!blowfish_ctx) {
       free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR();
+      MEMORY_ERROR;
       return (-1);
     }
 
@@ -1094,7 +1079,7 @@ int main(int argc, char * argv[]) {
     if (!threefish_ctx) {
       free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR();
+      MEMORY_ERROR;
       return (-1);
     }
 
@@ -1102,8 +1087,7 @@ int main(int argc, char * argv[]) {
                    (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
   }
 
-  printf("[#] Algoritm %s initialized!\n",
-    ALGORITM_NAME[(ctx->cipher_number)]);
+  printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[(ctx->cipher_number)]);
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] allocate byte for cipher struct: %u\n", cipher_ctx_len);
@@ -1122,30 +1106,31 @@ int main(int argc, char * argv[]) {
       printf("[#] %s file \"%s\" complete!\n",
         OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
       break;
+
     case READ_FILE_NOT_OPEN:
-      printf("[!] File for %s \"%s\" not opened!\n",
+      fprintf(stderr, "[!] File for %s \"%s\" not opened!\n",
         OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
       break;
     case WRITE_FILE_NOT_OPEN:
-      printf("[!] Output file \"%s\" not opened!\n", ctx->foutput);
+      fprintf(stderr, "[!] Output file \"%s\" not opened!\n", ctx->foutput);
       break;
     case SIZE_FILE_ERROR:
-      printf("[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
+      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
-      printf("[!] Error write in file \"%s\" !\n", ctx->foutput);
+      fprintf(stderr, "[!] Error write in file \"%s\" !\n", ctx->foutput);
       break;
     case READ_FILE_ERROR:
-      printf("[!] Error read form file \"%s\" !\n", ctx->finput);
+      fprintf(stderr, "[!] Error read form file \"%s\" !\n", ctx->finput);
       break;
     case STREAM_INPUT_CLOSE_ERROR:
-      printf("[!] Error close input stream!\n");
+      fprintf(stderr, "[!] Error close input stream!\n");
       break;
     case STREAM_OUTPUT_CLOSE_ERROR:
-      printf("[!] Error close output stream!\n");
+      fprintf(stderr, "[!] Error close output stream!\n");
       break;
     case SIZE_DECRYPT_FILE_INCORRECT:
-      printf("[!] Size of file for decrypt \"%s\" incorrect!\n", ctx->finput);
+      fprintf(stderr, "[!] Size of file for decrypt \"%s\" incorrect!\n", ctx->finput);
       break;
   }
 
