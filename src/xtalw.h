@@ -11,13 +11,6 @@
   programs, such as "phex", which prints the contents of memory
   in hexadecimal. The functions were debugged, tested and
   implemented into the program just in case.
-
-  WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
-  DO NOT CHANGE ASSEMBLER CODE IF YOU ARE WOODPECKER!
- 
-  If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (ON)
-  then Borland C++ 6.0 compiling assembler x86 code for
-  maximization program speed on 32 bits processor.
 */
 
 #ifndef XTALW_H
@@ -29,16 +22,23 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+/*
+ WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
+ DO NOT CHANGE ASSEMBLER CODE IF YOU ARE WOODPECKER!
+ 
+ 1 - FOR C++ BUILDER 6.0
+ 0 - OTHER COMPILERS
+ 
+ If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (ON)
+ then Borland C++ 6.0 compiling assembler x86 code for
+ maximization program speed on 32 bits processor!
+*/
+
+#define ON  1
+#define OFF 0
+
 #define HEX_TABLE  1
 #define HEX_STRING 0
-
-#ifndef RAND_MAX
-#define RAND_MAX 32767
-
-/* FOR C++ BUILDER 6.0 */
-#define ON  1
-/* OTHER COMPILERS */
-#define OFF 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
 #define __ASM_32_X86_CPP_BUILDER__ OFF
@@ -69,8 +69,6 @@ size_t printhex(int tumbler, const void * data, size_t length);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* RAND_MAX */
 
 #endif /* __ASM_32_X86_CPP_BUILDER__ */
 
