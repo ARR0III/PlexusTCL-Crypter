@@ -42,6 +42,8 @@
 #  define STRCMP(S_ONE,S_TWO) strcmp((S_ONE), (S_TWO))  /* LINUX */
 #endif
 
+#define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
+
 #define MEMORY_ERROR do \
     fprintf(stderr, "[!] Cannot allocate memory!\n"); \
   while(0)
@@ -281,7 +283,6 @@ static void cipher_free(void * ctx, size_t ctx_length) {
 }
 
 static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
-#define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
   if (!ctx) {
     return;
   }
@@ -346,7 +347,6 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   meminit((void *)hmac_ctx, 0x00, hmac_ctx_length);
   free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
-#undef MINIMAL
 }
 
 static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
