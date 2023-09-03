@@ -246,9 +246,10 @@ _exit:
     return;
   }
 
-  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) /* IF POINTERS OWERFLOW */
+  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) { /* IF POINTERS OWERFLOW */
     return;
-	
+  }
+
   if (output < input) {
     if (((size_t)input - (size_t)output) < sizeof(size_t)) {
       memxor(output, input, length);
@@ -261,14 +262,23 @@ _exit:
       *((size_t *)output + 2) ^= *((size_t *)input + 2);
       *((size_t *)output + 3) ^= *((size_t *)input + 3);
 
-      output = output + (sizeof(size_t) * 4);
-      input  = input  + (sizeof(size_t) * 4);
+      output = (uint8_t *)output + (sizeof(size_t) * 4);
+      input  = (uint8_t *)input  + (sizeof(size_t) * 4);
 
       length -= (sizeof(size_t) * 4);
     }
 
+    while (length >= sizeof(size_t)) {
+      *(size_t *)output ^= *(size_t *)input;
+
+      output = (uint8_t *)output + sizeof(size_t);
+      input  = (uint8_t *)input  + sizeof(size_t);
+
+      length -= sizeof(size_t);
+    }
+
     while (length) {
-      *((size_t*)output) ^= *((size_t*)input);
+      *((uint8_t *)output) ^= *((uint8_t *)input);
 
       output = (uint8_t *)output + 1;
       input  = (uint8_t *)input  + 1;
@@ -286,8 +296,9 @@ _exit:
     input  = (uint8_t *)input  + (length - 1);
 
     while (length) {
-      if (0 == length % sizeof(size_t)) /* max 3 or 7 iteration */
+      if (length % sizeof(size_t) == 0) { /* max 3 or 7 iteration */
         break;
+      }
 
       *(uint8_t *)output ^= *(uint8_t *)input;
 
@@ -311,6 +322,15 @@ _exit:
       input  = (uint8_t *)input  - (sizeof(size_t) * 4);
       
       length -= (sizeof(size_t) * 4);
+    }
+
+    while (length >= sizeof(size_t)) {
+      *(size_t *)output ^= *(size_t *)input;
+
+      output = (uint8_t *)output - sizeof(size_t);
+      input  = (uint8_t *)input  - sizeof(size_t);
+
+      length -= sizeof(size_t);
     }
   }
 #endif  
@@ -553,7 +573,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if (!filename || !buffer || filename == buffer || 0 == length || (buffer + length) < buffer) {
+  if (!filename || !buffer || filename == buffer || 0 == length || ((size_t)buffer + length) < (size_t)buffer) {
     return (-1);
   }
 
