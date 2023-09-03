@@ -629,13 +629,15 @@ static void random_vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
-  uint8_t * vector_memory = NULL;
-
+	
+  uint8_t  * vector_memory = NULL;
+  ARC4_CTX * arc4_memory  = NULL;
+	
   if ((!data) || (0 == size)) {
     return;
   }
   
-  ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
+  arc4_memory = (ARC4_CTX *)malloc(arc4_size);
   vector_memory = (uint8_t *)malloc(vector_size);
   
   if ((!arc4_memory) || (!vector_memory)) {
