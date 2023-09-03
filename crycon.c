@@ -3,8 +3,8 @@
  * Console Cryptography Software v5.08;
  *
  * Developer:         ARR0III;
- * Modification date: 10 AUG 2023;
- * Modification:      Testing;
+ * Modification date: 03 SEP 2023;
+ * Modification:      Release;
  * Language:          English;
  */
 
@@ -27,14 +27,12 @@
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
-/* if DEBUG_INFORMATION defined */
 #ifndef DEBUG_INFORMATION
 #  define DEBUG_INFORMATION 0
 #else
 #  define DEBUG_INFORMATION 1
 #endif
 
-/* if MS_WINDOWS defined */
 #ifdef MS_WINDOWS
 #  include <windows.h>
 #  define STRCMP(S_ONE,S_TWO) strcmpi((S_ONE), (S_TWO)) /* WINDOWS */
@@ -42,11 +40,11 @@
 #  define STRCMP(S_ONE,S_TWO) strcmp((S_ONE), (S_TWO))  /* LINUX */
 #endif
 
-#define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
-
 #define MEMORY_ERROR do \
     fprintf(stderr, "[!] Cannot allocate memory!\n"); \
   while(0)
+
+#define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
 
 #define OK                           0
 #define READ_FILE_NOT_OPEN          -1
@@ -70,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 10AUG23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 03SEP23 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -201,12 +199,12 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
               const uint8_t  * password, const size_t password_len,
                     uint8_t  * key,      const size_t key_len) {
 
+  uint32_t i, j, k;
+  uint32_t count = 0;
+
   if (!ctx || !password || !key) {
     return;
   }
-
-  uint32_t i, j, k;
-  uint32_t count = 0;
 
 #if DEBUG_INFORMATION
   srand(time(0));
@@ -256,6 +254,8 @@ static int operation_variant(const int operation) {
 }
 
 static int32_t size_of_file(FILE * f) {
+  int32_t result;
+
   if (!f) {
     return (-1);
   }
@@ -264,7 +264,7 @@ static int32_t size_of_file(FILE * f) {
     return (-1);
   }
 
-  int32_t result = ftell(f);
+  result = ftell(f);
 
   if (fseek(f, 0, SEEK_SET) != 0) {
     return (-1);
@@ -283,19 +283,24 @@ static void cipher_free(void * ctx, size_t ctx_length) {
 }
 
 static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
+  size_t i;
+  size_t size_copy_data;
+  size_t hmac_ctx_length;
+
+  HMAC_CTX * hmac_ctx;
+
   if (!ctx) {
     return;
   }
 	
-  size_t hmac_ctx_length = sizeof(HMAC_CTX);	
-  HMAC_CTX * hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
+  hmac_ctx_length = sizeof(HMAC_CTX);	
+  hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
 
-  if (NULL == hmac_ctx) {
+  if (!hmac_ctx) {
     return;
   }
 
-  size_t i;
-  size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
+  size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
   memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
@@ -350,12 +355,12 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 }
 
 static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
+  size_t i = 0;
+  size_t remnant = count;
+
   if (!ctx) {
     return;
   }
-
-  size_t       i = 0;
-  size_t remnant = count;
 
   while (i < count) {
     if (remnant < LENGTH_DATA_FOR_CHECK) {
@@ -389,13 +394,24 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
 
 static int filecrypt(GLOBAL_MEMORY * ctx) {
 
-  FILE * fi = fopen(ctx->finput, PARAM_READ_BYTE);
+  FILE * fi = NULL;
+  FILE * fo = NULL;
+
+  double div, fsize_double;
+  int    fsize_check, real_check = 0;
+  int    real_percent, past_percent = 0;
+
+  size_t nblock, realread;
+
+  int32_t fsize, position = 0;
+
+  fi = fopen(ctx->finput, PARAM_READ_BYTE);
 
   if (!fi) {
     return READ_FILE_NOT_OPEN;
   }
 
-  FILE * fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
+  fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
 
   if (!fo) {
     if (fclose(fi) == -1)
@@ -404,12 +420,11 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       return WRITE_FILE_NOT_OPEN;
   }
 
-  register int32_t fsize    = size_of_file(fi);
-  register int32_t position = 0;
-
 #if DEBUG_INFORMATION
   printf("[DEBUG] size of file: %d byte\n", fsize);
 #endif
+
+  fsize = size_of_file(fi);
 
   if (ENCRYPT == ctx->operation) { /* only for check fsize */
     fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
@@ -417,6 +432,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   /* fsize += (size initialized vector + size sha256 hash sum) */
   /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
+
   if (fsize <= 0L) {
     return close_in_out_files(fi, fo, SIZE_FILE_ERROR);
   }
@@ -432,16 +448,9 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
 
-  double div          = (double)((double)fsize / 100.0);
-  int    real_check   = 0;
-  int    fsize_check  = size_check(fsize);
-  double fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
-
-  size_t nblock;
-  size_t realread; /* count read byte from file */
-
-  int real_percent = 0;
-  int past_percent = 0;
+  div          = (double)((double)fsize / 100.0);
+  fsize_check  = size_check(fsize);
+  fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
   meminit(ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
@@ -617,16 +626,17 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 }
 
 static void random_vector_init(uint8_t * data, size_t size) {
+  size_t i;
+  size_t arc4_size   = sizeof(ARC4_CTX);
+  size_t vector_size = size;
+  uint8_t * vector_memory = NULL;
+
   if ((!data) || (0 == size)) {
     return;
   }
   
-  size_t i;
-  size_t arc4_size   = sizeof(ARC4_CTX);
-  size_t vector_size = size;
-  
   ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
-  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
+  vector_memory = (uint8_t *)malloc(vector_size);
   
   if ((!arc4_memory) || (!vector_memory)) {
     if (NULL != arc4_memory) {
@@ -664,12 +674,12 @@ static void random_vector_init(uint8_t * data, size_t size) {
 }
 
 static size_t vector_init(uint8_t * data, size_t size) {
+  size_t i;
+  size_t stack_trash; /* NOT initialized == ALL OK */
+
   if (!data) {
     return 0;
   }	
-	
-  size_t i;
-  size_t stack_trash; /* NOT initialized == ALL OK */
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] stack_trash: %u\n", stack_trash);
@@ -699,8 +709,19 @@ static size_t vector_init(uint8_t * data, size_t size) {
 
 int main(int argc, char * argv[]) {
 
+/*****************************************************************************/
+  extern int AES_Rounds; /* in rijndael.c source code file */
+
+  int i, real_read, result;
+
+  size_t ctx_length, cipher_ctx_len = 0;
+
+  GLOBAL_MEMORY * ctx;
+  void * cipher_pointer = NULL;
+/*****************************************************************************/
+
   if (argc > 1 && argc < 8) {
-    for (int i = 1; i < (argc - 1); i++) {
+    for (i = 1; i < (argc - 1); i++) {
       if (x_strnlen(argv[i], STRING_MAX_LENGTH) == STRING_MAX_LENGTH) { /* if length argument >= 2048 */
         fprintf(stderr, "[!] Warning: argument \"%d\" length more \"%d\"!\n", i, STRING_MAX_LENGTH);
         return (-1);
@@ -745,8 +766,8 @@ int main(int argc, char * argv[]) {
     return 0;
   }
 
-  size_t ctx_length = sizeof(GLOBAL_MEMORY);
-  GLOBAL_MEMORY * ctx = (GLOBAL_MEMORY *)calloc(ctx_length, 1);
+  ctx_length = sizeof(GLOBAL_MEMORY);
+  ctx = (GLOBAL_MEMORY *)calloc(ctx_length, 1);
 
   if (!ctx) {
     MEMORY_ERROR;
@@ -824,8 +845,6 @@ int main(int argc, char * argv[]) {
     fprintf(stderr, "[!] Operation \"%s\" incorrect!\n", argv[2]);
     return (-1);
   }
-
-  extern int AES_Rounds; /* in rijndael.c source code file */
 
   if (AES     == ctx->cipher_number ||
       SERPENT == ctx->cipher_number ||
@@ -908,7 +927,7 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
 #endif
 
-  int real_read = readfromfile(ctx->keyfile, ctx->temp_buffer, ctx->temp_buffer_length);
+  real_read = readfromfile(ctx->keyfile, ctx->temp_buffer, ctx->temp_buffer_length);
 
   if (real_read == (int)ctx->temp_buffer_length)
     printf("[#] Crypt key read from file \"%s\"!\n", ctx->keyfile);
@@ -967,8 +986,6 @@ int main(int argc, char * argv[]) {
   printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
 #endif
 
-  size_t cipher_ctx_len = 0;
-
   switch (ctx->cipher_number) {
     case AES:
       ctx->vector_length = 16;
@@ -1011,8 +1028,6 @@ int main(int argc, char * argv[]) {
       return (-1);
     }
   }
-
-  void * cipher_pointer = NULL;
 
   if (AES == ctx->cipher_number) {
     rijndael_ctx = (uint32_t *) calloc(cipher_ctx_len, 1);
@@ -1099,7 +1114,8 @@ int main(int argc, char * argv[]) {
     OPERATION_NAME[operation_variant(ctx->operation)],
     ctx->finput);
 
-  int result = filecrypt(ctx);
+/*****************************************************************************/
+  result = filecrypt(ctx);
 
   switch (result) {
     case OK:
@@ -1133,6 +1149,8 @@ int main(int argc, char * argv[]) {
       fprintf(stderr, "[!] Size of file for decrypt \"%s\" incorrect!\n", ctx->finput);
       break;
   }
+
+/*****************************************************************************/
 
 /* Clear all allocated memory for programm */
 
