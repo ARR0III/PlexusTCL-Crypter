@@ -18,11 +18,111 @@ __asm {
   mov ecx, length
   mov esi, input
   mov edi, output
+
+  test edi, edi
+  jz _exit
+
+  test esi, esi
+  jz _exit
+
+  test ecx, ecx
+  jz _exit
+
+  push edi
+  add edi, ecx
+  cmp edi, output
+  pop edi
+  jb _exit  
+
+  push esi
+  add esi, ecx
+  cmp esi, input
+  pop esi
+  jb _exit  
+
+  test esi, edi
+  jz _exit
+
+  cmp edi, esi
+  jb _memxor_normal /* if edi < esi then goto */
+  
+/***REVERSE*******************************************************************/
+  add esi, ecx
+  add edi, ecx
+  dec esi
+  dec edi
+
+_memxor_reverse:
+  mov al, byte [esi]
+  xor byte [edi], al
+  dec esi
+  dec edi
+  dec ecx
+  jz _exit
+  jmp _memxor_reverse
+
+/***NORMAL********************************************************************/  
+_memxor_normal:
+  mov al, byte [esi]
+  xor byte [edi], al
+  inc esi
+  inc edi
+  dec ecx
+  jz _exit
+  jmp _memxor_normal
+
+_exit:
+}
+#else
+  if (!output || !input || output == input || 0 == length) {
+    return;
+  }
+
+  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) { /* IF POINTERS OWERFLOW */
+    return;
+  }
+
+  if (output < input) {
+    while(length) {
+      *((uint8_t *)output) ^= *((uint8_t *)input);
+
+       output = (uint8_t *)output + 1;
+       input  = (uint8_t *)input  + 1;
+
+       length--;
+    }
+  }
+  else {
+    output = (uint8_t *)output + (length - 1);
+    input  = (uint8_t *)input  + (length - 1);
+	  
+    while(length) {
+      *((uint8_t*)output) ^= *((uint8_t*)input);
+
+       output = (uint8_t *)output - 1;
+       input  = (uint8_t *)input  - 1;
+
+       length--;
+    }
+  }
+#endif
+}
+
+void memxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
+  mov ecx, length
+  mov esi, input
+  mov edi, output
   mov ebx, 4
 
-  cmp edi, 0
+  test edi, edi
   jz _exit
-  cmp esi, 0
+
+  test esi, esi
+  jz _exit
+
+  test ecx, ecx
   jz _exit
 
   push edi
@@ -49,8 +149,6 @@ __asm {
   dec edi
   
 _memxor_byte_reverse:
-  test ecx, ecx
-  jz _exit
   mov eax, ecx
   xor edx, edx
   div ebx
@@ -61,6 +159,7 @@ _memxor_byte_reverse:
   dec esi
   dec edi
   dec ecx
+  jz _exit
   jmp _memxor_byte_reverse  
   
 _memxor_16_reverse_normal:
@@ -83,16 +182,16 @@ _memxor_16_reverse:
   sub esi, 16
   sub edi, 16
   sub ecx, 16
+  jz _exit
   jmp _memxor_16_reverse
 
 _memxor_4_reverse:
-  test ecx, ecx
-  jz _exit
   mov eax, dword [esi]
   xor dword [edi], eax
   sub esi, 4
   sub edi, 4
   sub ecx, 4
+  jz _exit
   jmp _memxor_4_reverse
 /****************************************************************************/  
 _memxor_16_normal:
@@ -117,6 +216,7 @@ _memxor_16:
   add esi, 16
   add edi, 16
   sub ecx, 16
+  jz _exit
   jmp _memxor_16
 
 _memxor_4:
@@ -127,16 +227,16 @@ _memxor_4:
   add esi, 4
   add edi, 4
   sub ecx, 4
+  jz _exit
   jmp _memxor_4
 
 _memxor_byte:
-  test ecx, ecx
-  jz _exit
   mov al, byte [esi]
   xor byte [edi], al
   inc esi
   inc edi
   dec ecx
+  jz _exit
   jmp _memxor_byte
 
 _exit:
@@ -146,39 +246,7 @@ _exit:
     return;
   }
 
-  if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
-    return;
-
-  if (output < input) {
-    while(length) {
-      *((uint8_t*)output) ^= *((uint8_t*)input);
-
-       output++;
-       input++;
-       length--;
-    }
-  }
-  else {
-    output += (length - 1);
-    input  += (length - 1);
-	  
-    while(length) {
-      *((uint8_t*)output) ^= *((uint8_t*)input);
-
-       output--;
-       input--;
-       length--;
-    }
-  }
-#endif
-}
-
-void memxormove(void * output, const void * input, size_t length) { /* DEBUG = OK */
-  if (!output || !input || output == input || 0 == length) {
-    return;
-  }
-
-  if ((output + length) < output || (input + length) < input) /* IF POINTERS OWERFLOW */
+  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) /* IF POINTERS OWERFLOW */
     return;
 	
   if (output < input) {
@@ -193,17 +261,17 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
       *((size_t *)output + 2) ^= *((size_t *)input + 2);
       *((size_t *)output + 3) ^= *((size_t *)input + 3);
 
-      output += (sizeof(size_t) * 4);
-      input  += (sizeof(size_t) * 4);
+      output = output + (sizeof(size_t) * 4);
+      input  = input  + (sizeof(size_t) * 4);
 
       length -= (sizeof(size_t) * 4);
     }
 
     while (length) {
-      *((uint8_t*)output) ^= *((uint8_t*)input);
+      *((size_t*)output) ^= *((size_t*)input);
 
-      output++;
-      input++;
+      output = (uint8_t *)output + 1;
+      input  = (uint8_t *)input  + 1;
 
       length--;
     }
@@ -214,8 +282,8 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
       return;
     }
 
-    output += (length - 1);
-    input  += (length - 1);
+    output = (uint8_t *)output + (length - 1);
+    input  = (uint8_t *)input  + (length - 1);
 
     while (length) {
       if (0 == length % sizeof(size_t)) /* max 3 or 7 iteration */
@@ -223,15 +291,15 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
 
       *(uint8_t *)output ^= *(uint8_t *)input;
 
-      output--;
-      input--;
+      output = (uint8_t *)output - 1;
+      input  = (uint8_t *)input  - 1;
 
       length--;
     }
 
     /* Align pointers to 32 or 64 bits for read from end! */
-    output -= (sizeof(size_t) - 1);
-    input  -= (sizeof(size_t) - 1);
+    output = (uint8_t *)output - (sizeof(size_t) - 1);
+    input  = (uint8_t *)input  - (sizeof(size_t) - 1);
 
     while (length >= (sizeof(size_t) * 4)) {
       *((size_t *)output - 0) ^= *((size_t *)input - 0);
@@ -239,11 +307,13 @@ void memxormove(void * output, const void * input, size_t length) { /* DEBUG = O
       *((size_t *)output - 2) ^= *((size_t *)input - 2);
       *((size_t *)output - 3) ^= *((size_t *)input - 3);
 
-      output -= (sizeof(size_t) * 4);
-      input  -= (sizeof(size_t) * 4);
+      output = (uint8_t *)output - (sizeof(size_t) * 4);
+      input  = (uint8_t *)input  - (sizeof(size_t) * 4);
+      
       length -= (sizeof(size_t) * 4);
     }
   }
+#endif  
 }
 
 /* "meminit32" optimization and always executable standart function memset */
@@ -254,8 +324,14 @@ __asm {
   mov edx, number
   mov eax, data
 
+  test eax, eax
+  jz _exit
+
+  test ecx, ecx
+  jz _exit
+
   push eax
-  add eax, length
+  add eax, ecx
   cmp eax, data
   pop eax
   jb _exit        /* IF POINTER OVERFLOW */  
@@ -281,6 +357,7 @@ _memset_x32:
   mov dword [eax+28], edx
   add eax, 32
   sub ecx, 32
+  jz _exit
   jmp _memset_x32
   
 _memset_x16:
@@ -292,6 +369,7 @@ _memset_x16:
   mov dword [eax+12], edx
   add eax, 16
   sub ecx, 16
+  jz _exit
   jmp _memset_x16
 
 _memset_x8:
@@ -301,6 +379,7 @@ _memset_x8:
   mov dword [eax+4], edx
   add eax, 8
   sub ecx, 8
+  jz _exit
   jmp _memset_x8
 
 _memset_x4:
@@ -309,14 +388,14 @@ _memset_x4:
   mov dword [eax], edx
   add eax, 4
   sub ecx, 4
+  jz _exit
   jmp _memset_x4
 
 _memset_xb:
-  test ecx, ecx
-  jz _exit
   mov byte [eax], dl
   inc eax
   dec ecx
+  jz _exit
   jmp _memset_xb
   
 _exit:
@@ -325,19 +404,16 @@ _exit:
   volatile uint8_t * temp = (uint8_t *)data;
   register size_t u_dword = number;
 
-  if (!data || 0 == length || (data + length) < data) {
+  if (!data || 0 == length || (temp + length) < temp) {
     return;
   }
 
+/*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
   if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
-#if (SIZE_MAX > 0x0000FFFF)
     u_dword |= u_dword << 16;
-#endif
-#if (SIZE_MAX > 0xFFFFFFFF)
-    u_dword |= u_dword << 32;
-#endif
   }
+/*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
 
   while (length >= (sizeof(size_t) * 8)) {
     *((size_t *)temp + 0) = u_dword;
@@ -362,6 +438,13 @@ _exit:
 
     temp   += (sizeof(size_t) * 4);
     length -= (sizeof(size_t) * 4);
+  }
+
+  while (length >= sizeof(size_t)) {
+    *((size_t *)temp) = u_dword;
+
+    temp   += sizeof(size_t);
+    length -= sizeof(size_t);
   }
 
   while (length) {
@@ -522,7 +605,7 @@ size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
   const uint8_t * temp = (uint8_t *)data;
 
-  if (!data || 0 == length || (data + length) < data) {
+  if (!data || 0 == length || (temp + length) < temp) {
     return i;
   }
 
