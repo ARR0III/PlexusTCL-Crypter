@@ -1,6 +1,6 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v5.08;
+ * Console Cryptography Software v5.08;
  *
  * Developer:         ARR0III;
  * Modification date: 03 SEP 2023;
@@ -629,15 +629,13 @@ static void random_vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
-	
-  uint8_t  * vector_memory = NULL;
-  ARC4_CTX * arc4_memory  = NULL;
-	
+  uint8_t * vector_memory = NULL;
+
   if ((!data) || (0 == size)) {
     return;
   }
   
-  arc4_memory = (ARC4_CTX *)malloc(arc4_size);
+  ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
   vector_memory = (uint8_t *)malloc(vector_size);
   
   if ((!arc4_memory) || (!vector_memory)) {
@@ -929,6 +927,21 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
 #endif
 
+  ctx->sha256sum_length = sizeof(SHA256_CTX);
+  ctx->sha256sum        = (SHA256_CTX *)calloc(1, ctx->sha256sum_length);
+
+  if (!ctx->sha256sum) {
+    free_global_memory(ctx, ctx_length);
+
+    MEMORY_ERROR;
+    return (-1);
+  }
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] size struct for sha256sum function: %u byte\n", ctx->sha256sum_length);
+  printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
+#endif
+
   real_read = readfromfile(ctx->keyfile, ctx->temp_buffer, ctx->temp_buffer_length);
 
   if (real_read == (int)ctx->temp_buffer_length)
@@ -947,28 +960,12 @@ int main(int argc, char * argv[]) {
     real_read = (int)x_strnlen(ctx->keyfile, 256);
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
-      ctx->sha256sum_length = sizeof(SHA256_CTX);
-      ctx->sha256sum        = (SHA256_CTX *)calloc(1, ctx->sha256sum_length);
+      /* password --> crypt key; Pseudo PBKDF2 */
+      KDFCLOMUL(ctx, (uint8_t *)(ctx->keyfile), real_read,
+                ctx->temp_buffer,
+                ctx->temp_buffer_length);
 
-#if DEBUG_INFORMATION
-  printf("[DEBUG] size struct for sha256sum function: %u byte\n", ctx->sha256sum_length);
-  printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
-#endif
-
-      if (ctx->sha256sum) {
-        /* password -> crypt key; Pseudo PBKDF2 */
-        KDFCLOMUL(ctx, (uint8_t *)(ctx->keyfile), real_read,
-                  ctx->temp_buffer,
-                  ctx->temp_buffer_length);
-
-        printf("[#] Crypt key read from command line!\n");
-      }
-      else {
-        free_global_memory(ctx, ctx_length);
-
-        MEMORY_ERROR;
-        return (-1);
-      }
+      printf("[#] Crypt key read from command line!\n");
     }
     else {
       free_global_memory(ctx, ctx_length);
