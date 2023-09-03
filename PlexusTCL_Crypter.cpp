@@ -9,8 +9,8 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   try {
     Application->Initialize();
     Application->CreateForm(__classid(TForm1), &Form1);
-    Application->CreateForm(__classid(TForm2), &Form2);
-    Application->Run();
+                 Application->CreateForm(__classid(TForm2), &Form2);
+                 Application->Run();
   }
   catch (Exception &exception) {
     Application->ShowException(&exception);
@@ -18,7 +18,7 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   
   catch (...) {
     try {
-      throw Exception("");
+      throw Exception("Good job cracker!");
     }
     catch (Exception &exception) {
       Application->ShowException(&exception);
