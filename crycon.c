@@ -1,6 +1,6 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Cryptography Software v5.08;
+ * Console Encryption Software v5.08;
  *
  * Developer:         ARR0III;
  * Modification date: 03 SEP 2023;
