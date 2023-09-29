@@ -337,8 +337,8 @@ _exit:
 }
 
 size_t * memset2(void * ptr, size_t data, size_t size) {
-#ifdef __ASM_32_X86_CPP_BUILDER__
-_asm {
+#if __ASM_32_X86_CPP_BUILDER__
+__asm {
   mov ecx, size
   mov edx, data
   mov edi, ptr
@@ -407,7 +407,7 @@ _exit:
   }
 
   while (o) {
-    (*p) = (unsigned char *)dword;
+    *p = (unsigned char)dword;
 
     p++;
     o--;
