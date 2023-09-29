@@ -401,7 +401,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   int    fsize_check, real_check = 0;
   int    real_percent, past_percent = 0;
 
-  size_t nblock, realread;
+  size_t nblock, realread = 0;
 
   int32_t fsize, position = 0;
 
