@@ -336,7 +336,7 @@ _exit:
 #endif  
 }
 
-size_t * memset2(void * ptr, size_t data, size_t size) {
+void * memset2(void * ptr, size_t data, size_t size) {
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
   mov ecx, size
