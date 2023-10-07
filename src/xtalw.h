@@ -51,6 +51,7 @@ extern "C" {
 void memxor(void * output, const void * input, size_t length);
 void memxormove(void * output, const void * input, size_t length);
 void meminit(void * data, const size_t number, size_t length); /* <-- memset function analog */
+void * memset2(void * ptr, size_t data, size_t size);
 
 /* Only C language source code */
 void arraytobits(const uint8_t * data, const size_t length, FILE * stream);
