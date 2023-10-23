@@ -597,8 +597,8 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
     return;
   }
 
-  if (stream == stdin || (stream != stdout && stream != stderr)) {
-    stream = stderr;
+  if (stream != stdin && stream != stdout && stream != stderr) {
+    stream = stdout;
   }
 
   for (j = 0; j < length; j++) {
@@ -682,8 +682,8 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     tumbler = HEX_TABLE;
   }
 
-  if (stream == stdin || (stream != stdout && stream != stderr)) {
-    stream = stderr;
+  if (stream != stdin && stream != stdout && stream != stderr) {
+    stream = stdout;
   }
 
   for (i = 0; i < length; ++i) {
