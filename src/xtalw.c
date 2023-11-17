@@ -19,28 +19,7 @@ __asm {
   mov esi, input
   mov edi, output
 
-  test edi, edi
-  jz _exit
-
-  test esi, esi
-  jz _exit
-
   test ecx, ecx
-  jz _exit
-
-  push edi
-  add edi, ecx
-  cmp edi, output
-  pop edi
-  jb _exit  
-
-  push esi
-  add esi, ecx
-  cmp esi, input
-  pop esi
-  jb _exit  
-
-  test esi, edi
   jz _exit
 
   cmp edi, esi
@@ -78,10 +57,6 @@ _exit:
     return;
   }
 
-  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) { /* IF POINTERS OWERFLOW */
-    return;
-  }
-
   if (output < input) {
     while(length) {
       *((uint8_t *)output) ^= *((uint8_t *)input);
@@ -116,28 +91,7 @@ __asm {
   mov edi, output
   mov ebx, 4
 
-  test edi, edi
-  jz _exit
-
-  test esi, esi
-  jz _exit
-
   test ecx, ecx
-  jz _exit
-
-  push edi
-  add edi, ecx
-  cmp edi, output
-  pop edi
-  jb _exit  
-
-  push esi
-  add esi, ecx
-  cmp esi, input
-  pop esi
-  jb _exit  
-
-  test esi, edi
   jz _exit
 
   cmp edi, esi
@@ -243,10 +197,6 @@ _exit:
 }
 #else
   if (!output || !input || output == input || 0 == length) {
-    return;
-  }
-
-  if (((size_t)output + length) < (size_t)output || ((size_t)input + length) < (size_t)input) { /* IF POINTERS OWERFLOW */
     return;
   }
 
@@ -424,17 +374,8 @@ __asm {
   mov edx, number
   mov eax, data
 
-  test eax, eax
-  jz _exit
-
   test ecx, ecx
   jz _exit
-
-  push eax
-  add eax, ecx
-  cmp eax, data
-  pop eax
-  jb _exit        /* IF POINTER OVERFLOW */  
 
   cmp edx, 0xFF
   ja _memset_x32
@@ -504,7 +445,7 @@ _exit:
   volatile uint8_t * temp = (uint8_t *)data;
   register size_t u_dword = number;
 
-  if (!data || 0 == length || (temp + length) < temp) {
+  if (!data || 0 == length) {
     return;
   }
 
