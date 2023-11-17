@@ -534,7 +534,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
   size_t j;
   int k;
 
-  if (!data || 0 == length || (data + length) < data) {
+  if (!data || 0 == length) {
     return;
   }
 
@@ -552,7 +552,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
 }
 
 void strinc(uint8_t * data, size_t len) {
-  if (!data || (data + len) < data) {
+  if (!data) {
     return;
   }
 	
@@ -569,7 +569,7 @@ void strinc(uint8_t * data, size_t len) {
 }
 
 void strdec(uint8_t * data, size_t len) {
-  if (!data || (data + len) < data) {
+  if (!data) {
     return;
   }
 	
@@ -586,7 +586,7 @@ void strdec(uint8_t * data, size_t len) {
 }
 
 int genrand(const int min, const int max) {
-  return min + (int)((double)max * rand() / (RAND_MAX + (double)min));
+  return min + (int)((double)max * rand() / ((double)min + RAND_MAX));
 }
 
 int readfromfile(const char * filename, void * buffer, const size_t length) {
@@ -594,7 +594,7 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   FILE * f;
   int result;
 
-  if (!filename || !buffer || filename == buffer || 0 == length || ((size_t)buffer + length) < (size_t)buffer) {
+  if (!filename || !buffer || filename == buffer || 0 == length) {
     return (-1);
   }
 
@@ -615,12 +615,12 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   int left, right;
   const char digits[] = "0123456789ABCDEF";
 
-  if (!data || 0 == length || (data + length) < data) {
+  if (!data || 0 == length) {
     return;
   }
 
   if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
-    tumbler = HEX_TABLE;
+    tumbler = HEX_STRING;
   }
 
   if (stream != stdin && stream != stdout && stream != stderr) {
@@ -646,7 +646,7 @@ size_t printhex(int tumbler, const void * data, size_t length) {
   size_t i = 0;
   const uint8_t * temp = (uint8_t *)data;
 
-  if (!data || 0 == length || (temp + length) < temp) {
+  if (!data || 0 == length) {
     return i;
   }
 
