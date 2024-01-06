@@ -1,6 +1,8 @@
 # PlexusTCL Crypter v5.08
 
-![Image alt](https://github.com/b61b5c32-65a0-43e5-9e9a-c2c5d12620f6)
+<p align="center">
+  <img src="IMG_10.png"/>
+</p>
 
 [ENGLISH LANGUAGE]
 
