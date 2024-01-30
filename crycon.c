@@ -1153,13 +1153,16 @@ int main(int argc, char * argv[]) {
   }
 
 /*****************************************************************************/
-
 /* Clear all allocated memory for programm */
 
   cipher_free((void *)cipher_pointer, cipher_ctx_len);
-
   free_global_memory(ctx, ctx_length);
-  ctx_length = 0;
+	
+  cipher_pointer = NULL;
+  ctx = NULL;
 
+  cipher_ctx_len = 0;
+  ctx_length = 0;
+	
   return 0;
 }
