@@ -29,18 +29,19 @@
 
 #include "LICENSE.h"
 
-#define EXT_CRYCON ".crycon"
+#define EMPTY_FILENAME "output.dat"
+#define EXT_CRYCON     ".crycon"
 
 #define OK                           0
-#define READ_FILE_NOT_OPEN          -1
-#define WRITE_FILE_NOT_OPEN         -2
-#define SIZE_FILE_ERROR             -3
-#define WRITE_FILE_ERROR            -4
-#define READ_FILE_ERROR             -5
-#define STREAM_INPUT_CLOSE_ERROR    -6
-#define STREAM_OUTPUT_CLOSE_ERROR   -7
-#define ERROR_ALLOCATE_MEMORY       -8
-#define SIZE_DECRYPT_FILE_INCORRECT -9
+#define READ_FILE_NOT_OPEN           1
+#define WRITE_FILE_NOT_OPEN          2
+#define SIZE_FILE_ERROR              3
+#define WRITE_FILE_ERROR             4
+#define READ_FILE_ERROR              5
+#define STREAM_INPUT_CLOSE_ERROR     6
+#define STREAM_OUTPUT_CLOSE_ERROR    7
+#define ERROR_ALLOCATE_MEMORY        8
+#define SIZE_DECRYPT_FILE_INCORRECT  9
 
 #define SIZE_PASSWORD_GENERATE     512
 #define BLOCK_SIZE_FOR_ERASED      512
@@ -67,8 +68,6 @@ typedef enum cipher_number_enum {
   BLOWFISH  = 3,
   THREEFISH = 4
 } cipher_t;
-
-const float cas = 4.87; /* ((float)Form1->Shape4->Width / (float)100) or (488 ??? / 100) */
 
 const char * PARAM_APPEND_BYTE  = "ab";
 const char * PARAM_READ_BYTE    = "rb";
@@ -115,7 +114,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.08 03SEP23 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 01FEB24 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -179,7 +178,12 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
     Form1->Edit2->Clear();
 
     if (ext.LowerCase() == EXT_CRYCON) {
-      Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+      if (name.Length() < 8) {
+        Form1->Edit2->Text = path + EMPTY_FILENAME;
+      }
+      else {
+        Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+      }
     }
     else {
       Form1->Edit2->Text = OpenDialog1->FileName + EXT_CRYCON;
@@ -200,7 +204,12 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
 
     if (Form1->Edit1->Text == SaveDialog1->FileName) {
       if (ext.LowerCase() == EXT_CRYCON) {
-        Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+        if (name.Length() < 8) {
+          Form1->Edit2->Text = path + EMPTY_FILENAME;
+        }
+        else {
+          Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+        }
       }
       else {
         Form1->Edit2->Text = SaveDialog1->FileName + EXT_CRYCON;
@@ -256,6 +265,9 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   Form1->Label5->Color = FORM_HEAD_COLOR;
   Form1->Label6->Color = FORM_HEAD_COLOR;
   Form1->Label7->Color = FORM_HEAD_COLOR;
+
+  Form1->ProgressBar1->Min = 0;
+  Form1->ProgressBar1->Max = 100;
 }
 
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
@@ -331,6 +343,7 @@ void cursorpos(uint8_t * data) {
 
   data[0] ^= (uint8_t)(position.x);
   data[1] ^= (uint8_t)(position.y);
+  data[2] ^= (uint8_t)(position.x + position.y + 1);
 /*
   position->x = 0;
   position->y = 0;
@@ -347,7 +360,6 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   uint32_t count = 0;
 
   short real, past = 0;
-
   float div = (float)(key_len) / 100.0;
 
   for (i = 1; i <= password_len; ++i) { /* dynamic counter generate */
@@ -388,7 +400,8 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     }
 
     if (real > past) {
-      Form1->Shape4->Width   = (int)((float)real * cas) + 1;
+      Form1->ProgressBar1->Position = real;
+
       Form1->Label9->Caption = "Генерация "
                              + IntToStr(key_len * 8)  + "-битного ключа из "
                              + IntToStr(password_len) + "-символьного пароля: "
@@ -405,7 +418,7 @@ int size_check(uint32_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
-    result = 1;
+    result = 1;  
   }
   else
   if (size >= INT_SIZE_DATA[1] && size < INT_SIZE_DATA[2]) {
@@ -544,7 +557,7 @@ int erasedfile(const char * filename) {
     }
 
     if (real_percent > past_percent) {
-      Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
+      Form1->ProgressBar1->Position = real_percent;
 
       check = size_check(position);
     
@@ -735,8 +748,6 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   fsize_check = size_check(fsize);
   fsize_float = sizetofloatprint(fsize_check, (float)fsize);
 
-  Form1->Shape4->Width = 0;
-
   meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
   sha256_init(ctx->sha256sum);
 
@@ -828,7 +839,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     if (real_percent > past_percent) {
-      Form1->Shape4->Width = (int)((float)real_percent * cas) + 1;
+      Form1->ProgressBar1->Position = real_percent;
 
       check = size_check(position);
 
@@ -881,12 +892,12 @@ void random_vector_init(uint8_t * data, size_t size) {
   ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
   uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
   
-  if ((!arc4_memory) || (!vector_memory)) {
-    if (NULL != arc4_memory) {
+  if (!arc4_memory || !vector_memory) {
+    if (arc4_memory) {
       free(arc4_memory);
     }
 	
-    if (NULL != vector_memory) {
+    if (vector_memory) {
       free(vector_memory);
     }
 	
@@ -1123,6 +1134,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (FileExists(Edit2->Text) == True) {
     UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
                  "Вы уверены что хотите перезаписать его?";
+
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
       free_global_memory(memory, memory_length);
 
@@ -1131,6 +1143,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "";
       return;
     }
+
     UnicodeMsg = "";
   }
 
@@ -1167,6 +1180,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "";
       return;
     }
+    /*
+    if (DoubleSecurityWitchPassword() == true) {
+      GeneratingKeyWitchPassword(memory->temp_buffer, memory->temp_buffer_length, password);
+    }
+    */
   }
   else
   if ((real_read > 0) && (real_read < (int)(memory->temp_buffer_length))) {
@@ -1196,6 +1214,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       }
 
       Button4->Enabled = False;
+
+      Form1->ProgressBar1->Position = 0;
+      Form1->ProgressBar1->Update();
+
       /* Crypt key generator; generate crypt key from password */
       KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
                 memory->temp_buffer, memory->temp_buffer_length);
@@ -1355,6 +1377,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
     Button4->Enabled = false;
+
+    Form1->ProgressBar1->Position = 0;
+    Form1->ProgressBar1->Update();
+    
     result = filecrypt(memory);
   }
 
@@ -1411,7 +1437,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
+
       Button4->Enabled = false;
+
+      Form1->ProgressBar1->Position = 0;
+      Form1->ProgressBar1->Update();
+      
       UnicodeMsg = "";
 
       if (erasedfile(Edit1->Text.c_str()) == 0) {
@@ -1442,16 +1473,29 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   UnicodeMsg = "";
 
-  Form1->Shape4->Width = 0;
-  Application->ProcessMessages();
-
   cipher_free((void *)cipher_pointer, cipher_length);
   free_global_memory(memory, memory_length);
 
   Button4->Enabled = true;
+
+  Form1->ProgressBar1->Position = 0;
+  Form1->ProgressBar1->Update();
+
+  Application->ProcessMessages();
 }
 
 void __fastcall TForm1::Label5Click(TObject *Sender) {
+  ComboBox1->Clear();
+  ComboBox2->Clear();
+
+  Edit1->Clear();
+  Edit2->Clear();
+  Edit3->Clear();
+
+  Memo1->Clear();
+
+  Form1->Label9->Caption = "";
+
   Form1->Close();
 }
 
