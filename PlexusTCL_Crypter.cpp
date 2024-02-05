@@ -18,7 +18,7 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   
   catch (...) {
     try {
-      throw Exception("Good job cracker!");
+      throw Exception("!");
     }
     catch (Exception &exception) {
       Application->ShowException(&exception);
