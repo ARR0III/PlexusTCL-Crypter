@@ -141,11 +141,7 @@ typedef struct {
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
 } GLOBAL_MEMORY;
 
-static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
-  if (!ctx) {
-    return;
-  }	
-	
+static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
   if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
       meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
@@ -199,15 +195,11 @@ static double sizetodoubleprint(const int status, const double size) {
 }
 
 static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
-              const uint8_t  * password, const size_t password_len,
-                    uint8_t  * key,      const size_t key_len) {
+                     const uint8_t  * password, const size_t password_len,
+                           uint8_t  * key,      const size_t key_len) {
 
   uint32_t i, j, k;
   uint32_t count = 0;
-
-  if (!ctx || !password || !key) {
-    return;
-  }
 
 #if DEBUG_INFORMATION
   srand(time(0));
@@ -277,10 +269,6 @@ static int32_t size_of_file(FILE * f) {
 }
 
 static void cipher_free(void * ctx, size_t ctx_length) {
-  if (!ctx) {
-    return;
-  }
-	
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
 }
@@ -291,10 +279,6 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   size_t hmac_ctx_length;
 
   HMAC_CTX * hmac_ctx;
-
-  if (!ctx) {
-    return;
-  }
 	
   hmac_ctx_length = sizeof(HMAC_CTX);	
   hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
@@ -360,10 +344,6 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   size_t i = 0;
   size_t remnant = count;
-
-  if (!ctx) {
-    return;
-  }
 
   while (i < count) {
     if (remnant < LENGTH_DATA_FOR_CHECK) {
@@ -632,15 +612,9 @@ static void random_vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
-  uint8_t * vector_memory = NULL;
-  ARC4_CTX * arc4_memory  = NULL;
-
-  if ((!data) || (0 == size)) {
-    return;
-  }
-  
-  arc4_memory  = (ARC4_CTX *)malloc(arc4_size);
-  vector_memory = (uint8_t *)malloc(vector_size);
+	
+  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
+  ARC4_CTX * arc4_memory  = (ARC4_CTX *)malloc(arc4_size);
   
   if (!arc4_memory || !vector_memory) {
     if (arc4_memory) {
@@ -680,10 +654,6 @@ static void random_vector_init(uint8_t * data, size_t size) {
 static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t stack_trash; /* NOT initialized == ALL OK */
-
-  if (!data) {
-    return 0;
-  }	
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] stack_trash: %u\n", stack_trash);
