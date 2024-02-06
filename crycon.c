@@ -40,9 +40,9 @@
 #  define STRCMP(S_ONE,S_TWO) strcmp((S_ONE), (S_TWO))  /* LINUX */
 #endif
 
-#define MEMORY_ERROR do \
+#define MEMORY_ERROR do { \
     fprintf(stderr, "[!] Cannot allocate memory!\n"); \
-  while(0)
+  } while(0)
 
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
 
