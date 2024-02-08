@@ -338,43 +338,52 @@ _meminit_byte:
 _exit:
 }
 #else
-  unsigned char * p = (unsigned char *)ptr;
-  size_t c, o, dword = data;
+  register unsigned char * p = (unsigned char *)ptr;
+  register size_t block, bt, dword = data;
 
   if (data < 256) {
     dword |= data  <<  8;
     dword |= dword << 16;
   }
 
-  c = size >> 2; /* blocks of 4 bytes */
-  o = size  & 3; /* bytes not in 1 block */
+  block = size >> 2; /* blocks of 4 bytes */
+  bt    = size  & 3; /* bytes not in 1 block */
 
-  while (c) {
+  while (block) {
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    c--;
-    if (!с) break;
-
-    *((size_t *)p) = dword;
-    p += sizeof(size_t);
-    c--;
-    if (!с) break;
+    block--;
+    if (!block) break;
 
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    c--;
-    if (!с) break;
+    block--;
+    if (!block) break;
 
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    c--;
+    block--;
+    if (!block) break;
+
+    *((size_t *)p) = dword;
+    p += sizeof(size_t);
+    block--;
+    if (!block) break;
   }
 
-  while (o) {
+  /* if data block be copy, to correction pointer of array from write block */
+  if (p > (unsigned char *)ptr) {
+    p -= (sizeof(size_t) - bt);
+    *((size_t *)p) = dword;
+    
+    return ptr;
+  }
+  
+  while (bt) {
     *p = (unsigned char)dword;
 
     p++;
-    o--;
+    bt--;
   }
 #endif
   return ptr;
