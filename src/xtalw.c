@@ -58,7 +58,7 @@ _exit:
   }
 
   if (output < input) {
-    while(length) {
+    while (length) {
       *((uint8_t *)output) ^= *((uint8_t *)input);
 
        output = (uint8_t *)output + 1;
@@ -351,7 +351,21 @@ _exit:
 
   while (c) {
     *((size_t *)p) = dword;
+    p += sizeof(size_t);
+    c--;
+    if (!с) break;
 
+    *((size_t *)p) = dword;
+    p += sizeof(size_t);
+    c--;
+    if (!с) break;
+
+    *((size_t *)p) = dword;
+    p += sizeof(size_t);
+    c--;
+    if (!с) break;
+
+    *((size_t *)p) = dword;
     p += sizeof(size_t);
     c--;
   }
