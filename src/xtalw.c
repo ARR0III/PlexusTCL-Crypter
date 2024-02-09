@@ -339,36 +339,36 @@ _exit:
 }
 #else
   register unsigned char * p = (unsigned char *)ptr;
-  register size_t block, bt, dword = data;
+  register size_t bt, dword = data;
 
   if (data < 256) {
     dword |= data  <<  8;
     dword |= dword << 16;
   }
 
-  block = size >> 2; /* blocks of 4 bytes */
-  bt    = size  & 3; /* bytes not in 1 block */
+  bt   = size  & 3; /* bytes not in 1 block */
+  size = size >> 2; /* blocks of 4 bytes */
 
-  while (block) {
+  while (1) {
+    if (!size) break;
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    block--;
-    if (!block) break;
-
+    size--;
+	  
+    if (!size) break;
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    block--;
-    if (!block) break;
+    size--;
 
+    if (!size) break;
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    block--;
-    if (!block) break;
+    size--;
 
+    if (!size) break;
     *((size_t *)p) = dword;
     p += sizeof(size_t);
-    block--;
-    if (!block) break;
+    size--;
   }
 
   /* if data block be copy, to correction pointer of array from write block */
