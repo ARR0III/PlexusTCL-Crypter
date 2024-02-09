@@ -350,22 +350,30 @@ _exit:
   size = size >> 2; /* blocks of 4 bytes */
 
   while (1) {
-    if (!size) break;
+    if (!size)
+      break;
+
     *((size_t *)p) = dword;
     p += sizeof(size_t);
     size--;
 	  
-    if (!size) break;
+    if (!size)
+      break;
+
     *((size_t *)p) = dword;
     p += sizeof(size_t);
     size--;
 
-    if (!size) break;
+    if (!size)
+      break;
+
     *((size_t *)p) = dword;
     p += sizeof(size_t);
     size--;
 
-    if (!size) break;
+    if (!size)
+      break;y
+
     *((size_t *)p) = dword;
     p += sizeof(size_t);
     size--;
