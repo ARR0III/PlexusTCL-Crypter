@@ -142,30 +142,30 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
+  if (!ctx) return;
+
   if (ctx->sha256sum) {
     if (ctx->sha256sum_length > 0) {
       meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
     }
-    
-    free((void *)ctx->sha256sum);
   }
 
   if (ctx->vector) {
     if (ctx->vector_length > 0) {
       meminit((void *)ctx->vector, 0x00, ctx->vector_length);
     }
-    
-    free((void *)ctx->vector);
   }
 
   if (ctx->temp_buffer) {
     if (ctx->temp_buffer_length > 0) {
       meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
     }
-    
-    free((void *)ctx->temp_buffer);
   }
 
+  free((void *)ctx->temp_buffer);
+  free((void *)ctx->sha256sum);
+  free((void *)ctx->vector);
+	
   /* clear all memory and all pointers */
   meminit((void *)ctx, 0x00, ctx_length);
   free((void *)ctx);
@@ -613,18 +613,16 @@ static void random_vector_init(uint8_t * data, size_t size) {
   size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
 	
-  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
-  ARC4_CTX * arc4_memory  = (ARC4_CTX *)malloc(arc4_size);
+  uint8_t * vector_memory = NULL;
+  ARC4_CTX * arc4_memory  = NULL;
+
+  vector_memory = (uint8_t *)malloc(vector_size);
+  arc4_memory   = (ARC4_CTX *)malloc(arc4_size);
   
   if (!arc4_memory || !vector_memory) {
-    if (arc4_memory) {
-      free(arc4_memory);
-    }
-	
-    if (vector_memory) {
-      free(vector_memory);
-    }
-	
+   free(vector_memory);
+   free(arc4_memory);
+
     return;
   }
   
