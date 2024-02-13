@@ -531,20 +531,17 @@ size_t x_strnlen(const char * s, size_t b) { /* DEBUG = OK */
   size_t r = 0;
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
-  mov eax, r
+  xor eax, eax
   mov ecx, b
   mov edx, s
-  test edx, edx
-  jz _exit         /* check NULL pointer */
   
 _strnlen:
   test ecx, ecx
   jz _exit
-  cmp byte[edx], 0
+  cmp byte[edx + eax], 0
   je _exit
-  inc edx          /* str++ */
-  inc eax          /* result++ */
-  dec ecx          /* bounder-- */
+  inc eax
+  dec ecx
   jmp _strnlen  
 
 _exit:
