@@ -1,9 +1,8 @@
 #!/bin/bash
 
-gcc -Wall -static -O3 -c crycon.c
+gcc -Wall -O3 -c crycon.c
 cd src/
-gcc -Wall -static -O3 -c *.c
-cp *.o ../
+clang -Wall -O3 -c *.c
 cd ..
-gcc -Wall -static -O3 *.o -o crycon
+clang -Wall -static -O3 crycon.o src/*.o -o crycon
 
