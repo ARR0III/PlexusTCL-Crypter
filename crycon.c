@@ -3,7 +3,7 @@
  * Console Encryption Software v5.08;
  *
  * Developer:         ARR0III;
- * Modification date: 30 JAN 2024;
+ * Modification date: 27 FEB 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -337,7 +337,7 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 
   /* clear memory for security */
   meminit((void *)hmac_ctx, 0x00, hmac_ctx_length);
-  free(hmac_ctx);
+  free((void *)hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
 
@@ -620,8 +620,8 @@ static void random_vector_init(uint8_t * data, size_t size) {
   arc4_memory   = (ARC4_CTX *)malloc(arc4_size);
   
   if (!arc4_memory || !vector_memory) {
-   free(vector_memory);
-   free(arc4_memory);
+   free((void *)vector_memory);
+   free((void *)arc4_memory);
 
     return;
   }
@@ -639,8 +639,8 @@ static void random_vector_init(uint8_t * data, size_t size) {
   meminit(vector_memory, 0x00, vector_size);
   meminit(arc4_memory, 0x00, arc4_size);
   
-  free(vector_memory);
-  free(arc4_memory);
+  free((void *)vector_memory);
+  free((void *)arc4_memory);
   
   vector_memory = NULL;
   arc4_memory = NULL;
