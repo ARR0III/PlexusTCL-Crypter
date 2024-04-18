@@ -22,7 +22,6 @@ __published:	// IDE-managed Components
         TLabel *Label3;
         TLabel *Label2;
         TLabel *Label8;
-        TShape *Shape3;
         TLabel *Label9;
         TComboBox *ComboBox1;
         TComboBox *ComboBox2;
@@ -41,6 +40,7 @@ __published:	// IDE-managed Components
         TOpenDialog *OpenDialog1;
         TSaveDialog *SaveDialog1;
         TShape *Shape4;
+        TProgressBar *ProgressBar1;
         void __fastcall Button1Click(TObject *Sender);
         void __fastcall Button2Click(TObject *Sender);
         void __fastcall Button3Click(TObject *Sender);

@@ -80,7 +80,7 @@ AutoIncBuild=0
 MajorVer=5
 MinorVer=0
 Release=0
-Build=8
+Build=9
 Debug=0
 PreRelease=0
 Special=0
@@ -92,7 +92,7 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=Plexus Tech Crypt Lab
 FileDescription=
-FileVersion=5.0.0.8
+FileVersion=5.0.0.9
 InternalName=
 LegalCopyright=
 LegalTrademarks=
