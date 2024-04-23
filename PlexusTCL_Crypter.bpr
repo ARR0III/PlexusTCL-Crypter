@@ -41,7 +41,7 @@
     <IDLCFLAGS value="-Isrc -I&quot;C:\Program Files\Borland\CBuilder6\Projects&quot; 
       -I&quot;C:\Documents and Settings\arrow\Рабочий стол\PlexusTCL Crypter 2&quot; 
       -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa"/>
-    <CFLAG1 value="-O2 -Vx -Ve -X- -a8 -b- -k- -v -vi -c -tW -tWM"/>
+    <CFLAG1 value="-O2 -Vx -Ve -X- -a8 -b- -k- -vi -c -tW -tWM"/>
     <PFLAGS value="-$Y- -$W -$L- -$D- -$A8 -v -JPHNE -M"/>
     <RFLAGS value=""/>
     <AFLAGS value="/mx /w2 /zn"/>

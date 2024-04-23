@@ -123,6 +123,12 @@ object Form1: TForm1
     Height = 13
     Caption = #1055#1072#1088#1086#1083#1100' '#1080#1083#1080' '#1087#1091#1090#1100' '#1082' '#1082#1083#1102#1095#1077#1074#1086#1084#1091' '#1092#1072#1081#1083#1091
   end
+  object Shape3: TShape
+    Left = 8
+    Top = 234
+    Width = 491
+    Height = 18
+  end
   object Label9: TLabel
     Left = 8
     Top = 256
@@ -297,17 +303,6 @@ object Form1: TForm1
     Caption = #1057#1090#1072#1088#1090
     TabOrder = 13
     OnClick = Button4Click
-  end
-  object ProgressBar1: TProgressBar
-    Left = 8
-    Top = 236
-    Width = 491
-    Height = 16
-    Cursor = crHandPoint
-    Min = 0
-    Max = 100
-    Smooth = True
-    TabOrder = 14
   end
   object OpenDialog1: TOpenDialog
     Left = 344
