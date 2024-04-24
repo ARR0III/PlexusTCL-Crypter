@@ -145,24 +145,24 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   if (!ctx) return;
 
   if (ctx->sha256sum && ctx->sha256sum_length > 0) {
-    meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+    meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   }
 
   if (ctx->vector && ctx->vector_length > 0) {
-    meminit((void *)ctx->vector, 0x00, ctx->vector_length);
+    meminit(ctx->vector, 0x00, ctx->vector_length);
   }
 
   if (ctx->temp_buffer && ctx->temp_buffer_length > 0) {
-    meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
+    meminit(ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
   }
 
-  free((void *)ctx->temp_buffer);
-  free((void *)ctx->sha256sum);
-  free((void *)ctx->vector);
+  free(ctx->temp_buffer);
+  free(ctx->sha256sum);
+  free(ctx->vector);
 	
   /* clear all memory and all pointers */
-  meminit((void *)ctx, 0x00, ctx_length);
-  free((void *)ctx);
+  meminit(ctx, 0x00, ctx_length);
+  free(ctx);
 }
 
 /* Function size_check checked size = Bt, Kb, Mb or Gb */
@@ -234,7 +234,7 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
 #endif
 
-  meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
 }
 
 /* return encrypt, decrypt or stream */
@@ -287,8 +287,8 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memcpy((void *)hmac_ctx->KEY_0, (void *)ctx->temp_buffer, size_copy_data);
-  memcpy((void *)hmac_ctx->KEY_1, (void *)ctx->temp_buffer, size_copy_data);
+  memcpy(hmac_ctx->KEY_0, ctx->temp_buffer, size_copy_data);
+  memcpy(hmac_ctx->KEY_1, ctx->temp_buffer, size_copy_data);
 
   /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
   for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
@@ -310,7 +310,7 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 #endif
 
   /* clear sha256sum struct */
-  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
@@ -318,10 +318,10 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
-  meminit((void *)(ctx->sha256sum), 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
@@ -330,8 +330,8 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_final(ctx->sha256sum);
 
   /* clear memory for security */
-  meminit((void *)hmac_ctx, 0x00, hmac_ctx_length);
-  free((void *)hmac_ctx);
+  meminit(hmac_ctx, 0x00, hmac_ctx_length);
+  free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
 
@@ -584,8 +584,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   }
   else {
-    if (memcmp((void *)(ctx->input + realread),
-               (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE) != 0) {
+    if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
 
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
@@ -614,8 +613,8 @@ static void random_vector_init(uint8_t * data, size_t size) {
   arc4_memory   = (ARC4_CTX *)malloc(arc4_size);
   
   if (!arc4_memory || !vector_memory) {
-   free((void *)vector_memory);
-   free((void *)arc4_memory);
+    free(vector_memory);
+    free(arc4_memory);
 
     return;
   }
@@ -633,8 +632,8 @@ static void random_vector_init(uint8_t * data, size_t size) {
   meminit(vector_memory, 0x00, vector_size);
   meminit(arc4_memory, 0x00, arc4_size);
   
-  free((void *)vector_memory);
-  free((void *)arc4_memory);
+  free(vector_memory);
+  free(arc4_memory);
   
   vector_memory = NULL;
   arc4_memory = NULL;
@@ -1118,7 +1117,7 @@ int main(int argc, char * argv[]) {
 /*****************************************************************************/
 /* Clear all allocated memory for programm */
 
-  cipher_free((void *)cipher_pointer, cipher_ctx_len);
+  cipher_free(cipher_pointer, cipher_ctx_len);
   free_global_memory(ctx, ctx_length);
 	
   cipher_pointer = NULL;
