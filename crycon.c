@@ -144,22 +144,16 @@ typedef struct {
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
   if (!ctx) return;
 
-  if (ctx->sha256sum) {
-    if (ctx->sha256sum_length > 0) {
-      meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
-    }
+  if (ctx->sha256sum && ctx->sha256sum_length > 0) {
+    meminit((void *)ctx->sha256sum, 0x00, ctx->sha256sum_length);
   }
 
-  if (ctx->vector) {
-    if (ctx->vector_length > 0) {
-      meminit((void *)ctx->vector, 0x00, ctx->vector_length);
-    }
+  if (ctx->vector && ctx->vector_length > 0) {
+    meminit((void *)ctx->vector, 0x00, ctx->vector_length);
   }
 
-  if (ctx->temp_buffer) {
-    if (ctx->temp_buffer_length > 0) {
-      meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
-    }
+  if (ctx->temp_buffer && ctx->temp_buffer_length > 0) {
+    meminit((void *)ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
   }
 
   free((void *)ctx->temp_buffer);
