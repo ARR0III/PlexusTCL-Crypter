@@ -3,7 +3,7 @@
  * Console Encryption Software v5.08;
  *
  * Developer:         ARR0III;
- * Modification date: 27 FEB 2024;
+ * Modification date: 08 MAY 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -68,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 03SEP23 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 08MAY24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -142,7 +142,10 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
-  if (!ctx) return;
+  if (!ctx) {
+    MEMORY_ERROR;
+    exit(1);
+  }
 
   if (ctx->sha256sum && ctx->sha256sum_length > 0) {
     meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
@@ -278,7 +281,8 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
 
   if (!hmac_ctx) {
-    return;
+    MEMORY_ERROR;
+    exit(1);
   }
 
   size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
@@ -434,7 +438,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   sha256_init(ctx->sha256sum);
 
   while (position < fsize) {
-    if (0 == position) {
+    if (0 == position) { /* if first block */
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
@@ -613,10 +617,12 @@ static void random_vector_init(uint8_t * data, size_t size) {
   arc4_memory   = (ARC4_CTX *)malloc(arc4_size);
   
   if (!arc4_memory || !vector_memory) {
+
     free(vector_memory);
     free(arc4_memory);
 
-    return;
+    MEMORY_ERROR;
+    exit(1);
   }
   
   /* generate trash for security and xor with random data from memory */
