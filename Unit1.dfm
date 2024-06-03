@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 235
-  Top = 290
+  Left = 332
+  Top = 272
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -12,7 +12,9 @@ object Form1: TForm1
   Font.Style = []
   OldCreateOrder = False
   Position = poDesktopCenter
+  OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object Shape2: TShape

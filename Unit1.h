@@ -56,9 +56,12 @@ __published:	// IDE-managed Components
         void __fastcall Label5MouseLeave(TObject *Sender);
         void __fastcall Label7MouseLeave(TObject *Sender);
         void __fastcall Label7MouseEnter(TObject *Sender);
+        void __fastcall FormClose(TObject *Sender, TCloseAction &Action);
+        void __fastcall FormDestroy(TObject *Sender);
 private:	// User declarations
 public:		// User declarations
         __fastcall TForm1(TComponent* Owner);
+        CRITICAL_SECTION CrSec;
 };
 //---------------------------------------------------------------------------
 extern PACKAGE TForm1 *Form1;
