@@ -9,7 +9,7 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	
   unsigned int trash[2];
   
-  srand((unsigned int)((trash[0] ^ (unsigned int)time(NULL)) + trash[1]));
+  srand((trash[0] ^ (unsigned int)time(NULL)) + trash[1]);
 	
   try {
     Application->Initialize();
