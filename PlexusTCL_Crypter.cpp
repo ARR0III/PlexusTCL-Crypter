@@ -9,13 +9,13 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	
   unsigned int trash[2];
   
-  srand(trash[0] ^ (unsigned int)time(NULL) + trash[1]);
+  srand((unsigned int)((trash[0] ^ (unsigned int)time(NULL)) + trash[1]));
 	
   try {
     Application->Initialize();
     Application->CreateForm(__classid(TForm1), &Form1);
-                 Application->CreateForm(__classid(TForm2), &Form2);
-                 Application->Run();
+    Application->CreateForm(__classid(TForm2), &Form2);
+    Application->Run();
   }
   catch (Exception &exception) {
     Application->ShowException(&exception);
@@ -23,7 +23,7 @@ WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   
   catch (...) {
     try {
-      throw Exception("Good job cracker!");
+      throw Exception("Good job!");
     }
     catch (Exception &exception) {
       Application->ShowException(&exception);
