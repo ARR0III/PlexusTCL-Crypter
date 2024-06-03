@@ -231,9 +231,7 @@ uint32_t MessageForUser(const int tumbler,
                         const char * head,
                         const char * message) {
 
-  uint32_t result = Application->MessageBox(message, head, tumbler);
-
-  return result;
+  return Application->MessageBox(message, head, tumbler);
 }
 
 int close_in_out_files(FILE * file_input, FILE * file_output, const int return_code) {
@@ -1523,9 +1521,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   free_global_memory(memory, memory_length);
 
   EnterCriticalSection(&Form1->CrSec);
-  if (PROCESSING) {
-    PROCESSING = false;
-  }
+  PROCESSING = false;
   LeaveCriticalSection(&Form1->CrSec);
 
   Button4->Caption = START_STR; 
