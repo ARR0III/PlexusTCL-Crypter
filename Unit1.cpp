@@ -696,8 +696,12 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
 }
 
 int filecrypt(GLOBAL_MEMORY * ctx) {
-  register long int fsize;
-  register long int position;
+  EnterCriticalSection(&Form1->CrSec);
+  PROCESSING = true;
+  LeaveCriticalSection(&Form1->CrSec);
+
+  register long int fsize    = 0;
+  register long int position = 0;
 	
   float div, fsize_float;
 
@@ -708,10 +712,6 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   short real_percent;
   short past_percent = 0;
-  
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = true;
-  LeaveCriticalSection(&Form1->CrSec);
 
   FILE * fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
 
@@ -719,8 +719,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     return READ_FILE_NOT_OPEN;
   }
 
-  fsize    = size_of_file(fi);
-  position = 0;
+  fsize = size_of_file(fi);
 
   if (0L == fsize ) {
     if (fclose(fi) == -1)
