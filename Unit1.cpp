@@ -169,14 +169,43 @@ typedef struct {
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
+void SetStartStream(void) {
+  EnterCriticalSection(&Form1->CrSec);
+  PROCESSING = true;
+  LeaveCriticalSection(&Form1->CrSec);
+}
+
+void SetStopStream(void) {
+  EnterCriticalSection(&Form1->CrSec);
+  PROCESSING = false;
+  LeaveCriticalSection(&Form1->CrSec);
+}
+
+bool BreakStream(void) {
+  EnterCriticalSection(&Form1->CrSec);
+
+  if (false == PROCESSING) {
+    LeaveCriticalSection(&Form1->CrSec);
+    return true;
+  }
+
+  LeaveCriticalSection(&Form1->CrSec);
+
+  return false;
+}
+
 /* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
 
+  AnsiString path;
+  AnsiString name;
+  AnsiString ext;
+
   if (OpenDialog1->Execute()) {
-    AnsiString path = ExtractFilePath(OpenDialog1->FileName);
-    AnsiString name = ExtractFileName(OpenDialog1->FileName);
-    AnsiString ext  = ExtractFileExt(OpenDialog1->FileName);
+    path = ExtractFilePath(OpenDialog1->FileName);
+    name = ExtractFileName(OpenDialog1->FileName);
+    ext  = ExtractFileExt(OpenDialog1->FileName);
 
     Form1->Edit1->Clear();
     Form1->Edit1->Text = OpenDialog1->FileName;
@@ -201,10 +230,14 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 void __fastcall TForm1::Button2Click(TObject *Sender) {
   SaveDialog1->Title = OUTPUT_FILENAME;
 
+  AnsiString path;
+  AnsiString name;
+  AnsiString ext;
+
   if (SaveDialog1->Execute()) {
-    AnsiString path = ExtractFilePath(SaveDialog1->FileName);
-    AnsiString name = ExtractFileName(SaveDialog1->FileName);
-    AnsiString ext  = ExtractFileExt(SaveDialog1->FileName);
+    path = ExtractFilePath(SaveDialog1->FileName);
+    name = ExtractFileName(SaveDialog1->FileName);
+    ext  = ExtractFileExt(SaveDialog1->FileName);
 
     Form1->Edit2->Clear();
 
@@ -261,7 +294,7 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::FormCreate(TObject *Sender) {
-  unsigned int trash[2];
+  unsigned int trash[2]; /* buffer 8 byte for trash from stack */
 
   srand((unsigned int)((trash[0] ^ (unsigned int)time(NULL)) + trash[1]));
 
@@ -475,9 +508,9 @@ int erased_head_of_file(const char * filename) {
   meminit(data, 0x00, BLOCK_SIZE_FOR_ERASED);
 
   while (counter) {
-    f = fopen(filename, PARAM_APPEND_BYTE);
+    f = fopen(filename, PARAM_APPEND_BYTE); /* 16 operation openned file */
 
-    if (!f) { /* if not openned file */
+    if (!f) {
       result = (-1);
       break;
     }
@@ -496,7 +529,7 @@ int erased_head_of_file(const char * filename) {
       chsize(fileno(f), 0);
     }
 
-    fclose(f);
+    fclose(f); /* 16 operation close file */
   }
 
   free(data);
@@ -505,10 +538,6 @@ int erased_head_of_file(const char * filename) {
 }
 
 int erasedfile(const char * filename) {
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = true;
-  LeaveCriticalSection(&Form1->CrSec);
-
   FILE * f = fopen(filename, PARAM_REWRITE_BYTE);
 
   if (!f) {
@@ -543,28 +572,36 @@ int erasedfile(const char * filename) {
   size_t realread;
   size_t size_for_erased ;
 
-  while (position < fsize) {
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
-      LeaveCriticalSection(&Form1->CrSec);
-      meminit(data, 0x00, DATA_SIZE);
-      free(data);
-      fclose(f);
-      return 0xDE;
-    }
-    LeaveCriticalSection(&Form1->CrSec);
-	
+  while (position < fsize) {	
     size_for_erased = (fsize - position);
 
     if (size_for_erased > DATA_SIZE) {
       size_for_erased = DATA_SIZE;
     }
 
+/*****************************************************************************/
+    if (BreakStream()) {
+      meminit(data, 0x00, DATA_SIZE);
+      free(data);
+      fclose(f);
+      return 0xDE;
+    }
+/*****************************************************************************/
+
     realread = fread(data, 1, size_for_erased, f);
     meminit(data, 0x00, realread);
     
     fseek(f, position, SEEK_SET);
     
+/*****************************************************************************/
+    if (BreakStream()) {
+      meminit(data, 0x00, DATA_SIZE);
+      free(data);
+      fclose(f);
+      return 0xDE;
+    }
+/*****************************************************************************/
+
     if (fwrite(data, 1, realread, f) != realread) {
       fclose(f);
       free(data);
@@ -696,10 +733,6 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
 }
 
 int filecrypt(GLOBAL_MEMORY * ctx) {
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = true;
-  LeaveCriticalSection(&Form1->CrSec);
-
   register long int fsize    = 0;
   register long int position = 0;
 	
@@ -771,13 +804,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   sha256_init(ctx->sha256sum);
 
   while (position < fsize) {
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
-      LeaveCriticalSection(&Form1->CrSec);
+    
+/*****************************************************************************/
+    if (BreakStream()) {
       meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
       return close_in_out_files(fi, fo, 0xDE);
     }
-    LeaveCriticalSection(&Form1->CrSec);
+/*****************************************************************************/
 
     if (0 == position) {
       if (ENCRYPT == ctx->operation) {
@@ -818,6 +851,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       }
     }
 
+/*****************************************************************************/
+    if (BreakStream()) {
+      meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      return close_in_out_files(fi, fo, 0xDE);
+    }
+/*****************************************************************************/
+
     realread = fread(ctx->input, 1, DATA_SIZE, fi);
 
     for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
@@ -857,6 +897,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     /* control sum all read 1 MB data for [en/de]crypt + crypt key */
     control_sum_buffer(ctx, realread);
+
+/*****************************************************************************/
+    if (BreakStream()) {
+      meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      return close_in_out_files(fi, fo, 0xDE);
+    }
+/*****************************************************************************/
 
     if (fwrite(ctx->output, 1, realread, fo) != realread) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
@@ -903,6 +950,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   }
 
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+
   return close_in_out_files(fi, fo, OK);
 }
 
@@ -995,8 +1043,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
     if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
+      /* во время простоя в вызове MessageForUser значение может измениться */
       PROCESSING = false;
-      Button4->Caption = STOP_STR;
+
+      Button4->Caption = START_STR;
       Form1->ProgressBar1->Position = 0;
       Form1->ProgressBar1->Update();
     }
@@ -1410,14 +1460,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
-    //Button4->Enabled = false;
-
-    Button4->Caption = STOP_STR;  
+    Button4->Caption = STOP_STR;
 
     Form1->ProgressBar1->Position = 0;
     Form1->ProgressBar1->Update();
-    
-    result = filecrypt(memory);
+
+/*****************************************************************************/
+    SetStartStream();
+      result = filecrypt(memory);
+    SetStopStream();
+/*****************************************************************************/
+
+    Button4->Caption = START_STR;
   }
 
   UnicodeMsg = "";
@@ -1474,14 +1528,17 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                        UnicodeMsg.c_str()) == IDYES) {
 
       Button4->Caption = STOP_STR;               
-      //Button4->Enabled = false;
 
       Form1->ProgressBar1->Position = 0;
       Form1->ProgressBar1->Update();
 
       UnicodeMsg = "";
 
-      result = erasedfile(Edit1->Text.c_str());
+/*****************************************************************************/
+      SetStartStream();
+        result = erasedfile(Edit1->Text.c_str());
+      SetStopStream();
+/*****************************************************************************/
 
       if (result == 0) {
         if (DeleteFile(Edit1->Text) != False) {
@@ -1519,13 +1576,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   cipher_free(cipher_pointer, cipher_length);
   free_global_memory(memory, memory_length);
 
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = false;
-  LeaveCriticalSection(&Form1->CrSec);
-
   Button4->Caption = START_STR; 
-
-  //Button4->Enabled = true;
 
   Form1->ProgressBar1->Position = 0;
   Form1->ProgressBar1->Update();
