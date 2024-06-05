@@ -120,7 +120,7 @@ const char * ALGORITM_NAME[] = {
 const char * START_STR = "Старт";
 const char * STOP_STR  = "Стоп";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 03JUN24 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 06JUN24 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -733,7 +733,7 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
 }
 
 int filecrypt(GLOBAL_MEMORY * ctx) {
-  register long int fsize    = 0;
+  register long int fsize;
   register long int position = 0;
 	
   float div, fsize_float;
@@ -1585,6 +1585,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::Label5Click(TObject *Sender) {
+  DeleteCriticalSection(&CrSec);
+
   ComboBox1->Clear();
   ComboBox2->Clear();
 

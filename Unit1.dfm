@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 332
-  Top = 272
+  Left = 285
+  Top = 284
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -297,6 +297,12 @@ object Form1: TForm1
     Height = 20
     Cursor = crHandPoint
     Caption = #1057#1090#1072#1088#1090
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentFont = False
     TabOrder = 13
     OnClick = Button4Click
   end
