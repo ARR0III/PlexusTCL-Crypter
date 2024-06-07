@@ -52,9 +52,23 @@
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
 
-#define DATA_SIZE       (1024*1024 * 8) /* 8 MiB */
+#define DATA_SIZE         (1024*1024*8) /* 8 MiB */
 
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
+
+#define SET_START_STREAM                 \
+  do {                                   \
+    EnterCriticalSection(&Form1->CrSec); \
+    PROCESSING = true;                   \
+    LeaveCriticalSection(&Form1->CrSec); \
+  } while(0)
+
+#define SET_STOP_STREAM                  \
+  do {                                   \
+    EnterCriticalSection(&Form1->CrSec); \
+    PROCESSING = false;                  \
+    LeaveCriticalSection(&Form1->CrSec); \
+  } while(0)
 
 #pragma hdrstop
 #pragma package(smart_init)
@@ -120,7 +134,7 @@ const char * ALGORITM_NAME[] = {
 const char * START_STR = "Старт";
 const char * STOP_STR  = "Стоп";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 06JUN24 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 08JUN24 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -167,18 +181,6 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
-}
-
-void SetStartStream(void) {
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = true;
-  LeaveCriticalSection(&Form1->CrSec);
-}
-
-void SetStopStream(void) {
-  EnterCriticalSection(&Form1->CrSec);
-  PROCESSING = false;
-  LeaveCriticalSection(&Form1->CrSec);
 }
 
 bool BreakStream(void) {
@@ -1466,9 +1468,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     Form1->ProgressBar1->Update();
 
 /*****************************************************************************/
-    SetStartStream();
+    SET_START_STREAM;
       result = filecrypt(memory);
-    SetStopStream();
+    SET_STOP_STREAM;
 /*****************************************************************************/
 
     Button4->Caption = START_STR;
@@ -1535,9 +1537,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       UnicodeMsg = "";
 
 /*****************************************************************************/
-      SetStartStream();
+      SET_START_STREAM;
         result = erasedfile(Edit1->Text.c_str());
-      SetStopStream();
+      SET_STOP_STREAM;
 /*****************************************************************************/
 
       if (result == 0) {
