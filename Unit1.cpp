@@ -183,19 +183,6 @@ typedef struct {
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
-bool BreakStream(void) {
-  EnterCriticalSection(&Form1->CrSec);
-
-  if (false == PROCESSING) {
-    LeaveCriticalSection(&Form1->CrSec);
-    return true;
-  }
-
-  LeaveCriticalSection(&Form1->CrSec);
-
-  return false;
-}
-
 /* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
@@ -582,12 +569,15 @@ int erasedfile(const char * filename) {
     }
 
 /*****************************************************************************/
-    if (BreakStream()) {
+    EnterCriticalSection(&Form1->CrSec);
+    if (false == PROCESSING) {
+      LeaveCriticalSection(&Form1->CrSec);
       meminit(data, 0x00, DATA_SIZE);
       free(data);
       fclose(f);
       return 0xDE;
     }
+    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
 
     realread = fread(data, 1, size_for_erased, f);
@@ -596,12 +586,15 @@ int erasedfile(const char * filename) {
     fseek(f, position, SEEK_SET);
     
 /*****************************************************************************/
-    if (BreakStream()) {
+    EnterCriticalSection(&Form1->CrSec);
+    if (false == PROCESSING) {
+      LeaveCriticalSection(&Form1->CrSec);
       meminit(data, 0x00, DATA_SIZE);
       free(data);
       fclose(f);
       return 0xDE;
     }
+    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
 
     if (fwrite(data, 1, realread, f) != realread) {
@@ -734,6 +727,26 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   }
 }
 
+int size_correct(GLOBAL_MEMORY * ctx, long int fsize) {
+  if (0L == fsize) {
+    return SIZE_FILE_ERROR;
+  }
+
+  if (ENCRYPT == ctx->operation) {
+    if ((long int)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0L) {
+      return SIZE_FILE_ERROR;
+    }
+  }
+  else {
+    /* if fsize < minimal size for decrypt */
+    if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+      return SIZE_DECRYPT_FILE_INCORRECT;
+    }
+  }
+
+  return OK;
+}
+
 int filecrypt(GLOBAL_MEMORY * ctx) {
   register long int fsize;
   register long int position = 0;
@@ -754,39 +767,17 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     return READ_FILE_NOT_OPEN;
   }
 
-  fsize = size_of_file(fi);
+  fsize       = size_of_file(fi);
+  fsize_check = size_correct(ctx, fsize);
 
-  if (0L == fsize ) {
+  if (fsize_check) { /* IF NOT OK */
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
     else
-      return SIZE_FILE_ERROR;
+      return fsize_check;
   }
 
-  if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
-  }
-
-  if (fsize <= 0L) {
-    if (fclose(fi) == -1)
-      return STREAM_INPUT_CLOSE_ERROR;
-    else
-      return SIZE_FILE_ERROR;
-  }
-
-  if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize -= (SHA256_BLOCK_SIZE + ctx->vector_length);
-  }
-
-  if (DECRYPT == ctx->operation) {
-    /* if fsize < minimal size for decrypt */
-    if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
-      if (fclose(fi) == -1)
-        return STREAM_INPUT_CLOSE_ERROR;
-      else
-        return SIZE_DECRYPT_FILE_INCORRECT;
-    }
-  }
+  fsize_check = 0;
 
   FILE * fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
 
@@ -805,15 +796,16 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   sha256_init(ctx->sha256sum);
 
-  while (position < fsize) {
-    
+  while (position < fsize) {  
 /*****************************************************************************/
-    if (BreakStream()) {
+    EnterCriticalSection(&Form1->CrSec);
+    if (false == PROCESSING) {
+      LeaveCriticalSection(&Form1->CrSec);
       meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
       return close_in_out_files(fi, fo, 0xDE);
     }
+    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
-
     if (0 == position) {
       if (ENCRYPT == ctx->operation) {
         switch (ctx->cipher_number) {
@@ -840,9 +832,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         if (fwrite(ctx->vector, 1, ctx->vector_length, fo) != ctx->vector_length) {
           return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
         }
-        else {
-          fflush(fo);
-        }
+
+        fflush(fo);
       }
       else
       if (DECRYPT == ctx->operation) {
@@ -852,14 +843,15 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         position += (int32_t)ctx->vector_length;
       }
     }
-
 /*****************************************************************************/
-    if (BreakStream()) {
+    EnterCriticalSection(&Form1->CrSec);
+    if (false == PROCESSING) {
+      LeaveCriticalSection(&Form1->CrSec);
       meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
       return close_in_out_files(fi, fo, 0xDE);
     }
+    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
-
     realread = fread(ctx->input, 1, DATA_SIZE, fi);
 
     for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
@@ -899,20 +891,20 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     /* control sum all read 1 MB data for [en/de]crypt + crypt key */
     control_sum_buffer(ctx, realread);
-
 /*****************************************************************************/
-    if (BreakStream()) {
+    EnterCriticalSection(&Form1->CrSec);
+    if (false == PROCESSING) {
+      LeaveCriticalSection(&Form1->CrSec);
       meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
       return close_in_out_files(fi, fo, 0xDE);
     }
+    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
-
     if (fwrite(ctx->output, 1, realread, fo) != realread) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
-    else {
-      fflush(fo);
-    }
+
+    fflush(fo);
 
     if (real_percent > past_percent) {
       Form1->ProgressBar1->Position = real_percent;
@@ -938,9 +930,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     if (fwrite(ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
-    else {
-      fflush(fo);
-    }
+
+    fflush(fo);
   }
   else {
     if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
@@ -993,14 +984,16 @@ void random_vector_init(uint8_t * data, size_t size) {
 size_t vector_init(uint8_t * data, size_t size) {
 	
   size_t i;
-  size_t stack_trash; /* NOT initialized == ALL OK */
+  size_t stack_trash[2]; /* NOT initialized == ALL OK */
   
   for (i = 0; i < size; i++) {
     data[i] = (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
   }
 
   /* random data from stack xor initialized vector */
-  (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
+  (*(uint32_t *)data) ^= (uint32_t)stack_trash[0] +
+                         (uint32_t)genrand(0x00000000, 0xFFFFFFFF) ^
+                         (uint32_t)stack_trash[1];
 
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
@@ -1033,10 +1026,8 @@ int GeneratingCryptKey(const char * message) {
 
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
-/*
-  не смог придумать ничего умнее, чем формировать строку простой конкатенацией
-  из языка C++, потому что в языке C формировать такую чушь сложно.
-*/
+/* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
+   из языка C++, потому что в языке C формировать такую чушь сложно */
 
   String UnicodeMsg = "Прервать операцию?";
 
