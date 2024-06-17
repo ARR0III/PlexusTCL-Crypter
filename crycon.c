@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v5.08;
+ * Console Encryption Software v5.09;
  *
  * Developer:         ARR0III;
- * Modification date: 08 MAY 2024;
+ * Modification date: 18 JUN 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -68,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.08 08MAY24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.09 18JUN24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -373,6 +373,29 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
   return return_code; /* All files close complete! */
 }
 
+/* fsize += (size initialized vector + size sha256 hash sum) */
+/* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
+int size_correct(const GLOBAL_MEMORY * ctx, const long int fsize) {
+  if (0L == fsize) {
+    return SIZE_FILE_ERROR;
+  }
+
+  if (ENCRYPT == ctx->operation) {
+    if ((signed long int)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0L) {
+      return SIZE_FILE_ERROR;
+    }
+  }
+  else {
+    /* if fsize < minimal size for decrypt */
+    if (fsize < (signed long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+      return SIZE_DECRYPT_FILE_INCORRECT;
+    }
+  }
+
+  return OK;
+}
+
+
 static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi = NULL;
@@ -392,6 +415,22 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     return READ_FILE_NOT_OPEN;
   }
 
+  fsize       = size_of_file(fi);
+  fsize_check = size_correct(ctx, fsize);
+
+  if (fsize_check) { /* IF NOT OK */
+    if (fclose(fi) == -1)
+      return STREAM_INPUT_CLOSE_ERROR;
+    else
+      return fsize_check;
+  }
+
+  fsize_check = 0;
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] size of file: %d byte\n", fsize);
+#endif
+
   fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
 
   if (!fo) {
@@ -399,34 +438,6 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       return STREAM_INPUT_CLOSE_ERROR;
     else
       return WRITE_FILE_NOT_OPEN;
-  }
-
-#if DEBUG_INFORMATION
-  printf("[DEBUG] size of file: %d byte\n", fsize);
-#endif
-
-  fsize = size_of_file(fi);
-
-  if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize += (SHA256_BLOCK_SIZE + ctx->vector_length);
-  }
-
-  /* fsize += (size initialized vector + size sha256 hash sum) */
-  /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
-
-  if (fsize <= 0L) {
-    return close_in_out_files(fi, fo, SIZE_FILE_ERROR);
-  }
-
-  if (ENCRYPT == ctx->operation) { /* only for check fsize */
-    fsize -= (SHA256_BLOCK_SIZE + ctx->vector_length);
-  }
-
-  if (DECRYPT == ctx->operation) {
-    /* if fsize < minimal size file for decrypt */
-    if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
-      return close_in_out_files(fi, fo, SIZE_DECRYPT_FILE_INCORRECT);
-    }
   }
 
   div          = (double)((double)fsize / 100.0);
@@ -650,7 +661,7 @@ static void random_vector_init(uint8_t * data, size_t size) {
 
 static size_t vector_init(uint8_t * data, size_t size) {
   size_t i;
-  size_t stack_trash; /* NOT initialized == ALL OK */
+  size_t stack_trash[2]; /* NOT initialized == ALL OK */
 
 #if DEBUG_INFORMATION
   printf("[DEBUG] stack_trash: %u\n", stack_trash);
@@ -661,7 +672,9 @@ static size_t vector_init(uint8_t * data, size_t size) {
   }
 
   /* random data from stack xor initialized vector */
-  (*(uint32_t *)data) ^= (uint32_t)stack_trash ^ (uint32_t)genrand(0x0000, 0x7FFF);
+  (*(uint32_t *)data) ^= ((uint32_t)stack_trash[0] ^
+                          (uint32_t)genrand(0x00000000, 0xFFFFFFFF)) +
+                          (uint32_t)stack_trash[1];
 
   /* generate real vector with cryptography */
   random_vector_init(data, size);
@@ -682,6 +695,8 @@ int main(int argc, char * argv[]) {
 
 /*****************************************************************************/
   extern int AES_Rounds; /* in rijndael.c source code file */
+
+  unsigned int trash[2]; /* not initialized == all control */
 
   int i, real_read, result;
 
@@ -989,7 +1004,7 @@ int main(int argc, char * argv[]) {
   }
 
   if (ENCRYPT == ctx->operation) {
-    srand((unsigned int)time(NULL));
+    srand(((unsigned int)trash[0] ^ (unsigned int)time(NULL)) + (unsigned int)trash[1]);
 
     if (vector_init(ctx->vector, ctx->vector_length) < (ctx->vector_length - 2)) {
       free_global_memory(ctx, ctx_length);
