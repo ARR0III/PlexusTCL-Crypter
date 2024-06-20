@@ -777,8 +777,6 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       return fsize_check;
   }
 
-  fsize_check = 0;
-
   FILE * fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
 
   if (!fo) {
