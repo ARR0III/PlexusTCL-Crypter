@@ -53,12 +53,13 @@ _memxor_normal:
 _exit:
 }
 #else
-  if (!output || !input || output == input || 0 == length) {
+
+  if (!output || !input || input == output || 0 == length) {
     return;
   }
 
   if (output < input) {
-    while (length) {
+    while(length) {
       *((uint8_t *)output) ^= *((uint8_t *)input);
 
        output = (uint8_t *)output + 1;
@@ -196,7 +197,8 @@ _memxor_byte:
 _exit:
 }
 #else
-  if (!output || !input || output == input || 0 == length) {
+	
+  if (!output || !input || input == output || 0 == length) {
     return;
   }
 
@@ -286,120 +288,62 @@ _exit:
 #endif  
 }
 
-void * memset2(void * ptr, size_t data, size_t size) {
-#if __ASM_32_X86_CPP_BUILDER__
-__asm {
-  mov ecx, size
-  mov edx, data
-  mov edi, ptr
-
-  cmp edx, 0xFF
-  ja _meminit
-
-  mov dh, dl
-  mov ebx, edx
-  shl ebx, 16
-  or  edx, ebx
-
-_meminit:
-  mov ebx, ecx
-  and ebx, 3
-
-  shr ecx, 2  /* sum blocks for writing */
-  jz _meminit_byte
-
-_meminit_dword:
-  mov dword[edi], edx
-  add edi, 4
-  dec ecx
-  jz _meminit_byte
-  mov dword[edi], edx
-  add edi, 4
-  dec ecx
-  jz _meminit_byte
-  mov dword[edi], edx
-  add edi, 4
-  dec ecx
-  jz _meminit_byte
-  mov dword[edi], edx
-  add edi, 4
-  dec ecx
-  jz _meminit_byte
-  jmp _meminit_dword
-
-_meminit_byte:
-  test ebx, ebx
-  jz _exit
-  mov byte[edi], dl
-  inc edi
-  dec ebx
-  jmp _meminit_byte
-
-_exit:
-}
-#else
-  register unsigned char * p = (unsigned char *)ptr;
-  register size_t bt, dword = data;
-
-  if (data < 256) {
-    dword |= data  <<  8;
-    dword |= dword << 16;
-  }
-
-  bt   = size  & 3; /* bytes not in 1 block */
-  size = size >> 2; /* blocks of 4 bytes */
-
-  while (1) {
-    if (!size)
-      break;
-
-    *((size_t *)p) = dword;
-    p += sizeof(size_t);
-    size--;
-	  
-    if (!size)
-      break;
-
-    *((size_t *)p) = dword;
-    p += sizeof(size_t);
-    size--;
-
-    if (!size)
-      break;
-
-    *((size_t *)p) = dword;
-    p += sizeof(size_t);
-    size--;
-
-    if (!size)
-      break;y
-
-    *((size_t *)p) = dword;
-    p += sizeof(size_t);
-    size--;
-  }
-
-  /* if data block be copy, to correction pointer of array from write block */
-  if (p > (unsigned char *)ptr) {
-    p -= (sizeof(size_t) - bt);
-    *((size_t *)p) = dword;
-    
-    return ptr;
-  }
-  
-  while (bt) {
-    *p = (unsigned char)dword;
-
-    p++;
-    bt--;
-  }
-#endif
-  return ptr;
-}
-
 /* "meminit32" optimization and always executable standart function memset */
 void meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
+
+/****** OLD * CODE ******
+__asm {
+  mov ecx, length
+  mov ebx, number
+  mov edi, data
+
+  cmp ebx, 0xFF
+  ja _memset
+
+  mov bh, bl
+  mov edx, ebx
+  shl edx, 16
+  or ebx, edx
+
+_memset:
+  mov edx, ecx
+  and edx, 0x03
+  
+  shr ecx, 2
+  jz _lp_byte
+
+_lp_block:
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  jmp _lp_block
+
+_lp_byte:
+  test edx, edx
+  jz _exit
+  mov byte[edi], bl
+  inc edi
+  dec edx
+  jmp _lp_byte
+
+_exit:
+}
+****** OLD * CODE ******/
+
 __asm {
   mov ecx, length
   mov edx, number
@@ -534,14 +478,16 @@ __asm {
   xor eax, eax
   mov ecx, b
   mov edx, s
+  test edx, edx
+  jz _exit         /* check NULL pointer */
   
 _strnlen:
   test ecx, ecx
   jz _exit
   cmp byte[edx + eax], 0
   je _exit
-  inc eax
-  dec ecx
+  inc eax          /* result++ */
+  dec ecx          /* bounder-- */
   jmp _strnlen  
 
 _exit:
@@ -613,8 +559,14 @@ void strdec(uint8_t * data, size_t len) {
   }
 }
 
-int genrand(const int min, const int max) {
-  return min + (int)((double)max * rand() / ((double)min + RAND_MAX));
+int genrand(const unsigned int min, const unsigned int max) {
+  int x = min + RAND_MAX;
+  
+  if (0 == x) {
+    x = RAND_MAX;
+  }
+  
+  return min + (int)((double)rand() * (double)max / (double)x);
 }
 
 int readfromfile(const char * filename, void * buffer, const size_t length) {
@@ -648,7 +600,7 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   }
 
   if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
-    tumbler = HEX_STRING;
+    tumbler = HEX_TABLE;
   }
 
   if (stream != stdin && stream != stdout && stream != stderr) {
