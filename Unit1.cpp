@@ -173,11 +173,11 @@ typedef struct {
   uint8_t    * temp_buffer;         /* temp_buffer for temp key data */
   size_t       temp_buffer_length;  /* size buffer for crypt key */
 
-  uint8_t      input  [DATA_SIZE];  /* memory for read */
-  uint8_t      output [DATA_SIZE];  /* memory for write */
-
   int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
+  
+  uint8_t      input  [DATA_SIZE];  /* memory for read */
+  uint8_t      output [DATA_SIZE];  /* memory for write */
 } GLOBAL_MEMORY;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
@@ -645,6 +645,7 @@ int erasedfile(const char * filename) {
 }
 
 void cipher_free(void * ctx, size_t ctx_length) {
+  /* clear crypt key and struct cipher */
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
 }
@@ -841,6 +842,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         position += (int32_t)ctx->vector_length;
       }
     }
+
 /*****************************************************************************/
     EnterCriticalSection(&Form1->CrSec);
     if (false == PROCESSING) {
@@ -1022,12 +1024,64 @@ int GeneratingCryptKey(const char * message) {
   return IDYES;
 }
 
+void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
+
+  void * cipher_ptr = (void *)malloc(cipher_len);
+
+  if (NULL == cipher_ptr) {
+    return NULL;
+  }
+
+/*
+  if (!VirtualLock(cipher_ptr, cipher_len)) {
+    MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+      "Не удалось защитить память приложения от кэширования.\n"
+      "Ключ шифрования и служебные данные могут быть записаны на диск.\n");
+  }
+*/
+
+  meminit(cipher_ptr, 0x00, cipher_len);
+
+  if (AES == ctx->cipher_number) {
+    rijndael_ctx = (uint32_t *)cipher_ptr;
+    rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
+  }
+  else
+  if (SERPENT == ctx->cipher_number) {
+	serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+    serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+  }
+  else
+  if (TWOFISH == ctx->cipher_number) {
+    twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+    twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+  }
+  else
+  if (BLOWFISH == ctx->cipher_number) {
+    blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
+    blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+  }
+  else
+  if (THREEFISH == ctx->cipher_number) {
+    threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
+    threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                  (uint64_t *)ctx->temp_buffer, (uint64_t *)ctx->temp_buffer);
+  }
+  
+  return cipher_ptr;
+}
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
    из языка C++, потому что в языке C формировать такую чушь сложно */
 
+  extern int AES_Rounds; /* in rijndael.c source code file */
+
   String UnicodeMsg = "Прервать операцию?";
+
+  int real_read, result;
+  size_t memory_length, cipher_length;
+  void * cipher_pointer;
 
   /* if stream create and execute then blocking stream and set PROCESSING in false
      stream to check PROCESSING and if PROCESSING == false, stream killself*/
@@ -1086,7 +1140,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
-  size_t memory_length = sizeof(GLOBAL_MEMORY);
+  memory_length = sizeof(GLOBAL_MEMORY);
   GLOBAL_MEMORY * memory = (GLOBAL_MEMORY *)malloc(memory_length);
 
   if (!memory) {
@@ -1122,8 +1176,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                    "Алгоритм шифрования не был выбран!");
     return;
   }
-
-  extern int AES_Rounds; /* in rijndael.c source code file */
 
   memory->temp_buffer_length = 0;
 
@@ -1192,7 +1244,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     THREEFISH = (temp_buffer_length = 32 or 64 or 128);
   */
 
-  memory->operation = ENCRYPT; /* fusking warnings c++ builder !*/
+  memory->operation = ENCRYPT; /* fucking warnings c++ builder !*/
 
   if (RadioButton1->Checked) {
     memory->operation = ENCRYPT;
@@ -1247,7 +1299,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
   
-  int real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
+  real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
 
   if (real_read == (int)(memory->temp_buffer_length)) {
     UnicodeMsg = "Использовать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из файла?\n"; 
@@ -1317,23 +1369,27 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 
   UnicodeMsg = "";
-
+  
   switch (memory->cipher_number) {
-    case AES:
-      memory->vector_length = 16;
-      break;
-    case SERPENT:
-      memory->vector_length = 16;
-      break;
-    case TWOFISH:
-      memory->vector_length = 16;
-      break;
-    case BLOWFISH:
-      memory->vector_length =  8;
-      break;
-    case THREEFISH:
-      memory->vector_length = memory->temp_buffer_length;
-      break;
+    case AES:       memory->vector_length = 16;
+                    cipher_length = 4 * (AES_Rounds + 1) * 4;
+                    break;
+					
+    case SERPENT:   memory->vector_length = 16;
+                    cipher_length = sizeof(SERPENT_CTX);
+                    break;
+					
+    case TWOFISH:   memory->vector_length = 16;
+                    cipher_length = sizeof(TWOFISH_CTX);
+                    break;
+					
+    case BLOWFISH:  memory->vector_length =  8;
+                    cipher_length = sizeof(BLOWFISH_CTX);
+                    break;
+					
+    case THREEFISH: memory->vector_length = memory->temp_buffer_length;
+                    cipher_length = sizeof(THREEFISH_CTX);
+                    break;
   }
 
   memory->vector = (uint8_t*)malloc(memory->vector_length);
@@ -1360,87 +1416,16 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     }
   }
 
-  size_t cipher_length  = 0;
-  void * cipher_pointer = NULL;
+  /* allocate memory + lock memory + protect memory */
+  cipher_pointer = CipherInitMemory(memory, cipher_length);
 
-  if (AES == memory->cipher_number) {
-    cipher_length  = 4 * (AES_Rounds + 1) * 4;
-    rijndael_ctx   = (uint32_t *)calloc(cipher_length, 1);
-    cipher_pointer = (void *)rijndael_ctx;
-
-    if (!rijndael_ctx) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      return;
-    }
-
-    AES_Rounds =
-      rijndael_key_encrypt_init(rijndael_ctx, memory->temp_buffer, memory->temp_buffer_length * 8);
-  }
-  if (memory->cipher_number == TWOFISH) {
-    cipher_length  = sizeof(TWOFISH_CTX);
-    twofish_ctx    = (TWOFISH_CTX *)calloc(1, cipher_length);
-    cipher_pointer = (void *)twofish_ctx;
-
-    if (!twofish_ctx) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      return;
-    }
-    twofish_init(twofish_ctx, memory->temp_buffer, memory->temp_buffer_length);
-  }
-  else
-  if (memory->cipher_number == SERPENT) {
-    cipher_length = sizeof(SERPENT_CTX);
-    serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_length);
-    cipher_pointer = (void *)serpent_ctx;
-
-    if (!serpent_ctx) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      return;
-    }
-    serpent_init(serpent_ctx, memory->temp_buffer_length * 8, memory->temp_buffer);
-  }
-  else
-  if (memory->cipher_number == BLOWFISH) {
-    cipher_length = sizeof(BLOWFISH_CTX);
-    blowfish_ctx = (BLOWFISH_CTX*)calloc(1, cipher_length);
-    cipher_pointer = (void *)blowfish_ctx;
-
-    if (!blowfish_ctx) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      return;
-    }
-    blowfish_init(blowfish_ctx, memory->temp_buffer, memory->temp_buffer_length);
-  }
-  else
-  if (memory->cipher_number == THREEFISH) {
-    cipher_length = sizeof(THREEFISH_CTX);
-    threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_length);
-    cipher_pointer = (void *)threefish_ctx;
-
-    if (!threefish_ctx) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-      return;
-    }
-    threefish_init(threefish_ctx, (threefishkeysize_t)(memory->temp_buffer_length * 8),
-                   (uint64_t *)memory->temp_buffer, (uint64_t *)memory->temp_buffer);
+  if (NULL == cipher_pointer) {
+    free_global_memory(memory, memory_length);
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    return;
   }
 
-  int result = 0xDE;
+  result = 0xDE;
 
   UnicodeMsg =
     "Приступить к выбранной вами операции?\n\n"
@@ -1684,10 +1669,6 @@ void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
   Label7->Font->Color = clRed;        
 }
 //---------------------------------------------------------------------------
-
-
-
-
 
 
 void __fastcall TForm1::FormClose(TObject *Sender, TCloseAction &Action)
