@@ -3,7 +3,7 @@
  * Console Encryption Software v5.09;
  *
  * Developer:         ARR0III;
- * Modification date: 18 JUN 2024;
+ * Modification date: 07 JUL 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -142,11 +142,6 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
-  if (!ctx) {
-    MEMORY_ERROR;
-    exit(1);
-  }
-
   if (ctx->sha256sum && ctx->sha256sum_length > 0) {
     meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   }
@@ -375,7 +370,7 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
 
 /* fsize += (size initialized vector + size sha256 hash sum) */
 /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
-int size_correct(const GLOBAL_MEMORY * ctx, const long int fsize) {
+static int size_correct(const GLOBAL_MEMORY * ctx, const long int fsize) {
   if (0L == fsize) {
     return SIZE_FILE_ERROR;
   }
@@ -689,6 +684,49 @@ static size_t vector_init(uint8_t * data, size_t size) {
   }
 
   return i;
+}
+
+static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
+
+  void * cipher_ptr = (void *)calloc(cipher_len, 1);
+
+  if (!cipher_ptr) {
+    return NULL;
+  }
+
+  switch(ctx->cipher_number) {
+    case AES:       { rijndael_ctx = (uint32_t *)cipher_ptr;
+                      rijndael_key_encrypt_init(rijndael_ctx,
+                                                ctx->temp_buffer,
+                                                ctx->temp_buffer_length * 8);
+                    }
+                    break;
+
+    case TWOFISH:   { twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+                      twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    }
+                    break;
+
+    case SERPENT:   { serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+                      serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+                    }
+                    break;
+
+    case BLOWFISH:  { blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
+                      blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    }
+                    break;
+
+    case THREEFISH: { threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
+                      threefish_init(threefish_ctx,
+                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                                  (uint64_t*)ctx->temp_buffer,
+                                  (uint64_t*)ctx->temp_buffer);
+                    }
+                    break;
+  }
+
+  return cipher_ptr;
 }
 
 int main(int argc, char * argv[]) {
@@ -1014,77 +1052,13 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  if (AES == ctx->cipher_number) {
-    rijndael_ctx = (uint32_t *) calloc(cipher_ctx_len, 1);
-    cipher_pointer = (void *)rijndael_ctx;
+  cipher_pointer = cipher_init_memory(ctx, cipher_ctx_len);
 
-    if (!rijndael_ctx) {
-      free_global_memory(ctx, ctx_length);
+  if (!cipher_pointer) {
+    free_global_memory(ctx, ctx_length);
 
-      MEMORY_ERROR;
-      return 1;
-    }
-    /* This function return real iteration count encrypt operation */
-    AES_Rounds = rijndael_key_encrypt_init(rijndael_ctx,
-                                           ctx->temp_buffer,
-                                           ctx->temp_buffer_length * 8);
-  }
-  else
-  if (TWOFISH == ctx->cipher_number) {
-    twofish_ctx = (TWOFISH_CTX *) calloc(1, cipher_ctx_len);
-    cipher_pointer = (void *)twofish_ctx;
-
-    if (!twofish_ctx) {
-      free_global_memory(ctx, ctx_length);
-
-      MEMORY_ERROR;
-      return 1;
-    }
-
-    twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-  }
-  else
-  if (SERPENT == ctx->cipher_number) {
-    serpent_ctx = (SERPENT_CTX *) calloc(1, cipher_ctx_len);
-    cipher_pointer = (void *)serpent_ctx;
-
-    if (!serpent_ctx) {
-      free_global_memory(ctx, ctx_length);
-
-      MEMORY_ERROR;
-      return 1;
-    }
-
-    serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
-  }
-  else
-  if (BLOWFISH == ctx->cipher_number) {
-    blowfish_ctx = (BLOWFISH_CTX *)calloc(1, cipher_ctx_len);
-    cipher_pointer = (void *)blowfish_ctx;
-
-    if (!blowfish_ctx) {
-      free_global_memory(ctx, ctx_length);
-
-      MEMORY_ERROR;
-      return 1;
-    }
-
-    blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-  }
-  else
-  if (THREEFISH == ctx->cipher_number) {
-    threefish_ctx = (THREEFISH_CTX *)calloc(1, cipher_ctx_len);
-    cipher_pointer = (void *)threefish_ctx;
-
-    if (!threefish_ctx) {
-      free_global_memory(ctx, ctx_length);
-
-      MEMORY_ERROR;
-      return 1;
-    }
-
-    threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                   (uint64_t*)ctx->temp_buffer, (uint64_t*)ctx->temp_buffer);
+    MEMORY_ERROR;
+    return 1;
   }
 
   printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[(ctx->cipher_number)]);
