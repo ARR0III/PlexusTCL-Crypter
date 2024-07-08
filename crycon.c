@@ -695,35 +695,40 @@ static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
   }
 
   switch(ctx->cipher_number) {
-    case AES:       { rijndael_ctx = (uint32_t *)cipher_ptr;
-                      rijndael_key_encrypt_init(rijndael_ctx,
-                                                ctx->temp_buffer,
-                                                ctx->temp_buffer_length * 8);
-                    }
-                    break;
+    case AES:
+	{ rijndael_ctx = (uint32_t *)cipher_ptr;
+          rijndael_key_encrypt_init(rijndael_ctx,
+                                    ctx->temp_buffer,
+                                    ctx->temp_buffer_length * 8);
+        }
+        break;
 
-    case TWOFISH:   { twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
-                      twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-                    }
-                    break;
+    case TWOFISH:
+	{ twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+          twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+        }
+        break;
 
-    case SERPENT:   { serpent_ctx = (SERPENT_CTX *)cipher_ptr;
-                      serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
-                    }
-                    break;
+    case SERPENT:
+	{ serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+          serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+        }
+        break;
 
-    case BLOWFISH:  { blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
-                      blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-                    }
-                    break;
+    case BLOWFISH:
+	{ blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
+          blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+        }
+        break;
 
-    case THREEFISH: { threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
-                      threefish_init(threefish_ctx,
-                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                                  (uint64_t*)ctx->temp_buffer,
-                                  (uint64_t*)ctx->temp_buffer);
-                    }
-                    break;
+    case THREEFISH:
+	{ threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
+          threefish_init(threefish_ctx,
+                        (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                        (uint64_t*)ctx->temp_buffer,
+                        (uint64_t*)ctx->temp_buffer);
+        }
+        break;
   }
 
   return cipher_ptr;
