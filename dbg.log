@@ -1,0 +1,73 @@
+[DEBUG] compile date and time:   Jul 10 2024, 03:26:43
+[DEBUG] global memory allocated: 16777288 byte
+[DEBUG] global memory pointer:   0xb6f46010
+[DEBUG] input filename:      data.dat
+[DEBUG] output filename:     data.dat.en
+[DEBUG] keyfile or password: PASSWORDING_NAMORDINK
+[DEBUG] cipher: AES
+[DEBUG] block cipher mode of operation: CFB
+[DEBUG] key length: 256 bist
+[DEBUG] operation: Encrypt
+[DEBUG] temp memory allocated: 32 byte
+[DEBUG] temp memory pointer: 0x8f4a1c0
+[DEBUG] size struct for sha256sum function: 140 byte
+[DEBUG] sha256sum struct create in pointer: 0x8f4a1f0
+[DEBUG] pointer of key matrix memory: 0x8f4a3c0
+[DEBUG] size of key matrix memory byte: 1024
+[DEBUG] make crypt key count iteration: 50104
+[DEBUG] make crypt key time: 0.3895 seconds
+[#] Crypt key read from command line!
+[#] Key length 256-bits initialized!
+[DEBUG] key or password length: 21 byte
+[DEBUG] key generator write data in pointer: 0x8f4a1c0
+[DEBUG] real crypt key data:
+99 08 40 C5 3F 2F 40 0D F3 0E D1 54 7A 0E CE 75
+79 E0 C4 5A 0B AD 90 23 DE 38 1E 5C F1 F6 21 90
+
+[DEBUG] stack_trash[0]: 6e94d312
+[DEBUG] stack_trash[1]: 8115140
+[#] Algoritm AES initialized!
+[DEBUG] allocate byte for cipher struct: 240
+[DEBUG] real data cipher struct:
+C5 40 08 99 0D 40 2F 3F 54 D1 0E F3 75 CE 0E 7A
+5A C4 E0 79 23 90 AD 0B 5C 1E 38 DE 90 21 F6 F1
+64 20 F5 DA 69 60 DA E5 3D B1 D4 16 48 7F DA 6C
+08 16 B7 29 2B 86 1A 22 77 98 22 FC E7 B9 D4 0D
+B3 B4 A3 90 DA D4 79 75 E7 65 AD 63 AF 1A 77 0F
+71 B4 42 5F 5A 32 58 7D 2D AA 7A 81 CA 13 AE 8C
+D7 C0 DE 70 0D 14 A7 05 EA 71 0A 66 45 6B 7D 69
+1F CB BD A6 45 F9 E5 DB 68 53 9F 5A A2 40 31 D6
+21 FA D7 BF 2C EE 70 BA C6 9F 7A DC 83 F4 07 B5
+F3 74 78 73 B6 8D 9D A8 DE DE 02 F2 7C 9E 33 24
+17 EA DC 6C 3B 04 AC D6 FD 9B D6 0A 7E 6F D1 BF
+00 DC 46 7B B6 51 DB D3 68 8F D9 21 14 11 EA 05
+7C 10 5E CB 47 14 F2 1D BA 8F 24 17 C4 E0 F5 A8
+1C 3D A0 B9 AA 6C 7B 6A C2 E3 A2 4B D6 F2 48 4E
+53 E6 D7 D9 14 F2 25 C4 AE 7D 01 D3 6A 9D F4 7B
+
+[#] Operation Encrypt file "data.dat" started!
+[DEBUG] size of file: 139624448 byte
+[DEBUG] vector memory allocated: 16 byte
+[DEBUG] vector memory pointer: 0x8f4a3c0
+[DEBUG] vector generator write data in pointer: 0x8f4a3c0
+[DEBUG] vector real data:
+19 E5 6E 71 E7 23 7C B0 EB 10 FF 60 B6 72 B0 14
+
+ >  Encrypt [#########################] (133.16 MiB/133.16 MiB) 100 %  
+[DEBUG] real sha-2-256 hash sum file: data.dat
+40 2D 6C BC 26 48 C2 F0 CE 9C 23 1A 0C 80 96 C1
+DD F3 8B D1 81 58 DD 54 E8 9A 0D AE AE DF 58 D5
+
+[DEBUG] authentification key 'U':
+CC 5D 15 90 6A 7A 15 58 A6 5B 84 01 2F 5B 9B 20
+2C B5 91 0F 5E F8 C5 76 8B 6D 4B 09 A4 A3 74 C5
+
+[DEBUG] authentification key 'f':
+FF 6E 26 A3 59 49 26 6B 95 68 B7 32 1C 68 A8 13
+1F 86 A2 3C 6D CB F6 45 B8 5E 78 3A 97 90 47 F6
+
+[DEBUG] real hmac input filename: data.dat
+82 D3 9F B8 51 1B 31 33 96 79 BD 74 70 F7 86 8B
+60 53 EB 0F 81 0A 38 5B BC F0 D3 43 D9 B6 CA 81
+
+[#] Encrypt file "data.dat" complete!
