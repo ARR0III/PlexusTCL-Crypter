@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v5.09;
+ * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 07 JUL 2024;
+ * Modification date: 10 JUL 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -68,7 +68,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.09 18JUN24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 10JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -184,6 +184,95 @@ static int size_check(uint32_t size) {
 
 static double sizetodoubleprint(const int status, const double size) {
   return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
+}
+
+/* TESTING NEW KEY DERIVATION FUNCTION */
+static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
+                      const uint8_t  * password, const size_t password_len,
+                            uint8_t  * key,      const size_t key_len) {
+
+  uint32_t i, j;
+  uint32_t count;
+
+/*uint32_t pmem_size = key_len * SHA256_BLOCK_SIZE * CLOMUL_CONST*/
+  uint32_t pmem_size = (key_len << 5) * CLOMUL_CONST;
+
+  uint8_t * pmem = (uint8_t *)malloc(pmem_size);
+
+  if (!pmem) {
+    MEMORY_ERROR;
+    exit(1);
+  }
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] pointer of key matrix memory: %p\n", pmem);
+  printf("[DEBUG] size of key matrix memory byte: %u\n", pmem_size);
+
+  srand(time(0));
+  clock_t min = clock();
+#endif
+
+/*****************************************************************************/
+/* GENERATION COUNTER */
+
+  count  = CRC32(password, password_len);
+  count  = count >> 16;
+  count |= ((uint32_t)1 << 15);
+  count *= CLOMUL_CONST;
+
+#if DEBUG_INFORMATION
+  printf("[DEBUG] make crypt key count iteration: %u\n", count);
+#endif
+
+/*****************************************************************************/
+/* INITIALIZED MEMORY */
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+
+  sha256_init(ctx->sha256sum);
+  sha256_update(ctx->sha256sum, password, password_len);
+  sha256_final(ctx->sha256sum);
+
+  for (i = 0; i < pmem_size; i += SHA256_BLOCK_SIZE) {
+    memcpy(pmem + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  }
+
+  for (i = 0; i < pmem_size; i += SHA256_BLOCK_SIZE) {
+    for (j = 0; j < count; j++) {
+      sha256_update(ctx->sha256sum, password, password_len);
+    }
+
+    sha256_final(ctx->sha256sum);
+
+    memxormove(pmem + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  }
+
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+/*****************************************************************************/
+/* HASHING MEMORY FOR GENERATION CRYPT KEY */
+
+  sha256_init(ctx->sha256sum);
+
+  for (i = 0; i < key_len; i += SHA256_BLOCK_SIZE) {
+    sha256_update(ctx->sha256sum, pmem, pmem_size);
+    sha256_final(ctx->sha256sum);
+
+    j = key_len - i;
+
+    if (j >= SHA256_BLOCK_SIZE) {
+      j = SHA256_BLOCK_SIZE;
+    }
+
+    memcpy(key + i, ctx->sha256sum->hash, j);
+  }
+/*****************************************************************************/
+#if DEBUG_INFORMATION
+  printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
+#endif
+
+  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(pmem, 0x00, pmem_size);
+  free(pmem);
+  pmem = NULL;
 }
 
 static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
@@ -659,7 +748,8 @@ static size_t vector_init(uint8_t * data, size_t size) {
   size_t stack_trash[2]; /* NOT initialized == ALL OK */
 
 #if DEBUG_INFORMATION
-  printf("[DEBUG] stack_trash: %u\n", stack_trash);
+  printf("[DEBUG] stack_trash[0]: %x\n", stack_trash[0]);
+  printf("[DEBUG] stack_trash[1]: %x\n", stack_trash[1]);
 #endif
   
   for (i = 0; i < size; i++) {
@@ -695,40 +785,35 @@ static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
   }
 
   switch(ctx->cipher_number) {
-    case AES:
-	{ rijndael_ctx = (uint32_t *)cipher_ptr;
-          rijndael_key_encrypt_init(rijndael_ctx,
-                                    ctx->temp_buffer,
-                                    ctx->temp_buffer_length * 8);
-        }
-        break;
+    case AES:       { rijndael_ctx = (uint32_t *)cipher_ptr;
+                      rijndael_key_encrypt_init(rijndael_ctx,
+                                                ctx->temp_buffer,
+                                                ctx->temp_buffer_length * 8);
+                    }
+                    break;
 
-    case TWOFISH:
-	{ twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
-          twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-        }
-        break;
+    case TWOFISH:   { twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+                      twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    }
+                    break;
 
-    case SERPENT:
-	{ serpent_ctx = (SERPENT_CTX *)cipher_ptr;
-          serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
-        }
-        break;
+    case SERPENT:   { serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+                      serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+                    }
+                    break;
 
-    case BLOWFISH:
-	{ blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
-          blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-        }
-        break;
+    case BLOWFISH:  { blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
+                      blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    }
+                    break;
 
-    case THREEFISH:
-	{ threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
-          threefish_init(threefish_ctx,
-                        (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                        (uint64_t*)ctx->temp_buffer,
-                        (uint64_t*)ctx->temp_buffer);
-        }
-        break;
+    case THREEFISH: { threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
+                      threefish_init(threefish_ctx,
+                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                                  (uint64_t*)ctx->temp_buffer,
+                                  (uint64_t*)ctx->temp_buffer);
+                    }
+                    break;
   }
 
   return cipher_ptr;
