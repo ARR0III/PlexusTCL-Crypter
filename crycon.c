@@ -268,6 +268,8 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
 /*****************************************************************************/
 #if _CRYCON_DEBUG_
   printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
+  printf("[DEBUG] hash matrix for key generation:\n");
+  printhex(HEX_TABLE, pmem, pmem_size);
 #endif
 
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
