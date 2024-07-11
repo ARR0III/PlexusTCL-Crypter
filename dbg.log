@@ -1,4 +1,8 @@
 /*
+  CPU: Intel Core 2 Quad Q9500 (2,83 GHz, LGA 775, Cache 6 MB, 4 core);
+  RAM: 4 Gb/800 MHz (2 x 2Gb)
+  OS: GNU/Linux Debian 11 (bullseye), (x32/i386)
+
   x = 208827064576 / 9;
   x = x / 60;
   x = x / 60;
