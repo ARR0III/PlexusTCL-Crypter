@@ -1005,6 +1005,8 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
   printf("[DEBUG] size struct for sha256sum function: %u byte\n", ctx->sha256sum_length);
   printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
+  printf("[DEBUG] maximal length password or name keyfile: %u byte\n", ctx->password_length);
+  printf("[DEBUG] pointer of memory for password or name keyfile: %p\n", ctx->password);
 #endif
 
   if (STRCMP(ctx->finput, ctx->foutput) == 0) {
@@ -1136,13 +1138,13 @@ int main(int argc, char * argv[]) {
 
   ctx->temp_buffer_length /= 8; /* for allocate memory */
 
-  /*
-    AES       = (temp_buffer_length = 16 or 24 or 32);
-    SERPENT   = (temp_buffer_length = 16 or 24 or 32);
-    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
-    BLOWFISH  = (temp_buffer_length = 56);
-    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
-  */
+/*
+  AES       = (temp_buffer_length = 16 or 24 or 32);
+  SERPENT   = (temp_buffer_length = 16 or 24 or 32);
+  TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
+  BLOWFISH  = (temp_buffer_length = 56);
+  THREEFISH = (temp_buffer_length = 32 or 64 or 128);
+*/
 
   ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
 
