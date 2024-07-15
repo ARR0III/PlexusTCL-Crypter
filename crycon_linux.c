@@ -49,6 +49,10 @@
 
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
 
+#define ERROR_TERMINAL               1
+#define ERROR_SET_FLAG               2
+#define ERROR_GET_STRING             3
+
 #define OK                           0
 #define READ_FILE_NOT_OPEN           1
 #define WRITE_FILE_NOT_OPEN          2
@@ -862,7 +866,7 @@ int password_read(GLOBAL_MEMORY * ctx) {
 
   if (!isatty(0)) {
     fprintf(stderr, "[X] Not terminal!\n");
-    return 1;
+    return ERROR_TERMINAL;
   }
 
   tcgetattr(0, &trms);                    /* get settings termios system */
@@ -870,11 +874,20 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
 
+  tcgetattr(0, &trms);
+
+  if (trms.c_lflag & ECHO) {
+    fprintf(stderr, "[X] Not are set ECHO flag for Termios!\n");
+    tcsetattr(0, TCSANOW, &trms_old);
+    return ERROR_SET_FLAG;
+  }
+
+  fflush(stdout);
   printf("[$] Enter password or name keyfile:");
 
   if (!fgets(ctx->password, ctx->password_length, stdin)) {
     fprintf(stderr, "[X] Password not read from command line!\n");
-    return 2;
+    return ERROR_GET_STRING;
   }
 
   for (i = 0; i < (ctx->password_length); i++) {
@@ -885,7 +898,6 @@ int password_read(GLOBAL_MEMORY * ctx) {
   }
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
-
   putc('\n', stdout);
 
   return OK;
@@ -1179,7 +1191,7 @@ int main(int argc, char * argv[]) {
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       /* password --> crypt key; Pseudo PBKDF2 */
-      KDFCLOMUL2(ctx, (uint8_t *)(ctx->password), real_read,
+      KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
                 ctx->temp_buffer,
                 ctx->temp_buffer_length);
 
