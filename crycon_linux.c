@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 12 JUL 2024;
+ * Modification date: 22 JUL 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -75,7 +75,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 12JUL24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 22JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -864,11 +864,6 @@ int password_read(GLOBAL_MEMORY * ctx) {
   int i;
   struct termios trms, trms_old;
 
-  if (!isatty(0)) {
-    fprintf(stderr, "[X] Not terminal!\n");
-    return ERROR_TERMINAL;
-  }
-
   tcgetattr(0, &trms);                    /* get settings termios system */
   memcpy(&trms_old, &trms, sizeof(trms)); /* copy normal settings */
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
@@ -952,6 +947,11 @@ int main(int argc, char * argv[]) {
 
   GLOBAL_MEMORY * ctx;
   void * cipher_pointer;
+/*****************************************************************************/
+  if (!isatty(0)) {
+    fprintf(stderr, "[X] Not terminal!\n");
+    return ERROR_TERMINAL;
+  }
 /*****************************************************************************/
   ctx_length = sizeof(GLOBAL_MEMORY);
   result = INITIALIZED_GLOBAL_MEMORY(&ctx, ctx_length);
@@ -1310,3 +1310,5 @@ int main(int argc, char * argv[]) {
 	
   return 0;
 }
+
+
