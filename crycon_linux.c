@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 22 JUL 2024;
+ * Modification date: 23 JUL 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -75,7 +75,7 @@
 
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 22JUL24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 23JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -994,7 +994,7 @@ int main(int argc, char * argv[]) {
                "-b/--192/--512\n\t"
                "-c/--256/--1024\n\n");
       printf("Enter: %s [algoritm] [operation]"
-      	     " [key length] [input filename] [output filename] [key filename or string key]\n", argv[0]);
+      	     " [key length] [input filename] [output filename]\n", argv[0]);
       return 0;
     }
     else {
@@ -1020,27 +1020,6 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] maximal length password or name keyfile: %u byte\n", ctx->password_length);
   printf("[DEBUG] pointer of memory for password or name keyfile: %p\n", ctx->password);
 #endif
-
-  if (STRCMP(ctx->finput, ctx->foutput) == 0) {
-    free_global_memory(ctx, ctx_length);
-
-    fprintf(stderr, "[!] Names input and output files equal!\n");
-    return 1;
-  }
-  else
-  if (STRCMP(ctx->foutput, ctx->password) == 0) {
-    free_global_memory(ctx, ctx_length);
-
-    fprintf(stderr, "[!] Names keyfile and output files equal!\n");
-    return 1;
-  }
-  else
-  if (STRCMP(ctx->finput, ctx->password) == 0) {
-    free_global_memory(ctx, ctx_length);
-
-    fprintf(stderr, "[!] Names keyfile and input files equal!\n");
-    return 1;
-  }
 
   if (strcmp(argv[1], "-b") == 0 || strcmp(argv[1], "--blowfish") == 0)
     ctx->cipher_number = BLOWFISH;
@@ -1135,6 +1114,27 @@ int main(int argc, char * argv[]) {
 
   if (password_read(ctx) != OK) {
     free_global_memory(ctx, ctx_length);
+    return 1;
+  }
+
+  if (STRCMP(ctx->finput, ctx->foutput) == 0) {
+    free_global_memory(ctx, ctx_length);
+
+    fprintf(stderr, "[!] Names input and output files equal!\n");
+    return 1;
+  }
+  else
+  if (STRCMP(ctx->foutput, ctx->password) == 0) {
+    free_global_memory(ctx, ctx_length);
+
+    fprintf(stderr, "[!] Names keyfile and output files equal!\n");
+    return 1;
+  }
+  else
+  if (STRCMP(ctx->finput, ctx->password) == 0) {
+    free_global_memory(ctx, ctx_length);
+
+    fprintf(stderr, "[!] Names keyfile and input files equal!\n");
     return 1;
   }
 
