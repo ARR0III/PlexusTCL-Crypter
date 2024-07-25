@@ -1,7 +1,7 @@
 /*
   CPU: Intel Core 2 Quad Q9500 (2,83 GHz, LGA 775, Cache 6 MB, 4 core);
-  RAM: 4 Gb/800 MHz (2 x 2Gb)
-  OS: GNU/Linux Debian 11 (bullseye), (x32/i386)
+  RAM: 4 Gb/800 MHz (2 x 2Gb);
+  OS: GNU/Linux Debian 11 (bullseye), (i386);
 
   x = 208827064576 / 9;
   x = x / 60;
@@ -12,13 +12,13 @@
 */
 
 user@machine:~/projects/crycon$ ./crycon --aes --encrypt --256 data.dat data.dat.en
-[DEBUG] compile date and time:   Jul 12 2024, 03:41:24
+[DEBUG] compile date and time:   Jul 25 2024, 10:05:04
 [DEBUG] global memory allocated: 16777292 byte
-[DEBUG] global memory pointer:   0xb6f53010
+[DEBUG] global memory pointer:   0xb6f33010
 [DEBUG] size struct for sha256sum function: 140 byte
-[DEBUG] sha256sum struct create in pointer: 0x9d235c0
+[DEBUG] sha256sum struct create in pointer: 0x8dab5c0
 [DEBUG] maximal length password or name keyfile: 2048 byte
-[DEBUG] pointer of memory for password or name keyfile: 0x9d22db0
+[DEBUG] pointer of memory for password or name keyfile: 0x8daadb0
 [$] Enter password or name keyfile:
 [DEBUG] input filename:      data.dat
 [DEBUG] output filename:     data.dat.en
@@ -28,11 +28,11 @@ user@machine:~/projects/crycon$ ./crycon --aes --encrypt --256 data.dat data.dat
 [DEBUG] key length: 256 bist
 [DEBUG] operation: Encrypt
 [DEBUG] temp memory allocated: 32 byte
-[DEBUG] temp memory pointer: 0x9d23e70
-[DEBUG] pointer of key matrix memory: 0x9d23fe0
+[DEBUG] temp memory pointer: 0x8dabe70
+[DEBUG] pointer of key matrix memory: 0x8dabfe0
 [DEBUG] size of key matrix memory byte: 1728
 [DEBUG] make crypt key count iteration: 1023733
-[DEBUG] make crypt key time: 0.2389 seconds
+[DEBUG] make crypt key time: 0.2685 seconds
 [DEBUG] hash matrix for key generation:
 26 DD A9 7C AC 1A 6C 41 7B E7 60 36 14 A6 20 CB
 34 C9 08 C8 90 BE D8 05 9E 41 85 2E 27 02 CF 77
@@ -146,13 +146,15 @@ E7 C9 5B 13 3C C0 5D 84 84 12 C9 69 A2 A1 E0 5C
 [#] Crypt key read from command line!
 [#] Key length 256-bits initialized!
 [DEBUG] key or password length: 21 byte
-[DEBUG] key generator write data in pointer: 0x9d23e70
+[DEBUG] key generator write data in pointer: 0x8dabe70
 [DEBUG] real crypt key data:
 03 6C CD 0A 07 D5 2D 86 CB 26 96 32 1C 77 2E 73
 1C EF A6 71 37 42 64 DD 09 FD 22 9A 7F 8A 4A 9A
 
-[DEBUG] stack_trash[0]: 0
-[DEBUG] stack_trash[1]: 8073a89
+[DEBUG] stack_trash: 8073a99
+[DEBUG] data from device "/dev/urandom":
+96 E9 3E 7D 52 DF 14 60 62 47 06 21 1E 04 CB 7A
+
 [#] Algoritm AES initialized!
 [DEBUG] allocate byte for cipher struct: 240
 [DEBUG] real data cipher struct:
@@ -173,17 +175,17 @@ BE 60 7C 23 06 42 81 F3 2F 08 0B 88 92 66 53 45
 DD 47 94 A5 09 2B 44 A1 5B C0 C2 BE 58 E9 4C A8
 
 [#] Operation Encrypt file "data.dat" started!
-[DEBUG] size of file: 104267776 byte
+[DEBUG] size of file: 124190720 byte
 [DEBUG] vector memory allocated: 16 byte
-[DEBUG] vector memory pointer: 0x9d23fe0
-[DEBUG] vector generator write data in pointer: 0x9d23fe0
+[DEBUG] vector memory pointer: 0x8dabfe0
+[DEBUG] vector generator write data in pointer: 0x8dabfe0
 [DEBUG] vector real data:
-5A D1 B1 38 DB 75 FD A8 3E 2A BB 0D 10 92 83 63
+C1 9C DE BA D0 00 0C D3 8D AD 96 AF 92 BB 2B EC
 
- >  Encrypt [#########################] (99.44 MiB/99.44 MiB) 100 %  
+ >  Encrypt [#########################] (118.44 MiB/118.44 MiB) 100 %  
 [DEBUG] real sha-2-256 hash sum file: data.dat
-A7 9E 87 CC ED 4A 16 15 C5 0C FA 05 38 3D 20 B4
-18 96 F4 6D 57 2C 9D 65 F0 FE 2B DB FF 95 77 9E
+A7 9F 59 F7 87 C6 2C C9 4D 5F 0D 61 69 25 9A 84
+53 15 50 71 05 51 F7 AB 1A 3B AF 30 7C F5 A0 0A
 
 [DEBUG] authentification key 'U':
 56 39 98 5F 52 80 78 D3 9E 73 C3 67 49 22 7B 26
@@ -194,8 +196,8 @@ A7 9E 87 CC ED 4A 16 15 C5 0C FA 05 38 3D 20 B4
 7A 89 C0 17 51 24 02 BB 6F 9B 44 FC 19 EC 2C FC
 
 [DEBUG] real hmac input filename: data.dat
-D3 B6 67 C9 C4 44 5C B1 56 2B 34 C7 69 89 BD 6F
-12 12 CA D5 8B B2 83 17 EA 16 90 C0 2D 65 9B A3
+10 94 30 B2 C0 E1 58 3B 65 D5 A1 49 BD 7B ED 2C
+90 8C 72 F3 30 89 9A C5 73 C6 3B 85 90 F1 60 92
 
 [#] Encrypt file "data.dat" complete!
 
