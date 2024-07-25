@@ -24,14 +24,14 @@
 
 /*
  WARNING: ASSEMBLER CODE ONLY FOR C++ BUILDER 6.0
- DO NOT CHANGE ASSEMBLER CODE IF YOU ARE WOODPECKER!
+ DO NOT CHANGE ASSEMBLER CODE IF YOU ARE WOODPECKER
  
  1 - FOR C++ BUILDER 6.0
  0 - OTHER COMPILERS
  
  If defined __ASM_32_X86_CPP_BUILDER__ const equal 1 (ON)
  then Borland C++ 6.0 compiling assembler x86 code for
- maximization program speed on 32 bits processor!
+ maximization program speed on 32 bits processor.
 */
 
 #define ON  1
@@ -41,7 +41,7 @@
 #define HEX_STRING 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ ON
+#define __ASM_32_X86_CPP_BUILDER__ OFF
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +51,7 @@ extern "C" {
 void memxor(void * output, const void * input, size_t length);
 void memxormove(void * output, const void * input, size_t length);
 void meminit(void * data, const size_t number, size_t length); /* <-- memset function analog */
+size_t x_strnlen(const char * s, size_t b);
 
 /* Only C language source code */
 void arraytobits(const uint8_t * data, const size_t length, FILE * stream);
@@ -63,7 +64,6 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 int  genrand(const unsigned int min, const unsigned int max);
 int  readfromfile(const char * filename, void * buffer, const size_t length);
 
-size_t x_strnlen(const char * s, size_t b);
 size_t printhex(int tumbler, const void * data, size_t length);
 
 #ifdef __cplusplus
