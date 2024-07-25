@@ -291,59 +291,6 @@ _exit:
 /* "meminit32" optimization and always executable standart function memset */
 void meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
-
-/****** OLD * CODE ******
-__asm {
-  mov ecx, length
-  mov ebx, number
-  mov edi, data
-
-  cmp ebx, 0xFF
-  ja _memset
-
-  mov bh, bl
-  mov edx, ebx
-  shl edx, 16
-  or ebx, edx
-
-_memset:
-  mov edx, ecx
-  and edx, 0x03
-  
-  shr ecx, 2
-  jz _lp_byte
-
-_lp_block:
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  jmp _lp_block
-
-_lp_byte:
-  test edx, edx
-  jz _exit
-  mov byte[edi], bl
-  inc edi
-  dec edx
-  jmp _lp_byte
-
-_exit:
-}
-****** OLD * CODE ******/
-
 __asm {
   mov ecx, length
   mov edx, number
@@ -431,6 +378,15 @@ _exit:
   }
 /*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
 
+  if (length < sizeof(size_t)) {
+    while (length) {
+      *temp = (uint8_t)u_dword;
+      temp++;
+      length--;
+    }
+    return;
+  }
+
   while (length >= (sizeof(size_t) * 8)) {
     *((size_t *)temp + 0) = u_dword;
     *((size_t *)temp + 1) = u_dword;
@@ -463,10 +419,9 @@ _exit:
     length -= sizeof(size_t);
   }
 
-  while (length) {
-    *temp = (uint8_t)number;
-     temp++;
-     length--;
+  if ((temp > (uint8_t *)data) && length) { /* min 1 block be copy */
+    temp -= (sizeof(size_t) - length);
+    *((size_t *)temp) = u_dword;
   }
 #endif
 }
