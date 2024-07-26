@@ -865,8 +865,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
 
-  tcgetattr(0, &trms);
 /*
+  tcgetattr(0, &trms);
   if (trms.c_lflag & ECHO) {
     fprintf(stderr, "[X] Not are set ECHO flag for Termios!\n");
     tcsetattr(0, TCSANOW, &trms_old);
