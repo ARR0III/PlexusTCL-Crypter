@@ -3,8 +3,8 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 25 JUL 2024;
- * Modification:      Release;
+ * Modification date: 28 JUL 2024;
+ * Modification:      Testing;
  * Language:          English;
  */
 
@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 #include <termios.h>
+#include <sys/types.h>
 
 #include "src/arc4.h"
 #include "src/crc32.h"
@@ -29,23 +30,28 @@
 
 #include "src/xtalw.h"
 #include "src/clomul.h"
-
+/*****************************************************************************/
 #ifndef CRYCON_DEBUG
 #  define CRYCON_DEBUG 0
 #else
 #  define CRYCON_DEBUG 1
 #endif
-
+/*****************************************************************************/
 #define MEMORY_ERROR do { \
     fprintf(stderr, "[!] Cannot allocate memory!\n"); \
   } while(0)
-
+/*****************************************************************************/
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
-
+/*****************************************************************************/
+#define KiB                          1
+#define MiB                          2
+#define GiB                          3
+#define TiB                          4
+/*****************************************************************************/
 #define ERROR_TERMINAL               1
 #define ERROR_SET_FLAG               2
 #define ERROR_GET_STRING             3
-
+/*****************************************************************************/
 #define OK                           0
 #define READ_FILE_NOT_OPEN           1
 #define WRITE_FILE_NOT_OPEN          2
@@ -55,17 +61,17 @@
 #define STREAM_INPUT_CLOSE_ERROR     6
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
-
+/*****************************************************************************/
 #define LENGTH_DATA_FOR_CHECK     1024
-
+/*****************************************************************************/
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
-
+/*****************************************************************************/
 #define PROGRESS_BAR_LENGTH         26
-
+/*****************************************************************************/
 #define STRING_MAX_LENGTH         2048
 #define DATA_SIZE     ((1024*1024) * 8 /*MiB*/ ) /* READ AND WRITE FROM DRIVE */
-
+/*****************************************************************************/
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
 const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 25JUL24 [EN]";
@@ -84,17 +90,19 @@ typedef enum cipher_number_enum {
   THREEFISH = 4
 } cipher_t;
 
-static const uint32_t INT_SIZE_DATA[] = {
-  (uint32_t)1 << 10, /* KiB */
-  (uint32_t)1 << 20, /* MeB */
-  (uint32_t)1 << 30  /* GiB */
+static const off_t INT_SIZE_DATA[] = {
+  (off_t)1 << 10, /* KiB */
+  (off_t)1 << 20, /* MiB */
+  (off_t)1 << 30, /* GiB */
+  (off_t)1 << 40  /* TiB*/
 };
 
 static const char * CHAR_SIZE_DATA[] = {
   "Bt" ,
   "KiB",
   "MiB",
-  "GiB"
+  "GiB",
+  "TiB"
 };
 
 static const char * OPERATION_NAME[] = {
@@ -170,20 +178,24 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free(ctx);
 }
 
-/* Function size_check checked size = Bt, Kb, Mb or Gb */
-static int size_check(uint32_t size) {
+/* Function size_check checked size = Bt, KiB, MiB, GiB or TiB */
+static int size_check(off_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
-    result = 1;
+    result = KiB;
   }
   else
   if (size >= INT_SIZE_DATA[1] && size < INT_SIZE_DATA[2]) {
-    result = 2;
+    result = MiB;
   }
   else
-  if (size >= INT_SIZE_DATA[2]) {
-    result = 3;
+  if (size >= INT_SIZE_DATA[2] && size < INT_SIZE_DATA[3]) {
+    result = GiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[3]) {
+    result = TiB;
   }
 
   return result;
@@ -339,20 +351,20 @@ static int operation_variant(const int operation) {
   return (operation ? 1 : 0);
 }
 
-static int32_t size_of_file(FILE * f) {
-  int32_t result;
+static off_t size_of_file(FILE * f) {
+  off_t result;
 
   if (!f) {
     return (-1);
   }
 	
-  if (fseek(f, 0, SEEK_END) != 0) {
+  if (fseeko(f, 0, SEEK_END) != 0) {
     return (-1);
   }
 
-  result = ftell(f);
+  result = ftello(f);
 
-  if (fseek(f, 0, SEEK_SET) != 0) {
+  if (fseeko(f, 0, SEEK_SET) != 0) {
     return (-1);
   }
 
@@ -469,19 +481,19 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
 
 /* fsize += (size initialized vector + size sha256 hash sum) */
 /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
-static int size_correct(const GLOBAL_MEMORY * ctx, const long int fsize) {
-  if (0L == fsize) {
+static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
+  if (0ULL == fsize) {
     return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) {
-    if ((signed long int)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0L) {
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0ULL) {
       return SIZE_FILE_ERROR;
     }
   }
   else {
     /* if fsize < minimal size for decrypt */
-    if (fsize < (signed long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+    if (fsize < (off_t)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
@@ -491,7 +503,6 @@ static int size_correct(const GLOBAL_MEMORY * ctx, const long int fsize) {
 
 
 static int filecrypt(GLOBAL_MEMORY * ctx) {
-
   FILE * fi = NULL;
   FILE * fo = NULL;
 
@@ -501,7 +512,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   size_t nblock, realread = 0;
 
-  int32_t fsize, position = 0;
+  off_t fsize, position = 0;
 
   fi = fopen(ctx->finput, PARAM_READ_BYTE);
 
@@ -521,10 +532,6 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   fsize_check = 0;
 
-#if CRYCON_DEBUG
-  printf("[DEBUG] size of file: %d byte\n", fsize);
-#endif
-
   fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
 
   if (!fo) {
@@ -538,12 +545,16 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
+#if CRYCON_DEBUG
+  printf("[DEBUG] size of file: %4.2f %s\n", fsize_double, CHAR_SIZE_DATA[fsize_check]);
+#endif
+
   meminit(ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
   sha256_init(ctx->sha256sum);
 
   while (position < fsize) {
-    if (0 == position) { /* if first block */
+    if (0ULL == position) { /* if first block */
 
 #if CRYCON_DEBUG
   printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
@@ -865,8 +876,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
 
-/*
   tcgetattr(0, &trms);
+/*
   if (trms.c_lflag & ECHO) {
     fprintf(stderr, "[X] Not are set ECHO flag for Termios!\n");
     tcsetattr(0, TCSANOW, &trms_old);
