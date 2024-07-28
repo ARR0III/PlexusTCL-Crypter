@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 28 JUL 2024;
+ * Modification date: 29 JUL 2024;
  * Modification:      Testing;
  * Language:          English;
  */
@@ -15,9 +15,10 @@
 #include <string.h>
 #include <stddef.h>
 
+#include <sys/types.h>
+
 #include <unistd.h>
 #include <termios.h>
-#include <sys/types.h>
 
 #include "src/arc4.h"
 #include "src/crc32.h"
@@ -47,6 +48,8 @@
 #define MiB                          2
 #define GiB                          3
 #define TiB                          4
+#define PiB                          5
+#define EiB                          6
 /*****************************************************************************/
 #define ERROR_TERMINAL               1
 #define ERROR_SET_FLAG               2
@@ -74,7 +77,7 @@
 /*****************************************************************************/
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 25JUL24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 29JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -94,7 +97,9 @@ static const off_t INT_SIZE_DATA[] = {
   (off_t)1 << 10, /* KiB */
   (off_t)1 << 20, /* MiB */
   (off_t)1 << 30, /* GiB */
-  (off_t)1 << 40  /* TiB*/
+  (off_t)1 << 40, /* TiB */
+  (off_t)1 << 50, /* PiB */
+  (off_t)1 << 60  /* EiB */
 };
 
 static const char * CHAR_SIZE_DATA[] = {
@@ -102,7 +107,9 @@ static const char * CHAR_SIZE_DATA[] = {
   "KiB",
   "MiB",
   "GiB",
-  "TiB"
+  "TiB",
+  "PiB",
+  "EiB"
 };
 
 static const char * OPERATION_NAME[] = {
@@ -194,8 +201,16 @@ static int size_check(off_t size) {
     result = GiB;
   }
   else
-  if (size >= INT_SIZE_DATA[3]) {
+  if (size >= INT_SIZE_DATA[3] && size < INT_SIZE_DATA[4]) {
     result = TiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[4] && size < INT_SIZE_DATA[5]) {
+    result = PiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[5] && size < INT_SIZE_DATA[6]) {
+    result = EiB;
   }
 
   return result;
@@ -482,12 +497,12 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
 /* fsize += (size initialized vector + size sha256 hash sum) */
 /* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
 static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
-  if (0ULL == fsize) {
+  if (0LL == fsize) {
     return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) {
-    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0ULL) {
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0LL) {
       return SIZE_FILE_ERROR;
     }
   }
@@ -639,7 +654,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       memcpy(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
-       position  += (int32_t)realread;
+       position  += (off_t)realread;
     real_percent  = (int)((double)position / div + 0.1);
 
     if (real_percent > 100) {
@@ -666,16 +681,10 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
         real_check = size_check(position);
 
         printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%  ",
-          OPERATION_NAME[operation_variant(ctx->operation)],
-          ctx->progress_bar,
-
+          OPERATION_NAME[operation_variant(ctx->operation)], ctx->progress_bar,
           sizetodoubleprint(real_check, (double)position),
-          CHAR_SIZE_DATA[real_check],
-
-          fsize_double,
-          CHAR_SIZE_DATA[fsize_check],
-
-          real_percent);
+          CHAR_SIZE_DATA[real_check],  fsize_double,
+          CHAR_SIZE_DATA[fsize_check], real_percent);
 
         fflush(stdout);
       /* } */
@@ -701,11 +710,9 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     fflush(fo);
-
   }
   else {
     if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
-
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
     else {
@@ -847,7 +854,7 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
       fprintf(stderr, "[!] Output file \"%s\" not opened!\n", ctx->foutput);
       break;
     case SIZE_FILE_ERROR:
-      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 2 GiB!\n", ctx->finput);
+      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 8 EiB!\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
       fprintf(stderr, "[!] Error write in file \"%s\" !\n", ctx->foutput);
@@ -875,9 +882,9 @@ int password_read(GLOBAL_MEMORY * ctx) {
   memcpy(&trms_old, &trms, sizeof(trms)); /* copy normal settings */
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
-
-  tcgetattr(0, &trms);
 /*
+  tcgetattr(0, &trms);
+
   if (trms.c_lflag & ECHO) {
     fprintf(stderr, "[X] Not are set ECHO flag for Termios!\n");
     tcsetattr(0, TCSANOW, &trms_old);
@@ -948,13 +955,15 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
 
 int main(int argc, char * argv[]) {
 /*****************************************************************************/
-  unsigned int trash;       /* not initialized == all control */
-  extern int AES_Rounds;    /* in rijndael.c source code file */
+  unsigned int trash;         /* not initialized == all control */
+  extern int AES_Rounds;      /* in rijndael.c source code file */
   int i, real_read, result;
   size_t ctx_length, cipher_ctx_len = 0;
 
   GLOBAL_MEMORY * ctx;
   void * cipher_pointer;
+/*****************************************************************************/
+  srand(trash + time(NULL));
 /*****************************************************************************/
   if (!isatty(0)) {
     fprintf(stderr, "[X] Not terminal!\n");
@@ -1263,7 +1272,6 @@ int main(int argc, char * argv[]) {
 #if CRYCON_DEBUG
   printf("[DEBUG] stack_trash: %02x\n", trash);
 #endif
-    srand(trash + time(NULL));
     /* random data from stack xor initialized vector */
     (*(uint32_t *)ctx->vector) ^= trash + (uint32_t)genrand(0x00000000, 0xFFFFFFFF);
 
