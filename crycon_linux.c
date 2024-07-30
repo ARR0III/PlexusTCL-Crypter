@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 29 JUL 2024;
+ * Modification date: 31 JUL 2024;
  * Modification:      Testing;
  * Language:          English;
  */
@@ -78,7 +78,7 @@
 /*****************************************************************************/
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 29JUL24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 31JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -518,7 +518,7 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
 }
 
 /* generating new crypt key for re-keying */
-static int full_re_keying(GLOBAL_MEMORY * ctx) {
+static int internal_re_keying(GLOBAL_MEMORY * ctx) {
   SHA256_CTX sha;
   int i, size;
 
@@ -765,12 +765,15 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     re_keying += realread;
-    
-/* if crypt key using for en/decrypt very long time --> regenerating crypt key */
+
+/*  if crypt key using for en/decrypt very long time --> regenerating crypt key
+    limit en/decrypt bytes = 2 GB
+    new_key = sha256sum(old_key);
+*/
     if (re_keying >= 0x80000000) {
       re_keying = 0;
 
-      if (full_re_keying(ctx) == 1) {
+      if (internal_re_keying(ctx) == 1) {
         return close_in_out_files(fi, fo, REKEYING_PROCESS_ERROR);
       }
     }
