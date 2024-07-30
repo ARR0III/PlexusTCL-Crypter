@@ -1303,7 +1303,6 @@ int main(int argc, char * argv[]) {
                 ctx->temp_buffer_length);
 
       meminit(ctx->password, 0x00, ctx->password_length);
-      ctx->password = NULL;
       ctx->password_length = 0;
 
       printf("[#] Crypt key read from command line.\n");
