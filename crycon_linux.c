@@ -39,7 +39,7 @@
 #endif
 /*****************************************************************************/
 #define MEMORY_ERROR do { \
-    fprintf(stderr, "[!] Cannot allocate memory!\n"); \
+    fprintf(stderr, "[!] Cannot allocate memory.\n"); \
   } while(0)
 /*****************************************************************************/
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
@@ -64,6 +64,7 @@
 #define STREAM_INPUT_CLOSE_ERROR     6
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
+#define REKEYING_PROCESS_ERROR       9
 /*****************************************************************************/
 #define LENGTH_DATA_FOR_CHECK     1024
 /*****************************************************************************/
@@ -209,7 +210,7 @@ static int size_check(off_t size) {
     result = PiB;
   }
   else
-  if (size >= INT_SIZE_DATA[5] && size < INT_SIZE_DATA[6]) {
+  if (size >= INT_SIZE_DATA[5]) {
     result = EiB;
   }
 
@@ -491,7 +492,7 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
     return STREAM_OUTPUT_CLOSE_ERROR;
   }
   
-  return return_code; /* All files close complete! */
+  return return_code; /* All files close complete. */
 }
 
 /* fsize += (size initialized vector + size sha256 hash sum) */
@@ -516,6 +517,77 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
   return OK;
 }
 
+/* generating new crypt key for re-keying */
+static int full_re_keying(GLOBAL_MEMORY * ctx) {
+  SHA256_CTX sha;
+  int i, size;
+
+  unsigned char * new_key = (unsigned char *)malloc(ctx->temp_buffer_length);
+
+  if (!new_key) {
+    return 1;
+  }
+
+  meminit(&sha, 0x00, sizeof(SHA256_CTX));
+  meminit(new_key, 0x00, ctx->temp_buffer_length);
+
+  sha256_init(&sha);
+
+  for (i = 0; i < ctx->temp_buffer_length; i += SHA256_BLOCK_SIZE) {
+    sha256_update(&sha, ctx->temp_buffer, ctx->temp_buffer_length);
+    sha256_final(&sha);
+
+    size = ctx->temp_buffer_length - i;
+
+    if (size > SHA256_BLOCK_SIZE) {
+      size = SHA256_BLOCK_SIZE;
+    }
+
+    memcpy(new_key + i, sha.hash, size);
+  }
+
+  memcpy(ctx->temp_buffer, new_key, ctx->temp_buffer_length);
+
+  meminit(&sha, 0x00, sizeof(SHA256_CTX));
+  meminit(new_key, 0x00, ctx->temp_buffer_length);
+
+  free(new_key);
+  new_key = NULL;
+
+/* now new crypt key in memory pointer ctx->temp_buffer */
+
+#if CRYCON_DEBUG
+  printf("[DEBUG] by generation new crypt key:\n");
+  printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
+#endif
+
+/* re-keying for security */
+
+  switch(ctx->cipher_number) {
+    case AES:       rijndael_key_encrypt_init(rijndael_ctx,
+                                              ctx->temp_buffer,
+                                              ctx->temp_buffer_length * 8);
+
+                    break;
+
+    case TWOFISH:   twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    break;
+
+    case SERPENT:   serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+                    break;
+
+    case BLOWFISH:  blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                    break;
+
+    case THREEFISH: threefish_init(threefish_ctx,
+                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
+                                  (uint64_t*)ctx->temp_buffer,
+                                  (uint64_t*)ctx->temp_buffer);
+                    break;
+  }
+  
+  return 0;
+}
 
 static int filecrypt(GLOBAL_MEMORY * ctx) {
   FILE * fi = NULL;
@@ -525,6 +597,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   int    fsize_check, real_check = 0;
   int    real_percent, past_percent = 0;
 
+  size_t re_keying = 0;
   size_t nblock, realread = 0;
 
   off_t fsize, position = 0;
@@ -690,6 +763,17 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       /* } */
       past_percent = real_percent;
     }
+
+    re_keying += realread;
+    
+/* if crypt key using for en/decrypt very long time --> regenerating crypt key */
+    if (re_keying >= 0x80000000) {
+      re_keying = 0;
+
+      if (full_re_keying(ctx) == 1) {
+        return close_in_out_files(fi, fo, REKEYING_PROCESS_ERROR);
+      }
+    }
   }
 
   putc('\n', stdout);
@@ -716,7 +800,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
     else {
-      printf("[#] Control sum file \"%s\" check! :)\n", ctx->finput);
+      printf("[#] Control sum file \"%s\" check. :)\n", ctx->finput);
     }
   }
 
@@ -842,34 +926,37 @@ static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
 void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
   switch (result) {
     case OK:
-      printf("[#] %s file \"%s\" complete!\n",
+      printf("[#] %s file \"%s\" complete.\n",
         OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
       break;
 
     case READ_FILE_NOT_OPEN:
-      fprintf(stderr, "[!] File for %s \"%s\" not opened!\n",
+      fprintf(stderr, "[!] File for %s \"%s\" not opened.\n",
         OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
       break;
     case WRITE_FILE_NOT_OPEN:
-      fprintf(stderr, "[!] Output file \"%s\" not opened!\n", ctx->foutput);
+      fprintf(stderr, "[!] Output file \"%s\" not opened.\n", ctx->foutput);
       break;
     case SIZE_FILE_ERROR:
-      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 8 EiB!\n", ctx->finput);
+      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 8 EiB.\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
-      fprintf(stderr, "[!] Error write in file \"%s\" !\n", ctx->foutput);
+      fprintf(stderr, "[!] Error write in file \"%s\" .\n", ctx->foutput);
       break;
     case READ_FILE_ERROR:
-      fprintf(stderr, "[!] Error read form file \"%s\" !\n", ctx->finput);
+      fprintf(stderr, "[!] Error read form file \"%s\" .\n", ctx->finput);
       break;
     case STREAM_INPUT_CLOSE_ERROR:
-      fprintf(stderr, "[!] Error close input stream!\n");
+      fprintf(stderr, "[!] Error close input stream.\n");
       break;
     case STREAM_OUTPUT_CLOSE_ERROR:
-      fprintf(stderr, "[!] Error close output stream!\n");
+      fprintf(stderr, "[!] Error close output stream.\n");
       break;
     case SIZE_DECRYPT_FILE_INCORRECT:
-      fprintf(stderr, "[!] Size of file for decrypt \"%s\" incorrect!\n", ctx->finput);
+      fprintf(stderr, "[!] Size of file for decrypt \"%s\" incorrect.\n", ctx->finput);
+      break;
+    case REKEYING_PROCESS_ERROR:
+      fprintf(stderr, "[!] Cannot allocate memory for re-keying.\n");
       break;
   }
 }
@@ -896,7 +983,7 @@ int password_read(GLOBAL_MEMORY * ctx) {
   printf("[$] Enter password or name keyfile:");
 
   if (!fgets(ctx->password, ctx->password_length, stdin)) {
-    fprintf(stderr, "[X] Password not read from command line!\n");
+    fprintf(stderr, "[X] Password not read from command line.\n");
     return ERROR_GET_STRING;
   }
 
@@ -989,7 +1076,7 @@ int main(int argc, char * argv[]) {
   }
   else
   if (1 == argc || argc >= 7) {
-    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
+    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings.\n", argc);
     return 0;
   }
 
@@ -1021,7 +1108,7 @@ int main(int argc, char * argv[]) {
   }
 
   if (argc < 4) {
-    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings!\n", argc);
+    fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings.\n", argc);
     return 0;
   }
 
@@ -1055,7 +1142,7 @@ int main(int argc, char * argv[]) {
   else {
     free_global_memory(ctx, ctx_length);
 
-    fprintf(stderr, "[!] Name cipher \"%s\" incorrect!\n", argv[1]);
+    fprintf(stderr, "[!] Name cipher \"%s\" incorrect.\n", argv[1]);
     return 1;
   }
 
@@ -1069,7 +1156,7 @@ int main(int argc, char * argv[]) {
   else {
     free_global_memory(ctx, ctx_length);
 
-    fprintf(stderr, "[!] Operation \"%s\" incorrect!\n", argv[2]);
+    fprintf(stderr, "[!] Operation \"%s\" incorrect.\n", argv[2]);
     return 1;
   }
 
@@ -1100,7 +1187,7 @@ int main(int argc, char * argv[]) {
     else {
       free_global_memory(ctx, ctx_length);
 
-      fprintf(stderr, "[!] Key length \"%s\" incorrect!\n", argv[3]);
+      fprintf(stderr, "[!] Key length \"%s\" incorrect.\n", argv[3]);
       return 1;
     }
   }
@@ -1124,7 +1211,7 @@ int main(int argc, char * argv[]) {
     else {
       free_global_memory(ctx, ctx_length);
 
-      fprintf(stderr, "[!] Key length \"%s\" incorrect!\n", argv[3]);
+      fprintf(stderr, "[!] Key length \"%s\" incorrect.\n", argv[3]);
       return 1;
     }
   }
@@ -1137,21 +1224,21 @@ int main(int argc, char * argv[]) {
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    fprintf(stderr, "[!] Names input and output files equal!\n");
+    fprintf(stderr, "[!] Names input and output files equal.\n");
     return 1;
   }
   else
   if (strcmp(ctx->foutput, ctx->password) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    fprintf(stderr, "[!] Names keyfile and output files equal!\n");
+    fprintf(stderr, "[!] Names keyfile and output files equal.\n");
     return 1;
   }
   else
   if (strcmp(ctx->finput, ctx->password) == 0) {
     free_global_memory(ctx, ctx_length);
 
-    fprintf(stderr, "[!] Names keyfile and input files equal!\n");
+    fprintf(stderr, "[!] Names keyfile and input files equal.\n");
     return 1;
   }
 
@@ -1192,11 +1279,11 @@ int main(int argc, char * argv[]) {
   real_read = readfromfile(ctx->password, ctx->temp_buffer, ctx->temp_buffer_length);
 
   if (real_read == (int)ctx->temp_buffer_length)
-    printf("[#] Crypt key read from file \"%s\"!\n", ctx->password);
+    printf("[#] Crypt key read from file \"%s\".\n", ctx->password);
   else
   if ((real_read > 0) && (real_read < (int)ctx->temp_buffer_length)) {
 
-    printf("[!] Data in key file %d byte; necessary %d byte!\n",
+    printf("[!] Data in key file %d byte; necessary %d byte.\n",
             real_read, (int32_t)ctx->temp_buffer_length);
 
     free_global_memory(ctx, ctx_length);
@@ -1216,17 +1303,17 @@ int main(int argc, char * argv[]) {
       ctx->password = NULL;
       ctx->password_length = 0;
 
-      printf("[#] Crypt key read from command line!\n");
+      printf("[#] Crypt key read from command line.\n");
     }
     else {
       free_global_memory(ctx, ctx_length);
 
-      fprintf(stderr, "[!] Data in string key %d byte; necessary 8..256 byte!\n", real_read);
+      fprintf(stderr, "[!] Data in string key %d byte; necessary 8..256 byte.\n", real_read);
       return 1;
     }
   }
 /*****************************************************************************/
-  printf("[#] Key length %d-bits initialized!\n", (int32_t)ctx->temp_buffer_length * 8);
+  printf("[#] Key length %d-bits initialized.\n", (int32_t)ctx->temp_buffer_length * 8);
 
 #if CRYCON_DEBUG
   printf("[DEBUG] key or password length: %d byte\n", real_read);
@@ -1287,7 +1374,7 @@ int main(int argc, char * argv[]) {
     return 1;
   }
 
-  printf("[#] Algoritm %s initialized!\n", ALGORITM_NAME[(ctx->cipher_number)]);
+  printf("[#] Algoritm %s initialized.\n", ALGORITM_NAME[(ctx->cipher_number)]);
 
 #if CRYCON_DEBUG
   printf("[DEBUG] allocate byte for cipher struct: %u\n", cipher_ctx_len);
@@ -1295,7 +1382,7 @@ int main(int argc, char * argv[]) {
   printhex(HEX_TABLE, cipher_pointer, cipher_ctx_len);
 #endif
 
-  printf("[#] Operation %s file \"%s\" started!\n",
+  printf("[#] Operation %s file \"%s\" started.\n",
     OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
 
 /*****************************************************************************/
