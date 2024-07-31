@@ -4,7 +4,7 @@
  *
  * Developer:         ARR0III;
  * Modification date: 31 JUL 2024;
- * Modification:      Testing;
+ * Modification:      Release;
  * Language:          English;
  */
 
@@ -496,19 +496,20 @@ static int close_in_out_files(FILE * file_input, FILE * file_output, const int r
 }
 
 /* fsize += (size initialized vector + size sha256 hash sum) */
-/* break operation if (fsize > 2 GB) or (fsize == 0) or (fsize == -1) */
+/* break operation if (fsize > 2 EiB) or (fsize == 0) or (fsize == -1) */
 static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
   if (0LL == fsize) {
     return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) {
-    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0LL) {
+/* if post encrypt size of file >= 4 EiB then this operation BAD ->> don't for decrypting */
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((off_t)1 << 63)) {
       return SIZE_FILE_ERROR;
     }
   }
   else {
-    /* if fsize < minimal size for decrypt */
+/* if fsize < minimal size, this file don't for decrypt */
     if (fsize < (off_t)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
@@ -557,7 +558,7 @@ static int internal_re_keying(GLOBAL_MEMORY * ctx) {
 /* now new crypt key in memory pointer ctx->temp_buffer */
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] by generation new crypt key:\n");
+  printf("\n[DEBUG] by generation new crypt key:\n");
   printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
 #endif
 
@@ -941,7 +942,7 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
       fprintf(stderr, "[!] Output file \"%s\" not opened.\n", ctx->foutput);
       break;
     case SIZE_FILE_ERROR:
-      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 8 EiB.\n", ctx->finput);
+      fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 4 EiB.\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
       fprintf(stderr, "[!] Error write in file \"%s\" .\n", ctx->foutput);
