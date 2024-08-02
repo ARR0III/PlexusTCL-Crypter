@@ -8,6 +8,8 @@
  * Language:          English;
  */
 
+/* #define _FILE_OFFSET_BITS 64 */
+
 #include <time.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -138,6 +140,12 @@ typedef struct {
   char       * finput;              /* path crypt file */
   char       * foutput;             /* path write file */
 
+  uint8_t    * real_key;            /* real_key for temp key data */
+  size_t       real_key_length;     /* size buffer for crypt key */
+
+  uint8_t    * new_key;             /* raw data for re-keying */
+  size_t       new_key_length;      /* always equal real_key_length */
+
   char       * password;            /* path keyfile or string key */
   size_t       password_length;
 
@@ -147,19 +155,24 @@ typedef struct {
   uint8_t    * vector;              /* initialized vector for crypt data */
   size_t       vector_length;       /* block size cipher execution */
 
-  uint8_t    * temp_buffer;         /* temp_buffer for temp key data */
-  size_t       temp_buffer_length;  /* size buffer for crypt key */
-
   uint8_t      input  [DATA_SIZE];  /* memory for read */
   uint8_t      output [DATA_SIZE];  /* memory for write */
 
-  char         progress_bar[PROGRESS_BAR_LENGTH];
+  uint8_t      progress_bar[PROGRESS_BAR_LENGTH];
 
   int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
 } GLOBAL_MEMORY;
 
-static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {	
+static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+  if (ctx->real_key && ctx->real_key_length > 0) {
+    meminit(ctx->real_key, 0x00, ctx->real_key_length);
+  }
+
+  if (ctx->new_key && ctx->new_key_length > 0) {
+    meminit(ctx->new_key, 0x00, ctx->new_key_length);
+  }
+
   if (ctx->password && ctx->password_length > 0) {
     meminit(ctx->password, 0x00, ctx->password_length);
   }
@@ -172,12 +185,9 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
     meminit(ctx->vector, 0x00, ctx->vector_length);
   }
 
-  if (ctx->temp_buffer && ctx->temp_buffer_length > 0) {
-    meminit(ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
-  }
-
+  free(ctx->real_key);
+  free(ctx->new_key);
   free(ctx->password);
-  free(ctx->temp_buffer);
   free(ctx->sha256sum);
   free(ctx->vector);
 	
@@ -407,16 +417,16 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     exit(1);
   }
 
-  size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
+  size_copy_data = MINIMAL(ctx->real_key_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
   memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memcpy(hmac_ctx->KEY_0, ctx->temp_buffer, size_copy_data);
-  memcpy(hmac_ctx->KEY_1, ctx->temp_buffer, size_copy_data);
+  memcpy(hmac_ctx->KEY_0, ctx->real_key, size_copy_data);
+  memcpy(hmac_ctx->KEY_1, ctx->real_key, size_copy_data);
 
-  /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
+  /* if length real_key equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
   for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
     hmac_ctx->KEY_0[i] = 0x00;
     hmac_ctx->KEY_1[i] = 0x00;
@@ -523,67 +533,59 @@ static int internal_re_keying(GLOBAL_MEMORY * ctx) {
   SHA256_CTX sha;
   int i, size;
 
-  unsigned char * new_key = (unsigned char *)malloc(ctx->temp_buffer_length);
-
-  if (!new_key) {
-    return 1;
-  }
-
   meminit(&sha, 0x00, sizeof(SHA256_CTX));
-  meminit(new_key, 0x00, ctx->temp_buffer_length);
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
 
   sha256_init(&sha);
 
-  for (i = 0; i < ctx->temp_buffer_length; i += SHA256_BLOCK_SIZE) {
-    sha256_update(&sha, ctx->temp_buffer, ctx->temp_buffer_length);
+  for (i = 0; i < ctx->real_key_length; i += SHA256_BLOCK_SIZE) {
+    sha256_update(&sha, ctx->real_key, ctx->real_key_length);
     sha256_final(&sha);
 
-    size = ctx->temp_buffer_length - i;
+    size = ctx->real_key_length - i;
 
     if (size > SHA256_BLOCK_SIZE) {
       size = SHA256_BLOCK_SIZE;
     }
 
-    memcpy(new_key + i, sha.hash, size);
+    memcpy(ctx->new_key + i, sha.hash, size);
   }
 
-  memcpy(ctx->temp_buffer, new_key, ctx->temp_buffer_length);
+  /* ctx->real_key_length and ctx->new_key_length always equal */
+  memcpy(ctx->real_key, ctx->new_key, ctx->new_key_length);
 
   meminit(&sha, 0x00, sizeof(SHA256_CTX));
-  meminit(new_key, 0x00, ctx->temp_buffer_length);
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
 
-  free(new_key);
-  new_key = NULL;
-
-/* now new crypt key in memory pointer ctx->temp_buffer */
+/* now new crypt key in memory pointer ctx->real_key */
 
 #if CRYCON_DEBUG
   printf("\n[DEBUG] by generation new crypt key:\n");
-  printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
+  printhex(HEX_TABLE, ctx->real_key, ctx->real_key_length);
 #endif
 
 /* re-keying for security */
 
   switch(ctx->cipher_number) {
     case AES:       rijndael_key_encrypt_init(rijndael_ctx,
-                                              ctx->temp_buffer,
-                                              ctx->temp_buffer_length * 8);
+                                              ctx->real_key,
+                                              ctx->real_key_length * 8);
 
                     break;
 
-    case TWOFISH:   twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+    case TWOFISH:   twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
 
-    case SERPENT:   serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+    case SERPENT:   serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
                     break;
 
-    case BLOWFISH:  blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+    case BLOWFISH:  blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
 
     case THREEFISH: threefish_init(threefish_ctx,
-                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                                  (uint64_t*)ctx->temp_buffer,
-                                  (uint64_t*)ctx->temp_buffer);
+                                  (threefishkeysize_t)(ctx->real_key_length * 8),
+                                  (uint64_t*)ctx->real_key,
+                                  (uint64_t*)ctx->real_key);
                     break;
   }
   
@@ -895,31 +897,31 @@ static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
   switch(ctx->cipher_number) {
     case AES:       { rijndael_ctx = (uint32_t *)cipher_ptr;
                       rijndael_key_encrypt_init(rijndael_ctx,
-                                                ctx->temp_buffer,
-                                                ctx->temp_buffer_length * 8);
+                                                ctx->real_key,
+                                                ctx->real_key_length * 8);
                     }
                     break;
 
     case TWOFISH:   { twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
-                      twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
                     }
                     break;
 
     case SERPENT:   { serpent_ctx = (SERPENT_CTX *)cipher_ptr;
-                      serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
+                      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
                     }
                     break;
 
     case BLOWFISH:  { blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
-                      blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
+                      blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
                     }
                     break;
 
     case THREEFISH: { threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
                       threefish_init(threefish_ctx,
-                                  (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                                  (uint64_t*)ctx->temp_buffer,
-                                  (uint64_t*)ctx->temp_buffer);
+                                  (threefishkeysize_t)(ctx->real_key_length * 8),
+                                  (uint64_t*)ctx->real_key,
+                                  (uint64_t*)ctx->real_key);
                     }
                     break;
   }
@@ -1016,13 +1018,14 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->finput             = NULL;
   (*ctx)->foutput            = NULL;
   (*ctx)->vector             = NULL;
-  (*ctx)->temp_buffer        = NULL;
+  (*ctx)->real_key           = NULL;
 
   (*ctx)->operation          = ENCRYPT;
   (*ctx)->cipher_number      = AES;
 
+  (*ctx)->new_key_length     = 0;
   (*ctx)->vector_length      = 0;
-  (*ctx)->temp_buffer_length = 0;
+  (*ctx)->real_key_length    = 0;
   (*ctx)->password_length    = STRING_MAX_LENGTH;
   (*ctx)->sha256sum_length   = sizeof(SHA256_CTX);
 
@@ -1172,21 +1175,21 @@ int main(int argc, char * argv[]) {
       if (AES == ctx->cipher_number) {
         AES_Rounds = 10;
       }
-      ctx->temp_buffer_length = 128;
+      ctx->real_key_length = 128;
     }
     else
     if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--192") == 0) {
       if (AES == ctx->cipher_number) {
         AES_Rounds = 12;
       }
-      ctx->temp_buffer_length = 192;
+      ctx->real_key_length = 192;
     }
     else
     if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--256") == 0) {
       if (AES == ctx->cipher_number) {
         AES_Rounds = 14;
       }
-      ctx->temp_buffer_length = 256;
+      ctx->real_key_length = 256;
     }
     else {
       free_global_memory(ctx, ctx_length);
@@ -1197,20 +1200,20 @@ int main(int argc, char * argv[]) {
   }
   else
   if (BLOWFISH  == ctx->cipher_number) {
-    ctx->temp_buffer_length = 448;
+    ctx->real_key_length = 448;
   }
   else
   if (THREEFISH == ctx->cipher_number) {
     if (strcmp(argv[3], "-a") == 0 || strcmp(argv[3], "--256") == 0) {
-      ctx->temp_buffer_length = 256;
+      ctx->real_key_length = 256;
     }
     else
     if (strcmp(argv[3], "-b") == 0 || strcmp(argv[3], "--512") == 0) {
-      ctx->temp_buffer_length = 512;
+      ctx->real_key_length = 512;
     }
     else
     if (strcmp(argv[3], "-c") == 0 || strcmp(argv[3], "--1024") == 0) {
-      ctx->temp_buffer_length = 1024;
+      ctx->real_key_length = 1024;
     }
     else {
       free_global_memory(ctx, ctx_length);
@@ -1252,43 +1255,55 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] keyfile or password: %s\n", ctx->password);
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] block cipher mode of operation: CFB\n");
-  printf("[DEBUG] key length: %u bist\n", ctx->temp_buffer_length);
+  printf("[DEBUG] key length: %u bist\n", ctx->real_key_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
 #endif
 
-  ctx->temp_buffer_length /= 8; /* for allocate memory */
+  ctx->real_key_length >>= 3; /* for allocate memory; (rkl div 8) */
 
 /*
-  AES       = (temp_buffer_length = 16 or 24 or 32);
-  SERPENT   = (temp_buffer_length = 16 or 24 or 32);
-  TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
-  BLOWFISH  = (temp_buffer_length = 56);
-  THREEFISH = (temp_buffer_length = 32 or 64 or 128);
+  AES       = (real_key_length = 16 or 24 or 32);
+  SERPENT   = (real_key_length = 16 or 24 or 32);
+  TWOFISH   = (real_key_length = 16 or 24 or 32);
+  BLOWFISH  = (real_key_length = 56);
+  THREEFISH = (real_key_length = 32 or 64 or 128);
 */
 
-  ctx->temp_buffer = (uint8_t*)calloc(ctx->temp_buffer_length, 1);
+  ctx->real_key = (uint8_t *)calloc(ctx->real_key_length, 1);
 
-  if (!ctx->temp_buffer) {
+  if (!ctx->real_key) {
     free_global_memory(ctx, ctx_length);
 
     MEMORY_ERROR;
     return 1;
   }
 
+  ctx->new_key_length = ctx->real_key_length;
+  ctx->new_key = (uint8_t *)malloc(ctx->new_key_length);
+
+  if (!ctx->new_key) {
+    free_global_memory(ctx, ctx_length);
+
+    MEMORY_ERROR;
+    return 1;
+  }
+
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
+
 #if CRYCON_DEBUG
-  printf("[DEBUG] temp memory allocated: %u byte\n", ctx->temp_buffer_length);
-  printf("[DEBUG] temp memory pointer: %p\n", ctx->temp_buffer);
+  printf("[DEBUG] temp memory allocated: %u byte\n", ctx->real_key_length);
+  printf("[DEBUG] temp memory pointer: %p\n", ctx->real_key);
 #endif
 /*****************************************************************************/
-  real_read = readfromfile(ctx->password, ctx->temp_buffer, ctx->temp_buffer_length);
+  real_read = readfromfile(ctx->password, ctx->real_key, ctx->real_key_length);
 
-  if (real_read == (int)ctx->temp_buffer_length)
+  if (real_read == (int)ctx->real_key_length)
     printf("[#] Crypt key read from file \"%s\".\n", ctx->password);
   else
-  if ((real_read > 0) && (real_read < (int)ctx->temp_buffer_length)) {
+  if ((real_read > 0) && (real_read < (int)ctx->real_key_length)) {
 
     printf("[!] Data in key file %d byte; necessary %d byte.\n",
-            real_read, (int32_t)ctx->temp_buffer_length);
+            real_read, (int32_t)ctx->real_key_length);
 
     free_global_memory(ctx, ctx_length);
     return 1;
@@ -1300,8 +1315,8 @@ int main(int argc, char * argv[]) {
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       /* password --> crypt key; Pseudo PBKDF2 */
       KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
-                ctx->temp_buffer,
-                ctx->temp_buffer_length);
+                ctx->real_key,
+                ctx->real_key_length);
 
       meminit(ctx->password, 0x00, ctx->password_length);
       ctx->password_length = 0;
@@ -1316,14 +1331,15 @@ int main(int argc, char * argv[]) {
     }
   }
 /*****************************************************************************/
-  printf("[#] Key length %d-bits initialized.\n", (int32_t)ctx->temp_buffer_length * 8);
+  printf("[#] Key length %d-bits initialized.\n",
+    (int32_t)ctx->real_key_length << 3); /* (rkl * 8) */
 
 #if CRYCON_DEBUG
   printf("[DEBUG] key or password length: %d byte\n", real_read);
-  printf("[DEBUG] key generator write data in pointer: %p\n", ctx->temp_buffer);
+  printf("[DEBUG] key generator write data in pointer: %p\n", ctx->real_key);
   printf("[DEBUG] real crypt key data:\n");
 
-  printhex(HEX_TABLE, ctx->temp_buffer, ctx->temp_buffer_length);
+  printhex(HEX_TABLE, ctx->real_key, ctx->real_key_length);
 #endif
 
   switch (ctx->cipher_number) {
@@ -1344,7 +1360,7 @@ int main(int argc, char * argv[]) {
       cipher_ctx_len = sizeof(BLOWFISH_CTX);
       break;
     case THREEFISH:
-      ctx->vector_length = ctx->temp_buffer_length;
+      ctx->vector_length = ctx->real_key_length;
       cipher_ctx_len = sizeof(THREEFISH_CTX);
       break;
   }
