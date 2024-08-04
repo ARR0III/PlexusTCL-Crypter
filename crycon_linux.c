@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 31 JUL 2024;
+ * Modification date: 05 AUG 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -80,7 +80,7 @@
 /*****************************************************************************/
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 31JUL24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 05AUG24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
