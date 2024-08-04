@@ -984,9 +984,9 @@ int password_read(GLOBAL_MEMORY * ctx) {
     return ERROR_SET_FLAG;
   }
 */
-  fflush(stdin);
-  fflush(stdout);
   printf("[$] Enter password or name keyfile:");
+  fflush(stdout);
+  fflush(stdin);
 
   if (!fgets(ctx->password, ctx->password_length, stdin)) {
     fprintf(stderr, "[X] Password not read from command line.\n");
