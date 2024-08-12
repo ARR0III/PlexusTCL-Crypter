@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 05 AUG 2024;
+ * Modification date: 31 JUL 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -80,7 +80,7 @@
 /*****************************************************************************/
 const char * PARAM_READ_BYTE  = "rb";
 const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 05AUG24 [EN]";
+const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 31JUL24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -529,7 +529,7 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
 }
 
 /* generating new crypt key for re-keying */
-static int internal_re_keying(GLOBAL_MEMORY * ctx) {
+static void internal_re_keying(GLOBAL_MEMORY * ctx) {
   SHA256_CTX sha;
   int i, size;
 
@@ -551,7 +551,7 @@ static int internal_re_keying(GLOBAL_MEMORY * ctx) {
     memcpy(ctx->new_key + i, sha.hash, size);
   }
 
-  /* ctx->real_key_length and ctx->new_key_length always equal */
+/* ctx->real_key_length and ctx->new_key_length always equal */
   memcpy(ctx->real_key, ctx->new_key, ctx->new_key_length);
 
   meminit(&sha, 0x00, sizeof(SHA256_CTX));
@@ -588,8 +588,6 @@ static int internal_re_keying(GLOBAL_MEMORY * ctx) {
                                   (uint64_t*)ctx->real_key);
                     break;
   }
-  
-  return 0;
 }
 
 static int filecrypt(GLOBAL_MEMORY * ctx) {
@@ -775,10 +773,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 */
     if (re_keying >= 0x80000000) {
       re_keying = 0;
-
-      if (internal_re_keying(ctx) == 1) {
-        return close_in_out_files(fi, fo, REKEYING_PROCESS_ERROR);
-      }
+      internal_re_keying(ctx);
     }
   }
 
@@ -984,9 +979,9 @@ int password_read(GLOBAL_MEMORY * ctx) {
     return ERROR_SET_FLAG;
   }
 */
-  printf("[$] Enter password or name keyfile:");
-  fflush(stdout);
   fflush(stdin);
+  fflush(stdout);
+  printf("[$] Enter password or name keyfile:");
 
   if (!fgets(ctx->password, ctx->password_length, stdin)) {
     fprintf(stderr, "[X] Password not read from command line.\n");
