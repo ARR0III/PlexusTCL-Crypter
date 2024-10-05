@@ -32,6 +32,13 @@
 #define EMPTY_FILENAME "output.dat"
 #define EXT_CRYCON     ".crycon"
 
+#define KiB                          1
+#define MiB                          2
+#define GiB                          3
+#define TiB                          4
+#define PiB                          5
+#define EiB                          6
+
 #define OK                           0
 #define READ_FILE_NOT_OPEN           1
 #define WRITE_FILE_NOT_OPEN          2
@@ -78,6 +85,8 @@ TForm1 *Form1;
 
 bool PROCESSING = false;
 
+typedef int64_t fsize_t;
+
 typedef enum cipher_number_enum {
   AES       = 0,
   SERPENT   = 1,
@@ -105,17 +114,23 @@ const char * CHAR_KEY_LENGTH_THREEFISH[] ={
   "1024"
 };
 
-const uint32_t INT_SIZE_DATA[] = {
-  (uint32_t)1 << 10, /* KiB */
-  (uint32_t)1 << 20, /* MeB */
-  (uint32_t)1 << 30  /* GiB */
+static const fsize_t INT_SIZE_DATA[] = {
+  (fsize_t)1 << 10, /* KiB */
+  (fsize_t)1 << 20, /* MiB */
+  (fsize_t)1 << 30, /* GiB */
+  (fsize_t)1 << 40, /* TiB */
+  (fsize_t)1 << 50, /* PiB */
+  (fsize_t)1 << 60  /* EiB */
 };
 
-const char * CHAR_SIZE_DATA[] = {
-  "Бт",
+static const char * CHAR_SIZE_DATA[] = {
+  "Кб" ,
   "КиБ",
-  "МеБ",
-  "ГиБ"
+  "МиБ",
+  "ГиБ",
+  "ТиБ",
+  "ПиБ",
+  "ЭиБ"
 };
 
 const char * OPERATION_NAME[] = {
@@ -134,7 +149,7 @@ const char * ALGORITM_NAME[] = {
 const char * START_STR = "Старт";
 const char * STOP_STR  = "Стоп";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.09 08JUN24 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.10 05OKT24 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -165,13 +180,15 @@ typedef struct {
 typedef struct {
 /* pointers for */
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
-  size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
 
   uint8_t    * vector;              /* initialized vector for crypt data */
   size_t       vector_length;       /* block size cipher execution */
 
-  uint8_t    * temp_buffer;         /* temp_buffer for temp key data */
-  size_t       temp_buffer_length;  /* size buffer for crypt key */
+  uint8_t    * real_key;            /* real_key for temp key data */
+  size_t       real_key_length;     /* size buffer for crypt key */
+
+  uint8_t    * new_key;            /* real_key for temp key data */
+  size_t       new_key_length;     /* size buffer for crypt key */
 
   int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
   cipher_t     cipher_number;       /* search type name cipher_number_enum */
@@ -345,23 +362,28 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
   }
 }
 
-void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
-  if (ctx->sha256sum && ctx->sha256sum_length > 0) {
-    meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+  if (ctx->real_key && ctx->real_key_length > 0) {
+    meminit(ctx->real_key, 0x00, ctx->real_key_length);
+  }
+
+  if (ctx->new_key && ctx->new_key_length > 0) {
+    meminit(ctx->new_key, 0x00, ctx->new_key_length);
+  }
+
+  if (ctx->sha256sum) {
+    meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   }
 
   if (ctx->vector && ctx->vector_length > 0) {
     meminit(ctx->vector, 0x00, ctx->vector_length);
   }
 
-  if (ctx->temp_buffer && ctx->temp_buffer_length > 0) {
-    meminit(ctx->temp_buffer, 0x00, ctx->temp_buffer_length);
-  }
-
-  free(ctx->vector);
+  free(ctx->real_key);
+  free(ctx->new_key);
   free(ctx->sha256sum);
-  free(ctx->temp_buffer);
-
+  free(ctx->vector);
+	
   /* clear all memory and all pointers */
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
@@ -391,7 +413,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   uint32_t count = 0;
 
   short real, past = 0;
-  float div = (float)(key_len) / 100.0;
+  double div = (double)(key_len) / 100.0;
 
   for (i = 1; i <= password_len; ++i) { /* dynamic counter generate */
     count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
@@ -403,7 +425,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   count  |= ((uint32_t)1 << 14);
   count  *= CLOMUL_CONST;
 
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
 
   i = k = 0;
@@ -424,7 +446,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     i++;
     k++;
 
-    real = (short)((float)i / div + 0.1);
+    real = (short)((double)i / div + 0.1);
 
     if (real > 100) {
       real = 100;
@@ -442,44 +464,70 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     }
   }
 
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
 }
 
-int size_check(uint32_t size) {
+/* Function size_check checked size = Bt, KiB, MiB, GiB or TiB */
+static int size_check(fsize_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
-    result = 1;  
+    result = KiB;
   }
   else
   if (size >= INT_SIZE_DATA[1] && size < INT_SIZE_DATA[2]) {
-    result = 2;
+    result = MiB;
   }
   else
-  if (size >= INT_SIZE_DATA[2]) {
-    result = 3;
+  if (size >= INT_SIZE_DATA[2] && size < INT_SIZE_DATA[3]) {
+    result = GiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[3] && size < INT_SIZE_DATA[4]) {
+    result = TiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[4] && size < INT_SIZE_DATA[5]) {
+    result = PiB;
+  }
+  else
+  if (size >= INT_SIZE_DATA[5]) {
+    result = EiB;
   }
 
   return result;
 }
 
-long int size_of_file(FILE * f) {
+/* get size of file bytes */
+fsize_t SizeOfFile(const char * filename) {
+  HANDLE fh;
+  DWORD low_size;
+  DWORD high_size = 0;
+  fsize_t result  = (fsize_t)(-1);
 
-  if (fseek(f, 0, SEEK_END) != 0) {
-    return (-1);
+  if (!filename) {
+    return result;
   }
 
-  long int result = ftell(f);
+  fh = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                  0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-  if (fseek(f, 0, SEEK_SET) != 0) {
-    return (-1);
+  if (INVALID_HANDLE_VALUE != fh) {
+    low_size = GetFileSize(fh, &high_size);
+
+    if (!GetLastError()) {
+      result  = (fsize_t)high_size << 32;
+      result += (fsize_t)low_size;
+    }
+
+    CloseHandle(fh);
   }
-
+  
   return result;
 }
 
-float sizetofloatprint(const int status, const float size) {
-  return (status ? (size / (float)INT_SIZE_DATA[status - 1]) : size);
+double sizetodoubleprint(const int status, const double size) {
+  return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
 }
 
 int erased_head_of_file(const char * filename) {
@@ -527,17 +575,25 @@ int erased_head_of_file(const char * filename) {
 }
 
 int erasedfile(const char * filename) {
-  FILE * f = fopen(filename, PARAM_REWRITE_BYTE);
+  FILE * f;
+  fsize_t size_for_erased, fsize, position = 0;
+  
+  int     check, fsize_check;
+  size_t  realread;
+  
+  double  fsize_double, div;
+  short   real_percent, past_percent = 0;
 
-  if (!f) {
+  fsize = SizeOfFile(filename);
+
+  if (fsize <= 0LL) {
+    fclose(f);
     return -1;
   }
 
-  long int fsize    = size_of_file(f);
-  long int position = 0;
+  f = fopen(filename, PARAM_REWRITE_BYTE);
 
-  if (fsize <= 0L) {
-    fclose(f);
+  if (!f) {
     return -1;
   }
 
@@ -549,22 +605,13 @@ int erasedfile(const char * filename) {
     return -1;
   }
 
-  int   fsize_check = size_check(fsize);
-  float fsize_float = sizetofloatprint(fsize_check, (float)fsize);
-
-  short real_percent;
-  short past_percent = 0;
-
-  float div = (float)fsize / 100.0;
-  int   check;
-
-  size_t realread;
-  size_t size_for_erased ;
+  fsize_check  = size_check(fsize);
+  fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
   while (position < fsize) {	
     size_for_erased = (fsize - position);
 
-    if (size_for_erased > DATA_SIZE) {
+    if (size_for_erased > (fsize_t)DATA_SIZE) {
       size_for_erased = DATA_SIZE;
     }
 
@@ -603,13 +650,12 @@ int erasedfile(const char * filename) {
 
       return -1;
     }
-    else {
-      fflush(f);
-    }
+    
+	fflush(f);
 
-    position += (long int)realread;
+    position += (fsize_t)realread;
 
-    real_percent = (short)((float)position / div + 0.1);
+    real_percent = (short)((double)position / div + 0.1);
 
     if (real_percent > 100) {
       real_percent = 100;
@@ -621,9 +667,9 @@ int erasedfile(const char * filename) {
       check = size_check(position);
     
       Form1->Label9->Caption = "Уничтожение файла; обработано: " +
-      (check ? FloatToStrF(((float)position / (float)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
+      (check ? FloatToStrF(((double)position / (double)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
                IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) +
+      (check ? FloatToStrF(fsize_double, ffFixed, 4, 2) : IntToStr((int)(fsize_double + 0.1))) +
                " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
       Application->ProcessMessages();
@@ -651,27 +697,28 @@ void cipher_free(void * ctx, size_t ctx_length) {
 }
 
 void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
-	
-  size_t hmac_ctx_length = sizeof(HMAC_CTX);	
-  HMAC_CTX * hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
+  HMAC_CTX * hmac_ctx;
+  int i;
+  size_t size_copy_data;
+  
+  hmac_ctx = (HMAC_CTX *)malloc(sizeof(HMAC_CTX));
 
   if (!hmac_ctx) {
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
 
-  int i;
-  size_t size_copy_data = MINIMAL(ctx->temp_buffer_length, SHA256_BLOCK_SIZE);
+  size_copy_data = MINIMAL(ctx->real_key_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
   memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memcpy(hmac_ctx->KEY_0, ctx->temp_buffer, size_copy_data);
-  memcpy(hmac_ctx->KEY_1, ctx->temp_buffer, size_copy_data);
+  memcpy(hmac_ctx->KEY_0, ctx->real_key, size_copy_data);
+  memcpy(hmac_ctx->KEY_1, ctx->real_key, size_copy_data);
 
-  /* if length temp_buffer equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
-  for (i = ctx->temp_buffer_length; i < SHA256_BLOCK_SIZE; i++) {
+  /* if length real_key equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
+  for (i = ctx->real_key_length; i < SHA256_BLOCK_SIZE; i++) {
     hmac_ctx->KEY_0[i] = 0x00;
     hmac_ctx->KEY_1[i] = 0x00;
   }
@@ -682,7 +729,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   /* clear sha256sum struct */
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
 
   /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
@@ -693,7 +740,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
 
   /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
@@ -702,7 +749,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   sha256_final(ctx->sha256sum);
 
   /* clear  buffers for security */
-  meminit(hmac_ctx, 0x00, hmac_ctx_length);
+  meminit(hmac_ctx, 0x00, sizeof(HMAC_CTX));
   free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
@@ -728,19 +775,77 @@ void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   }
 }
 
-int size_correct(GLOBAL_MEMORY * ctx, long int fsize) {
-  if (0L == fsize) {
+/* generating new crypt key for re-keying */
+static void internal_re_keying(GLOBAL_MEMORY * ctx) {
+  SHA256_CTX sha;
+  size_t i, size;
+
+  meminit(&sha, 0x00, sizeof(SHA256_CTX));
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
+
+  sha256_init(&sha);
+
+  for (i = 0; i < ctx->real_key_length; i += SHA256_BLOCK_SIZE) {
+    sha256_update(&sha, ctx->real_key, ctx->real_key_length);
+    sha256_final(&sha);
+
+    size = ctx->real_key_length - i;
+
+    if (size > SHA256_BLOCK_SIZE) {
+      size = SHA256_BLOCK_SIZE;
+    }
+
+    memcpy(ctx->new_key + i, sha.hash, size);
+  }
+
+/* ctx->real_key_length and ctx->new_key_length always equal */
+  memcpy(ctx->real_key, ctx->new_key, ctx->new_key_length);
+
+  meminit(&sha, 0x00, sizeof(SHA256_CTX));
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
+
+/* now new crypt key in memory pointer ctx->real_key */
+
+  switch(ctx->cipher_number) {
+    case AES:
+	  rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
+      break;
+
+    case TWOFISH:
+	  twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
+      break;
+
+    case SERPENT:
+	  serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
+      break;
+
+    case BLOWFISH:
+	  blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
+      break;
+
+    case THREEFISH:
+	  threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
+                     (uint64_t*)ctx->real_key, (uint64_t*)ctx->real_key);
+      break;
+  }
+}
+
+/* fsize += (size initialized vector + size sha256 hash sum) */
+/* break operation if (fsize > 2 EiB) or (fsize == 0) or (fsize == -1) */
+static int size_correct(const GLOBAL_MEMORY * ctx, fsize_t fsize) {
+  if (0LL == fsize) {
     return SIZE_FILE_ERROR;
   }
 
   if (ENCRYPT == ctx->operation) {
-    if ((long int)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) <= 0L) {
+/* if post encrypt size of file >= 4 EiB then this operation BAD ->> don't for decrypting */
+    if ((fsize_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((fsize_t)1 << 63)) {
       return SIZE_FILE_ERROR;
     }
   }
   else {
-    /* if fsize < minimal size for decrypt */
-    if (fsize < (long int)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+/* if fsize < minimal size, this file don't for decrypt */
+    if (fsize < (fsize_t)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
@@ -749,36 +854,38 @@ int size_correct(GLOBAL_MEMORY * ctx, long int fsize) {
 }
 
 int filecrypt(GLOBAL_MEMORY * ctx) {
-  register long int fsize;
-  register long int position = 0;
+  fsize_t fsize, position = 0LL;
 	
-  float div, fsize_float;
+  double div, fsize_double;
 
   int check, fsize_check;
 
   size_t nblock;
   size_t realread;
+  size_t re_keying = 0;
 
   short real_percent;
   short past_percent = 0;
 
-  FILE * fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
+  FILE * fi, *fo;
 
-  if (!fi) {
-    return READ_FILE_NOT_OPEN;
-  }
+  fsize        = SizeOfFile(Form1->Edit1->Text.c_str());
+  fsize_check  = size_correct(ctx, fsize);
 
-  fsize       = size_of_file(fi);
-  fsize_check = size_correct(ctx, fsize);
-
-  if (fsize_check) { /* IF NOT OK */
+  if (fsize_check) {      /* IF NOT OK */
     if (fclose(fi) == -1)
       return STREAM_INPUT_CLOSE_ERROR;
     else
       return fsize_check;
   }
 
-  FILE * fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
+  fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
+
+  if (!fi) {
+    return READ_FILE_NOT_OPEN;
+  }
+
+  fo = fopen(Form1->Edit2->Text.c_str(), PARAM_WRITE_BYTE);
 
   if (!fo) {
     if (fclose(fi) == -1)
@@ -787,12 +894,12 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       return WRITE_FILE_NOT_OPEN;
   }
 
-  div = (float)fsize / 100.0;
+  div = (double)fsize / 100.0;
   
-  fsize_check = size_check(fsize);
-  fsize_float = sizetofloatprint(fsize_check, (float)fsize);
+  fsize_check  = size_check(fsize);
+  fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
 
   while (position < fsize) {  
@@ -800,12 +907,12 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     EnterCriticalSection(&Form1->CrSec);
     if (false == PROCESSING) {
       LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
       return close_in_out_files(fi, fo, 0xDE);
     }
     LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
-    if (0 == position) {
+    if (0LL == position) {
       if (ENCRYPT == ctx->operation) {
         switch (ctx->cipher_number) {
           case AES:
@@ -839,7 +946,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         if (fread(ctx->vector, 1, ctx->vector_length, fi) != ctx->vector_length) {
           return close_in_out_files(fi, fo, READ_FILE_ERROR);
         }
-        position += (int32_t)ctx->vector_length;
+        position += (fsize_t)ctx->vector_length;
       }
     }
 
@@ -847,7 +954,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     EnterCriticalSection(&Form1->CrSec);
     if (false == PROCESSING) {
       LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
       return close_in_out_files(fi, fo, 0xDE);
     }
     LeaveCriticalSection(&Form1->CrSec);
@@ -878,7 +985,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       memcpy(ctx->vector, (ctx->operation ? ctx->input : ctx->output) + nblock, ctx->vector_length);
     }
 
-       position  += (int32_t)realread;
+       position  += (fsize_t)realread;
     real_percent  = (int)((double)position / div + 0.1);
 
     if (real_percent > 100) {
@@ -895,7 +1002,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     EnterCriticalSection(&Form1->CrSec);
     if (false == PROCESSING) {
       LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
       return close_in_out_files(fi, fo, 0xDE);
     }
     LeaveCriticalSection(&Form1->CrSec);
@@ -913,12 +1020,24 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
       Form1->Label9->Caption = AnsiString(OPERATION_NAME[ctx->operation ? 1 : 0 ]) +
       ": " + AnsiString(ALGORITM_NAME[ctx->cipher_number]) + "; Обработано: " +
-      (check ? FloatToStrF(((float)position / (float)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
+      (check ? FloatToStrF(((double)position / (double)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
                IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-      (check ? FloatToStrF(fsize_float, ffFixed, 4, 2) : IntToStr((int)(fsize_float + 0.1))) + " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+      (check ? FloatToStrF(fsize_double, ffFixed, 4, 2) : IntToStr((int)(fsize_double + 0.1))) + " " +
+	           CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
       Application->ProcessMessages();
       past_percent = real_percent;
+    }
+
+    re_keying += realread;
+	
+/*  if crypt key using for en/decrypt very long time --> regenerating crypt key
+    limit en/decrypt bytes = 2 GB
+    new_key = sha256sum(old_key);
+*/
+    if (re_keying >= 0x80000000) {
+      re_keying = 0;
+      internal_re_keying(ctx);
     }
   }
 
@@ -942,26 +1061,23 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
   }
 
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
 
   return close_in_out_files(fi, fo, OK);
 }
 
-void random_vector_init(uint8_t * data, size_t size) {
-  
+bool random_vector_init(uint8_t * data, size_t size) {
   size_t i;
-  size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
-  
-  ARC4_CTX * arc4_memory = (ARC4_CTX *)malloc(arc4_size);
-  uint8_t * vector_memory = (uint8_t *)malloc(vector_size);
-  
+
+  ARC4_CTX * arc4_memory   = (ARC4_CTX *)malloc(sizeof(ARC4_CTX));
+  uint8_t *  vector_memory = (uint8_t *)malloc(vector_size);
+
   if (!arc4_memory || !vector_memory) {
     free(vector_memory);
     free(arc4_memory);
-	
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);	
-    return;
+		
+    return false;
   }
   
   /* generate trash for security and xor with random data from memory */
@@ -975,14 +1091,15 @@ void random_vector_init(uint8_t * data, size_t size) {
   
   /* clear all data for security */
   meminit(vector_memory, 0x00, vector_size);
-  meminit(arc4_memory, 0x00, arc4_size);
+  meminit(arc4_memory, 0x00, sizeof(ARC4_CTX));
   
   free(vector_memory);
   free(arc4_memory);
+
+  return true;
 }
 
-size_t vector_init(uint8_t * data, size_t size) {
-	
+bool vector_init(uint8_t * data, size_t size) {
   size_t i;
   size_t stack_trash[2]; /* NOT initialized == ALL OK */
   
@@ -997,19 +1114,10 @@ size_t vector_init(uint8_t * data, size_t size) {
 
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
+  stack_trash[0] = stack_trash[1] = 0;
+
   /* generate real vector with cryptography */
-  random_vector_init(data, size);
-
-  size = size - 2; /* for check cycle bottom */
-
-  /* What the fuck is this ??? */
-  for (i = 0; i < size; i++) {
-    if ((data[i] == data[i + 1]) && (data[i + 1] == data[i + 2])) {
-      break;
-    }
-  }
-
-  return i;
+  return random_vector_init(data, size);
 }
 
 char * CharA_Or_CharOV(size_t length) {
@@ -1024,67 +1132,82 @@ int GeneratingCryptKey(const char * message) {
   return IDYES;
 }
 
-void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
-
-  void * cipher_ptr = (void *)malloc(cipher_len);
+void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_length) {
+  void * cipher_ptr = (void *)malloc(cipher_length);
 
   if (NULL == cipher_ptr) {
     return NULL;
   }
 
-/*
-  if (!VirtualLock(cipher_ptr, cipher_len)) {
-    MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-      "Не удалось защитить память приложения от кэширования.\n"
-      "Ключ шифрования и служебные данные могут быть записаны на диск.\n");
-  }
-*/
+  meminit(cipher_ptr, 0x00, cipher_length);
 
-  meminit(cipher_ptr, 0x00, cipher_len);
-
-  if (AES == ctx->cipher_number) {
-    rijndael_ctx = (uint32_t *)cipher_ptr;
-    rijndael_key_encrypt_init(rijndael_ctx, ctx->temp_buffer, ctx->temp_buffer_length * 8);
-  }
-  else
-  if (SERPENT == ctx->cipher_number) {
-	serpent_ctx = (SERPENT_CTX *)cipher_ptr;
-    serpent_init(serpent_ctx, ctx->temp_buffer_length * 8, ctx->temp_buffer);
-  }
-  else
-  if (TWOFISH == ctx->cipher_number) {
-    twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
-    twofish_init(twofish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-  }
-  else
-  if (BLOWFISH == ctx->cipher_number) {
-    blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
-    blowfish_init(blowfish_ctx, ctx->temp_buffer, ctx->temp_buffer_length);
-  }
-  else
-  if (THREEFISH == ctx->cipher_number) {
-    threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
-    threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->temp_buffer_length * 8),
-                  (uint64_t *)ctx->temp_buffer, (uint64_t *)ctx->temp_buffer);
+  switch(ctx->cipher_number) {
+    case AES:
+	  rijndael_ctx = (uint32_t *)cipher_ptr;
+      rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
+      break;
+				  
+    case SERPENT:
+	  serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
+      break;
+	  
+    case TWOFISH:
+      twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
+	  break;
+	
+    case BLOWFISH:
+      blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
+      blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
+      break;
+	  
+    case THREEFISH:
+      threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
+      threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
+                     (uint64_t *)ctx->real_key, (uint64_t *)ctx->real_key);
+      break;
   }
   
   return cipher_ptr;
+}
+
+bool GLOBAL_MEMORY_ALLOCATOR(GLOBAL_MEMORY ** memory) {
+  (*memory) = (GLOBAL_MEMORY *)malloc(sizeof(GLOBAL_MEMORY));
+
+  if (NULL == (*memory)) {
+    return false;
+  }
+
+  meminit((*memory), 0x00, sizeof(GLOBAL_MEMORY));
+
+  (*memory)->sha256sum = (SHA256_CTX *)malloc(sizeof(SHA256_CTX));
+
+  if (NULL == (*memory)->sha256sum) {
+    return false;
+  }	
+  
+  meminit((*memory)->sha256sum, 0x00, sizeof(SHA256_CTX));
+  
+  return true;
 }
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
    из языка C++, потому что в языке C формировать такую чушь сложно */
 
+  GLOBAL_MEMORY * memory;
+  void * cipher_pointer;
+
   extern int AES_Rounds; /* in rijndael.c source code file */
+
+  int real_read, result;
+  size_t cipher_length;
 
   String UnicodeMsg = "Прервать операцию?";
 
-  int real_read, result;
-  size_t memory_length, cipher_length;
-  void * cipher_pointer;
-
   /* if stream create and execute then blocking stream and set PROCESSING in false
-     stream to check PROCESSING and if PROCESSING == false, stream killself*/
+     stream to check PROCESSING and if PROCESSING == false, stream killself */
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
     if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
@@ -1103,7 +1226,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   LeaveCriticalSection(&Form1->CrSec);
 
   UnicodeMsg = "";
-
+/*****************************************************************************/
   if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                    "Имя обрабатываемого файла не введено!");
@@ -1121,7 +1244,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                    "Пароль или имя ключевого файла не введены!");
     return;
   }
-
+/*****************************************************************************/
   if (Edit1->Text == Edit2->Text) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                    "Имена обрабатываемого файла и файла назначения совпадают!");
@@ -1139,17 +1262,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                    "Имена файла назначения и ключевого файла совпадают!");
     return;
   }
-
-  memory_length = sizeof(GLOBAL_MEMORY);
-  GLOBAL_MEMORY * memory = (GLOBAL_MEMORY *)malloc(memory_length);
-
-  if (!memory) {
+/*****************************************************************************/
+  if (GLOBAL_MEMORY_ALLOCATOR(&memory) == false) {
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
-
-  meminit(memory, 0x00, memory_length);
-
+/*****************************************************************************/
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) {
     memory->cipher_number = AES;
   }
@@ -1170,40 +1288,40 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     memory->cipher_number = THREEFISH;
   }
   else {
-    free_global_memory(memory, memory_length);
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                    "Алгоритм шифрования не был выбран!");
     return;
   }
+/*****************************************************************************/
+  memory->real_key_length = 0;
 
-  memory->temp_buffer_length = 0;
-
-  if (memory->cipher_number == AES ||
-      memory->cipher_number == SERPENT ||
+  if (memory->cipher_number == AES || memory->cipher_number == SERPENT ||
       memory->cipher_number == TWOFISH) {
+		  
     if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
       if (memory->cipher_number == AES) {
         AES_Rounds = 10;
       }
-      memory->temp_buffer_length = 128;
+      memory->real_key_length = 128;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("192")) {
       if (memory->cipher_number == AES) {
         AES_Rounds = 12;
       }
-      memory->temp_buffer_length = 192;
+      memory->real_key_length = 192;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
       if (memory->cipher_number == AES) {
         AES_Rounds = 14;
       }
-      memory->temp_buffer_length = 256;
+      memory->real_key_length = 256;
     }
     else {
-      free_global_memory(memory, memory_length);
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                      "Длина ключа шифрования не была выбрана!");
       return;
@@ -1211,37 +1329,37 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
   else
   if (memory->cipher_number == BLOWFISH) {
-    memory->temp_buffer_length = 448;
+    memory->real_key_length = 448;
   }
   else
   if (memory->cipher_number == THREEFISH) {
     if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
-      memory->temp_buffer_length = 256;
+      memory->real_key_length = 256;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("512")) {
-      memory->temp_buffer_length = 512;
+      memory->real_key_length = 512;
     }
     else
     if (AnsiString(ComboBox2->Text) == AnsiString("1024")) {
-      memory->temp_buffer_length = 1024;
+      memory->real_key_length = 1024;
     }
     else {
-      free_global_memory(memory, memory_length);
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                      "Длина ключа шифрования не была выбрана!");
       return;
     }
   }
-
-  memory->temp_buffer_length = (memory->temp_buffer_length / 8);
+/*****************************************************************************/
+  memory->real_key_length = (memory->real_key_length / 8);
 
   /*
-    AES       = (temp_buffer_length = 16 or 24 or 32;
-    TWOFISH   = (temp_buffer_length = 16 or 24 or 32);
-    SERPENT   = (temp_buffer_length = 16 or 24 or 32);
-    BLOWFISH  = (temp_buffer_length = 56);
-    THREEFISH = (temp_buffer_length = 32 or 64 or 128);
+    AES       = (real_key_length = 16 or 24 or 32;
+    TWOFISH   = (real_key_length = 16 or 24 or 32);
+    SERPENT   = (real_key_length = 16 or 24 or 32);
+    BLOWFISH  = (real_key_length = 56);
+    THREEFISH = (real_key_length = 32 or 64 or 128);
   */
 
   memory->operation = ENCRYPT; /* fucking warnings c++ builder !*/
@@ -1254,18 +1372,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     memory->operation = DECRYPT;
   }
   else {
-    free_global_memory(memory, memory_length);
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                      "Операция не была выбрана!");
     return;
   }
-
+/*****************************************************************************/
   if (FileExists(Edit2->Text) == True) {
     UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
                  "Вы уверены что хотите перезаписать его?";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
-      free_global_memory(memory, memory_length);
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
                      "Измените имя файла назначения!");
@@ -1275,53 +1393,55 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     UnicodeMsg = "";
   }
-
+/*****************************************************************************/
   UnicodeMsg = "";
 
-  memory->temp_buffer = (uint8_t*)malloc(memory->temp_buffer_length);
+  memory->real_key = (uint8_t*)malloc(memory->real_key_length);
 
-  if (!memory->temp_buffer) {
-    free_global_memory(memory, memory_length);
-
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
-
-    return;
-  }
-
-  memory->sha256sum_length = sizeof(SHA256_CTX);
-  memory->sha256sum = (SHA256_CTX *)malloc(memory->sha256sum_length);
-
-  if (!memory->sha256sum) {
-    free_global_memory(memory, memory_length);
+  if (!memory->real_key) {
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
     return;
   }
+
+  memory->new_key_length = memory->real_key_length;
+  memory->new_key = (uint8_t*)malloc(memory->new_key_length);
+
+  if (!memory->new_key) {
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
+
+    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+
+    return;
+  }
+/*****************************************************************************/
+  meminit(memory->new_key, 0x00, memory->new_key_length);
   
-  real_read = readfromfile(Memo1->Text.c_str(), memory->temp_buffer, memory->temp_buffer_length);
+  real_read = readfromfile(Memo1->Text.c_str(), memory->real_key, memory->real_key_length);
 
-  if (real_read == (int)(memory->temp_buffer_length)) {
-    UnicodeMsg = "Использовать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из файла?\n"; 
+  if (real_read == (int)(memory->real_key_length)) {
+    UnicodeMsg = "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n"; 
 	
     if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
-      free_global_memory(memory, memory_length);
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
       UnicodeMsg = "";
       return;
     }
     /*
     if (DoubleSecurityWitchPassword() == true) {
-      GeneratingKeyWitchPassword(memory->temp_buffer, memory->temp_buffer_length, password);
+      GeneratingKeyWitchPassword(memory->real_key, memory->real_key_length, password);
     }
     */
   }
   else
-  if ((real_read > 0) && (real_read < (int)(memory->temp_buffer_length))) {
-    free_global_memory(memory, memory_length);
+  if ((real_read > 0) && (real_read < (int)(memory->real_key_length))) {
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
     UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
                  "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                 "Необходимо:\t" + IntToStr(memory->temp_buffer_length) + " Бт";
+                 "Необходимо:\t" + IntToStr(memory->real_key_length) + " Бт";
 
     Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
 
@@ -1330,14 +1450,14 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
   else
-  if ((real_read == 0) || (real_read == -1)) {	
+  if ((real_read == 0) || (real_read == -1)) {
     real_read = (int)x_strnlen(Memo1->Text.c_str(), 256);
 
     if ((real_read > 7) && (real_read < 257)) {
-      UnicodeMsg = "Сгенерировать " + IntToStr(memory->temp_buffer_length * 8) + "-битный ключ шифрования из пароля?\n";
+      UnicodeMsg = "Сгенерировать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из пароля?\n";
 	
       if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
-        free_global_memory(memory, memory_length);
+        free_global_memory(memory, sizeof(GLOBAL_MEMORY));
         UnicodeMsg = "";
         return;
       }
@@ -1349,12 +1469,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       /* Crypt key generator; generate crypt key from password */
       KDFCLOMUL(memory, (uint8_t *)Memo1->Text.c_str(), real_read,
-                memory->temp_buffer, memory->temp_buffer_length);
+                memory->real_key, memory->real_key_length);
 
       Button4->Enabled = True;
     }
     else {
-      free_global_memory(memory, memory_length);
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
       UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
                    "Было считано:\t" + IntToStr(real_read) + " Бт\n"
@@ -1367,35 +1487,40 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       return;
     }
   }
-
+/*****************************************************************************/
   UnicodeMsg = "";
   
-  switch (memory->cipher_number) {
-    case AES:       memory->vector_length = 16;
-                    cipher_length = 4 * (AES_Rounds + 1) * 4;
-                    break;
+  switch(memory->cipher_number) {
+    case AES:
+	  memory->vector_length = 16;
+      cipher_length = 4 * (AES_Rounds + 1) * 4;
+      break;
 					
-    case SERPENT:   memory->vector_length = 16;
-                    cipher_length = sizeof(SERPENT_CTX);
-                    break;
+    case SERPENT:
+	  memory->vector_length = 16;
+      cipher_length = sizeof(SERPENT_CTX);
+      break;
 					
-    case TWOFISH:   memory->vector_length = 16;
-                    cipher_length = sizeof(TWOFISH_CTX);
-                    break;
+    case TWOFISH:
+	  memory->vector_length = 16;
+      cipher_length = sizeof(TWOFISH_CTX);
+      break;
 					
-    case BLOWFISH:  memory->vector_length =  8;
-                    cipher_length = sizeof(BLOWFISH_CTX);
-                    break;
+    case BLOWFISH:
+	  memory->vector_length =  8;
+      cipher_length = sizeof(BLOWFISH_CTX);
+      break;
 					
-    case THREEFISH: memory->vector_length = memory->temp_buffer_length;
-                    cipher_length = sizeof(THREEFISH_CTX);
-                    break;
+    case THREEFISH:
+	  memory->vector_length = memory->real_key_length;
+      cipher_length = sizeof(THREEFISH_CTX);
+      break;
   }
-
+/*****************************************************************************/
   memory->vector = (uint8_t*)malloc(memory->vector_length);
 
   if (!memory->vector) {
-    free_global_memory(memory, memory_length);
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
@@ -1405,12 +1530,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   meminit(memory->vector, 0x00, memory->vector_length);
 
   if (ENCRYPT == memory->operation) {
-    if (vector_init(memory->vector, memory->vector_length) < (memory->vector_length - 2)) {
-      free_global_memory(memory, memory_length);
-
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Критическая ошибка ГПСЧ! Дальнейшие операции не позволены!"
-                     "\nСистемное время остановлено? Проверьте системные часы!");
+    if (!vector_init(memory->vector, memory->vector_length)) {
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
+      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
 
       Form1->Close();
     }
@@ -1420,7 +1542,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   cipher_pointer = CipherInitMemory(memory, cipher_length);
 
   if (NULL == cipher_pointer) {
-    free_global_memory(memory, memory_length);
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
     return;
   }
@@ -1431,8 +1553,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     "Приступить к выбранной вами операции?\n\n"
     "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
     "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
-    "Длина ключа:\t" + IntToStr(memory->temp_buffer_length * 8).c_str() + " бит" +
-                       CharA_Or_CharOV(memory->temp_buffer_length);
+    "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() + " бит" +
+                       CharA_Or_CharOV(memory->real_key_length);
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
 
@@ -1472,7 +1594,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     case SIZE_FILE_ERROR:
       MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
                      "Файл для обработки пуст или его размер"
-                     " превышает 2 ГиБ!");
+                     " превышает 2 ЭиБ!");
       break;
     case WRITE_FILE_ERROR:
       MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
@@ -1495,8 +1617,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                      "Размер файла для расшифровки некорректен!\n"
                      "Обрабатываемый файл ранее был зашифрован?");
   }
-
-  if ((result == OK) && (CheckBox1->Checked == True)) {
+/*****************************************************************************/
+  if (result == OK && CheckBox1->Checked == True) {
     UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
                  "Стертые данные будет невозможно восстановить!";
 
@@ -1525,10 +1647,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
           /* if file rewriting and not delete -> show error code for user */
           unsigned long error_delete = GetLastError();
 
-          UnicodeMsg = "Ошибка удаления файла!\n"
-                       "Файл:\n"
-                       + Form1->Edit1->Text + "\n\n"
-                       "был перезаписан но не был удален с диска!\n"
+          UnicodeMsg = "Ошибка удаления файла!\n\n"
+                       "Файл: " + Form1->Edit1->Text + "\n\n"
+                       "был перезаписан но не был удален с диска!\n\n"
                        "Код ошибки: " + IntToStr(error_delete);
 
           MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, UnicodeMsg.c_str());
@@ -1536,7 +1657,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       }
       else
       if (result == 0xDE) {
-        MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,"Операция была отменена!");
+        MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG, "Операция была отменена!");
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
@@ -1550,7 +1671,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   UnicodeMsg = "";
 
   cipher_free(cipher_pointer, cipher_length);
-  free_global_memory(memory, memory_length);
+  free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
   Button4->Caption = START_STR; 
 
@@ -1603,12 +1724,8 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
     return;
   }
 
-  size_t cipher_len              = sizeof(ARC4_CTX);
-  size_t password_memory_ctx_len = sizeof(PASSWORD_MEMORY_CTX);
-
-  /* allocate memory and NOT clear memory */
-  PASSWORD_MEMORY_CTX * memory   = (PASSWORD_MEMORY_CTX *)malloc(password_memory_ctx_len);
-  ARC4_CTX * arc4_ctx = (ARC4_CTX *)malloc(cipher_len);
+  PASSWORD_MEMORY_CTX * memory   = (PASSWORD_MEMORY_CTX *)malloc(sizeof(PASSWORD_MEMORY_CTX));
+  ARC4_CTX * arc4_ctx = (ARC4_CTX *)malloc(sizeof(ARC4_CTX));
 
   if (!memory || !arc4_ctx) {
     free(memory);
@@ -1633,9 +1750,10 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
 
   Memo1->Clear();
   Memo1->Lines->Text = AnsiString((char*)memory->input);
+  Application->ProcessMessages();  
 
-  meminit(arc4_ctx, 0x00, cipher_len);
-  meminit(memory, 0x00, password_memory_ctx_len);
+  meminit(arc4_ctx, 0x00, sizeof(ARC4_CTX));
+  meminit(memory, 0x00, sizeof(PASSWORD_MEMORY_CTX));
 
   free(memory);
   free(arc4_ctx);
@@ -1669,7 +1787,6 @@ void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
   Label7->Font->Color = clRed;        
 }
 //---------------------------------------------------------------------------
-
 
 void __fastcall TForm1::FormClose(TObject *Sender, TCloseAction &Action)
 {
