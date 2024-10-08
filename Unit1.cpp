@@ -1314,8 +1314,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                  "Вы уверены что хотите перезаписать его?";
 
     if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
-      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-
       MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
                      "Измените имя файла назначения!");
       UnicodeMsg = "";
