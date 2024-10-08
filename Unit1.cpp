@@ -51,6 +51,8 @@
 #define SIZE_DECRYPT_FILE_INCORRECT  9
 #define STOP                        10
 
+#define STATUS_BUFFER_SIZE         128
+
 #define SIZE_PASSWORD_GENERATE     512
 #define BLOCK_SIZE_FOR_ERASED      512
 
@@ -124,7 +126,7 @@ static const fsize_t INT_SIZE_DATA[] = {
 };
 
 static const char * CHAR_SIZE_DATA[] = {
-  "Кб" ,
+  "Бт" ,
   "КиБ",
   "МиБ",
   "ГиБ",
@@ -149,7 +151,7 @@ const char * ALGORITM_NAME[] = {
 const char * START_STR = "Старт";
 const char * STOP_STR  = "Стоп";
 
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.10 05OKT24 [RU]";
+const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.10 08OKT24 [RU]";
 const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
 
 const char * OK_MSG           = PROGRAMM_NAME;
@@ -200,6 +202,12 @@ typedef struct {
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
 
+void PathToStrings(const AnsiString &FileName, AnsiString &path, AnsiString &name, AnsiString &ext) {
+  path = ExtractFilePath(FileName);
+  name = ExtractFileName(FileName);
+  ext  = ExtractFileExt(FileName);	
+}
+
 /* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
   OpenDialog1->Title = INPUT_FILENAME;
@@ -209,9 +217,7 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
   AnsiString ext;
 
   if (OpenDialog1->Execute()) {
-    path = ExtractFilePath(OpenDialog1->FileName);
-    name = ExtractFileName(OpenDialog1->FileName);
-    ext  = ExtractFileExt(OpenDialog1->FileName);
+    PathToStrings(OpenDialog1->FileName, path, name, ext);
 
     Form1->Edit1->Clear();
     Form1->Edit1->Text = OpenDialog1->FileName;
@@ -241,9 +247,7 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
   AnsiString ext;
 
   if (SaveDialog1->Execute()) {
-    path = ExtractFilePath(SaveDialog1->FileName);
-    name = ExtractFileName(SaveDialog1->FileName);
-    ext  = ExtractFileExt(SaveDialog1->FileName);
+    PathToStrings(SaveDialog1->FileName, path, name, ext);
 
     Form1->Edit2->Clear();
 
@@ -503,7 +507,7 @@ fsize_t SizeOfFile(const char * filename) {
   HANDLE fh;
   DWORD low_size;
   DWORD high_size = 0;
-  fsize_t result  = (fsize_t)(-1);
+  fsize_t result  = -1LL;
 
   if (!filename) {
     return result;
@@ -584,6 +588,9 @@ int erasedfile(const char * filename) {
   double  fsize_double, div;
   short   real_percent, past_percent = 0;
 
+  int status_buffer_pos;
+  char status_buffer[STATUS_BUFFER_SIZE] = {0};
+
   fsize = SizeOfFile(filename);
 
   if (fsize <= 0LL) {
@@ -605,8 +612,13 @@ int erasedfile(const char * filename) {
     return -1;
   }
 
+  div = (double)fsize / 100.0;
+
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
+
+  status_buffer_pos = snprintf(status_buffer, STATUS_BUFFER_SIZE,
+                               "Уничтожение файла; Обработано: ");
 
   while (position < fsize) {	
     size_for_erased = (fsize - position);
@@ -651,7 +663,7 @@ int erasedfile(const char * filename) {
       return -1;
     }
     
-	fflush(f);
+    fflush(f);
 
     position += (fsize_t)realread;
 
@@ -662,16 +674,19 @@ int erasedfile(const char * filename) {
     }
 
     if (real_percent > past_percent) {
-      Form1->ProgressBar1->Position = real_percent;
-
       check = size_check(position);
-    
-      Form1->Label9->Caption = "Уничтожение файла; обработано: " +
-      (check ? FloatToStrF(((double)position / (double)INT_SIZE_DATA[check - 1]), ffFixed, 4, 2) :
-               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-      (check ? FloatToStrF(fsize_double, ffFixed, 4, 2) : IntToStr((int)(fsize_double + 0.1))) +
-               " " + CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
 
+      snprintf(status_buffer + status_buffer_pos,
+               STATUS_BUFFER_SIZE - status_buffer_pos,
+               "%4.2f %s / %4.2f %s; Прогресс: %3d %%",
+               check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
+               CHAR_SIZE_DATA[check],
+               fsize_double,
+               CHAR_SIZE_DATA[fsize_check],
+               real_percent);
+
+      Form1->ProgressBar1->Position = real_percent;
+      Form1->Label9->Caption = AnsiString(&status_buffer[0]);
       Application->ProcessMessages();
 
       past_percent = real_percent;
@@ -808,23 +823,23 @@ static void internal_re_keying(GLOBAL_MEMORY * ctx) {
 
   switch(ctx->cipher_number) {
     case AES:
-	  rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
+      rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
       break;
 
     case TWOFISH:
-	  twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
+      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
       break;
 
     case SERPENT:
-	  serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
+      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
       break;
 
     case BLOWFISH:
-	  blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
+      blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
       break;
 
     case THREEFISH:
-	  threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
+      threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
                      (uint64_t*)ctx->real_key, (uint64_t*)ctx->real_key);
       break;
   }
@@ -833,6 +848,10 @@ static void internal_re_keying(GLOBAL_MEMORY * ctx) {
 /* fsize += (size initialized vector + size sha256 hash sum) */
 /* break operation if (fsize > 2 EiB) or (fsize == 0) or (fsize == -1) */
 static int size_correct(const GLOBAL_MEMORY * ctx, fsize_t fsize) {
+  if (-1LL == fsize) {
+    return READ_FILE_NOT_OPEN;
+  }
+
   if (0LL == fsize) {
     return SIZE_FILE_ERROR;
   }
@@ -858,7 +877,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 	
   double div, fsize_double;
 
-  int check, fsize_check;
+  int check, fsize_check, status_buffer_pos;
 
   size_t nblock;
   size_t realread;
@@ -868,6 +887,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   short past_percent = 0;
 
   FILE * fi, *fo;
+
+  char status_buffer[STATUS_BUFFER_SIZE] = {0};
 
   fsize        = SizeOfFile(Form1->Edit1->Text.c_str());
   fsize_check  = size_correct(ctx, fsize);
@@ -901,6 +922,13 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
+
+/*****************************************************************************/
+
+  status_buffer_pos = snprintf(status_buffer, STATUS_BUFFER_SIZE,
+    "%s: %s; Обработано: ",
+    OPERATION_NAME[ctx->operation ? 1 : 0],
+    ALGORITM_NAME[ctx->cipher_number]);
 
   while (position < fsize) {  
 /*****************************************************************************/
@@ -1014,17 +1042,19 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     fflush(fo);
 
     if (real_percent > past_percent) {
-      Form1->ProgressBar1->Position = real_percent;
-
       check = size_check(position);
 
-      Form1->Label9->Caption = AnsiString(OPERATION_NAME[ctx->operation ? 1 : 0 ]) +
-      ": " + AnsiString(ALGORITM_NAME[ctx->cipher_number]) + "; Обработано: " +
-      (check ? FloatToStrF(((double)position / (double)(INT_SIZE_DATA[check - 1])), ffFixed, 4, 2) :
-               IntToStr(position)) + " " + CHAR_SIZE_DATA[check] + " из " +
-      (check ? FloatToStrF(fsize_double, ffFixed, 4, 2) : IntToStr((int)(fsize_double + 0.1))) + " " +
-	           CHAR_SIZE_DATA[fsize_check] + "; Прогресс: " + IntToStr(real_percent) + " %" ;
+      snprintf(status_buffer + status_buffer_pos,
+               STATUS_BUFFER_SIZE - status_buffer_pos,
+               "%4.2f %s / %4.2f %s; Прогресс: %3d %%",
+               check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
+               CHAR_SIZE_DATA[check],
+               fsize_double,
+               CHAR_SIZE_DATA[fsize_check],
+               real_percent);
 
+      Form1->ProgressBar1->Position = real_percent;              
+      Form1->Label9->Caption = AnsiString(&status_buffer[0]);
       Application->ProcessMessages();
       past_percent = real_percent;
     }
@@ -1143,19 +1173,19 @@ void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_length) {
 
   switch(ctx->cipher_number) {
     case AES:
-	  rijndael_ctx = (uint32_t *)cipher_ptr;
+      rijndael_ctx = (uint32_t *)cipher_ptr;
       rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
       break;
 				  
     case SERPENT:
-	  serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+      serpent_ctx = (SERPENT_CTX *)cipher_ptr;
       serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
       break;
 	  
     case TWOFISH:
       twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
       twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
-	  break;
+      break;
 	
     case BLOWFISH:
       blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
@@ -1192,17 +1222,17 @@ bool GLOBAL_MEMORY_ALLOCATOR(GLOBAL_MEMORY ** memory) {
   return true;
 }
 
+void FormActivate(const bool active) {
+  Form1->Label5->Enabled = active;
+
+  Application->ProcessMessages();
+}
+
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
    из языка C++, потому что в языке C формировать такую чушь сложно */
 
-  GLOBAL_MEMORY * memory;
-  void * cipher_pointer;
-
   extern int AES_Rounds; /* in rijndael.c source code file */
-
-  int real_read, result;
-  size_t cipher_length;
 
   String UnicodeMsg = "Прервать операцию?";
 
@@ -1214,6 +1244,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       /* во время простоя в вызове MessageForUser значение может измениться */
       PROCESSING = false;
 
+      FormActivate(true);
       Button4->Caption = START_STR;
       Form1->ProgressBar1->Position = 0;
       Form1->ProgressBar1->Update();
@@ -1224,8 +1255,14 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
   LeaveCriticalSection(&Form1->CrSec);
+/*****************************************************************************/
 
-  UnicodeMsg = "";
+  GLOBAL_MEMORY * memory;
+  void * cipher_pointer;
+
+  int real_read, result;
+  size_t cipher_length;
+
 /*****************************************************************************/
   if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
@@ -1262,6 +1299,32 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                    "Имена файла назначения и ключевого файла совпадают!");
     return;
   }
+
+/*****************************************************************************/
+  if (FileExists(Edit1->Text) == False) {
+    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
+                   "Файл для обработки не существует!");
+    return;
+  }
+
+  UnicodeMsg = "";
+
+  if (FileExists(Edit2->Text) == True) {
+    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
+                 "Вы уверены что хотите перезаписать его?";
+
+    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
+      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
+
+      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
+                     "Измените имя файла назначения!");
+      UnicodeMsg = "";
+      return;
+    }
+
+    UnicodeMsg = "";
+  }
+
 /*****************************************************************************/
   if (GLOBAL_MEMORY_ALLOCATOR(&memory) == false) {
     MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
@@ -1377,24 +1440,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                      "Операция не была выбрана!");
     return;
   }
-/*****************************************************************************/
-  if (FileExists(Edit2->Text) == True) {
-    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
-                 "Вы уверены что хотите перезаписать его?";
-
-    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
-      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-
-      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Измените имя файла назначения!");
-      UnicodeMsg = "";
-      return;
-    }
-
-    UnicodeMsg = "";
-  }
-/*****************************************************************************/
-  UnicodeMsg = "";
 
   memory->real_key = (uint8_t*)malloc(memory->real_key_length);
 
@@ -1492,27 +1537,27 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   
   switch(memory->cipher_number) {
     case AES:
-	  memory->vector_length = 16;
+      memory->vector_length = 16;
       cipher_length = 4 * (AES_Rounds + 1) * 4;
       break;
 					
     case SERPENT:
-	  memory->vector_length = 16;
+      memory->vector_length = 16;
       cipher_length = sizeof(SERPENT_CTX);
       break;
 					
     case TWOFISH:
-	  memory->vector_length = 16;
+      memory->vector_length = 16;
       cipher_length = sizeof(TWOFISH_CTX);
       break;
 					
     case BLOWFISH:
-	  memory->vector_length =  8;
+      memory->vector_length =  8;
       cipher_length = sizeof(BLOWFISH_CTX);
       break;
-					
+
     case THREEFISH:
-	  memory->vector_length = memory->real_key_length;
+      memory->vector_length = memory->real_key_length;
       cipher_length = sizeof(THREEFISH_CTX);
       break;
   }
@@ -1557,19 +1602,19 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
                        CharA_Or_CharOV(memory->real_key_length);
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
-
     Button4->Caption = STOP_STR;
-
     Form1->ProgressBar1->Position = 0;
     Form1->ProgressBar1->Update();
+    FormActivate(false);
 
 /*****************************************************************************/
     SET_START_STREAM;
-      result = filecrypt(memory);
+    result = filecrypt(memory);
     SET_STOP_STREAM;
 /*****************************************************************************/
 
     Button4->Caption = START_STR;
+    FormActivate(true);
   }
 
   UnicodeMsg = "";

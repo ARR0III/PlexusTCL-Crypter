@@ -1,5 +1,5 @@
 object Form1: TForm1
-  Left = 285
+  Left = 225
   Top = 284
   BorderStyle = bsNone
   ClientHeight = 276
@@ -200,7 +200,7 @@ object Form1: TForm1
     Left = 424
     Top = 48
     Width = 75
-    Height = 20
+    Height = 21
     Cursor = crHandPoint
     Caption = #1054#1090#1082#1088#1099#1090#1100
     TabOrder = 4
@@ -210,7 +210,7 @@ object Form1: TForm1
     Left = 424
     Top = 96
     Width = 75
-    Height = 20
+    Height = 21
     Cursor = crHandPoint
     Caption = #1054#1090#1082#1088#1099#1090#1100
     TabOrder = 5
@@ -253,8 +253,10 @@ object Form1: TForm1
     Height = 21
     Cursor = crIBeam
     BiDiMode = bdRightToLeft
+    Ctl3D = True
     MaxLength = 3
     ParentBiDiMode = False
+    ParentCtl3D = False
     TabOrder = 9
     Text = '64'
   end
@@ -262,7 +264,7 @@ object Form1: TForm1
     Left = 8
     Top = 128
     Width = 81
-    Height = 20
+    Height = 21
     Cursor = crHandPoint
     Caption = #1043#1077#1085#1077#1088#1072#1090#1086#1088
     TabOrder = 10
@@ -284,7 +286,7 @@ object Form1: TForm1
     Left = 424
     Top = 170
     Width = 75
-    Height = 20
+    Height = 21
     Cursor = crHandPoint
     Caption = #1054#1090#1082#1088#1099#1090#1100
     TabOrder = 12
@@ -292,9 +294,9 @@ object Form1: TForm1
   end
   object Button4: TButton
     Left = 424
-    Top = 207
+    Top = 206
     Width = 75
-    Height = 20
+    Height = 21
     Cursor = crHandPoint
     Caption = #1057#1090#1072#1088#1090
     Font.Charset = DEFAULT_CHARSET
