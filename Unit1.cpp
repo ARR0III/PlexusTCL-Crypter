@@ -24,6 +24,12 @@
 #include "src/xtalw.h"
 #include "src/clomul.h"
 
+/****************************************************************************/
+/* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
+#define PTCL_RUSSIAN_LANGUAGE
+#include "LANGUAGE_STRINGS.h"
+/****************************************************************************/
+
 #include "Unit1.h"
 #include "Unit2.h"
 
@@ -126,18 +132,20 @@ static const fsize_t INT_SIZE_DATA[] = {
 };
 
 static const char * CHAR_SIZE_DATA[] = {
-  "Бт" ,
-  "КиБ",
-  "МиБ",
-  "ГиБ",
-  "ТиБ",
-  "ПиБ",
-  "ЭиБ"
+#ifdef PTCL_RUSSIAN_LANGUAGE
+  "Бт" , "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЭиБ"
+#else
+  "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
+#endif
 };
 
+
 const char * OPERATION_NAME[] = {
-  "Шифрование",
-  "Расшифровка",
+#ifdef PTCL_RUSSIAN_LANGUAGE
+  "Шифрование", "Расшифровка",
+#else
+  "Encrypting", "Decrypting",
+#endif
 };
 
 const char * ALGORITM_NAME[] = {
@@ -148,19 +156,7 @@ const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
-const char * START_STR = "Старт";
-const char * STOP_STR  = "Стоп";
-
-const char * PROGRAMM_NAME    = "PlexusTCL Crypter 5.10 08OKT24 [RU]";
-const char * MEMORY_BLOCKED   = "Ошибка выделения памяти!";
-
-const char * OK_MSG           = PROGRAMM_NAME;
-const char * WARNING_MSG      = "Внимание!";
-const char * ERROR_MSG        = "Ошибка!";
-
-const char * INPUT_FILENAME   = "Файл для шифрования";
-const char * OUTPUT_FILENAME  = "Файл назначения";
-const char * KEY_FILENAME     = "Ключ шифрования";
+/*******************************************/
 
 uint32_t      * rijndael_ctx  = NULL;
 SERPENT_CTX   * serpent_ctx   = NULL;
@@ -210,7 +206,7 @@ void PathToStrings(const AnsiString &FileName, AnsiString &path, AnsiString &nam
 
 /* INPUT FILE */
 void __fastcall TForm1::Button1Click(TObject *Sender) {
-  OpenDialog1->Title = INPUT_FILENAME;
+  OpenDialog1->Title = STR_INPUT_FILENAME;
 
   AnsiString path;
   AnsiString name;
@@ -240,7 +236,7 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
 
 /* OUTPUT FILE */
 void __fastcall TForm1::Button2Click(TObject *Sender) {
-  SaveDialog1->Title = OUTPUT_FILENAME;
+  SaveDialog1->Title = STR_OUTPUT_FILENAME;
 
   AnsiString path;
   AnsiString name;
@@ -295,7 +291,7 @@ int operation_variant(const int operation) {
 }
 
 void __fastcall TForm1::Button3Click(TObject *Sender) {
-  OpenDialog1->Title = KEY_FILENAME;
+  OpenDialog1->Title = STR_KEY_FILENAME;
 
   if (OpenDialog1->Execute()) {
     Form1->Memo1->Clear();
@@ -316,8 +312,26 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
   }
 
-  Form1->Caption         = PROGRAMM_NAME;
-  Form1->Label6->Caption = PROGRAMM_NAME;
+  Form1->Caption         = STR_PROGRAMM_NAME;
+  Form1->Label6->Caption = STR_PROGRAMM_NAME;
+
+  Form1->Label1->Caption = STR_CRYPT_ALG;
+  Form1->Label2->Caption = STR_INPUT_FILENAME;
+  Form1->Label3->Caption = STR_OUTPUT_FILENAME;
+  Form1->Label4->Caption = STR_KEY_LENGTH;
+  Form1->Label8->Caption = STR_KEY_OR_KEY_FILENAME;
+  Form1->Label9->Caption = STR_STATUS;
+
+  Form1->Button1->Caption = STR_OPEN;
+  Form1->Button2->Caption = STR_OPEN;
+  Form1->Button3->Caption = STR_OPEN;
+  Form1->Button4->Caption = STR_START;
+  Form1->Button5->Caption = STR_KEYGEN;
+
+  Form1->RadioButton1->Caption = STR_EN;
+  Form1->RadioButton2->Caption = STR_DE;
+
+  Form1->CheckBox1->Caption = STR_ERASED;
 
   Form1->Shape1->Pen->Color   = FORM_HEAD_COLOR;
   Form1->Shape2->Brush->Color = FORM_HEAD_COLOR;
@@ -459,10 +473,19 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     if (real > past) {
       Form1->ProgressBar1->Position = real;
 
-      Form1->Label9->Caption = "Генерация "
-                             + IntToStr(key_len * 8)  + "-битного ключа из "
-                             + IntToStr(password_len) + "-символьного пароля: "
-                             + IntToStr(real) + " %";
+      Form1->Label9->Caption =
+#ifdef PTCL_RUSSIAN_LANGUAGE
+       "Генерация "
+        + IntToStr(key_len * 8)  + "-битного ключа из "
+        + IntToStr(password_len) + "-символьного пароля: "
+        + IntToStr(real) + " %";
+#else
+        "Generating "
+        + IntToStr(key_len * 8) + "-bit key from "
+        + IntToStr(password_len) + "-character password: "
+        + IntToStr(real) + " %";
+#endif				
+				
       Application->ProcessMessages();
       past = real;
     }
@@ -542,7 +565,7 @@ int erased_head_of_file(const char * filename) {
   unsigned char * data = (unsigned char *)malloc(BLOCK_SIZE_FOR_ERASED);
 
   if (!data) {
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     return -1;
   }
 
@@ -607,7 +630,7 @@ int erasedfile(const char * filename) {
   uint8_t * data = (uint8_t *)malloc(DATA_SIZE);
 
   if (!data) {
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     fclose(f);
     return -1;
   }
@@ -618,7 +641,7 @@ int erasedfile(const char * filename) {
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
 
   status_buffer_pos = snprintf(status_buffer, STATUS_BUFFER_SIZE,
-                               "Уничтожение файла; Обработано: ");
+                               STR_ERASED_FILE_PROC);
 
   while (position < fsize) {	
     size_for_erased = (fsize - position);
@@ -678,7 +701,7 @@ int erasedfile(const char * filename) {
 
       snprintf(status_buffer + status_buffer_pos,
                STATUS_BUFFER_SIZE - status_buffer_pos,
-               "%4.2f %s / %4.2f %s; Прогресс: %3d %%",
+               STR_PROGRESS_BAR_MKS,
                check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
                CHAR_SIZE_DATA[check],
                fsize_double,
@@ -719,7 +742,7 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   hmac_ctx = (HMAC_CTX *)malloc(sizeof(HMAC_CTX));
 
   if (!hmac_ctx) {
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     return;
   }
 
@@ -846,7 +869,7 @@ static void internal_re_keying(GLOBAL_MEMORY * ctx) {
 }
 
 /* fsize += (size initialized vector + size sha256 hash sum) */
-/* break operation if (fsize > 2 EiB) or (fsize == 0) or (fsize == -1) */
+/* break operation if (fsize > 4 EiB) or (fsize == 0) or (fsize == -1) */
 static int size_correct(const GLOBAL_MEMORY * ctx, fsize_t fsize) {
   if (-1LL == fsize) {
     return READ_FILE_NOT_OPEN;
@@ -926,9 +949,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 /*****************************************************************************/
 
   status_buffer_pos = snprintf(status_buffer, STATUS_BUFFER_SIZE,
-    "%s: %s; Обработано: ",
-    OPERATION_NAME[ctx->operation ? 1 : 0],
-    ALGORITM_NAME[ctx->cipher_number]);
+        STR_ENCRYPT_FILE_PROC,
+	OPERATION_NAME[ctx->operation ? 1 : 0],
+	ALGORITM_NAME[ctx->cipher_number]);
 
   while (position < fsize) {  
 /*****************************************************************************/
@@ -1046,7 +1069,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
       snprintf(status_buffer + status_buffer_pos,
                STATUS_BUFFER_SIZE - status_buffer_pos,
-               "%4.2f %s / %4.2f %s; Прогресс: %3d %%",
+               STR_PROGRESS_BAR_MKS,
                check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
                CHAR_SIZE_DATA[check],
                fsize_double,
@@ -1084,10 +1107,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   }
   else {
     if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
-
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Контрольная сумма файла НЕ совпадает с ожидаемой!\n"
-                     "Возможно файл поврежден или был использован неправильный ключ!");
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG, STR_CONTROL_SUM_FILE_ERROR);
     }
   }
 
@@ -1155,7 +1175,7 @@ char * CharA_Or_CharOV(size_t length) {
 }
 
 int GeneratingCryptKey(const char * message) {
-  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, OK_MSG, message) == IDNO) {
+  if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, STR_PROGRAMM_NAME, message) == IDNO) {
     return IDNO;
   }
   
@@ -1234,18 +1254,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   extern int AES_Rounds; /* in rijndael.c source code file */
 
-  String UnicodeMsg = "Прервать операцию?";
+  String UnicodeMsg = STR_STOP_PROCESS;
 
   /* if stream create and execute then blocking stream and set PROCESSING in false
      stream to check PROCESSING and if PROCESSING == false, stream killself */
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
-    if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
+    if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
       /* во время простоя в вызове MessageForUser значение может измениться */
       PROCESSING = false;
 
       FormActivate(true);
-      Button4->Caption = START_STR;
+      Button4->Caption = STR_START;
       Form1->ProgressBar1->Position = 0;
       Form1->ProgressBar1->Update();
     }
@@ -1265,57 +1285,56 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
 /*****************************************************************************/
   if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имя обрабатываемого файла не введено!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_INPUT_FILENAME_EMPTY);
     return;
   }
 
   if (x_strnlen(Edit2->Text.c_str(), 2048) == 0) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имя файла назначения не введено!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_OUTPUT_FILENAME_EMPTY);
     return;
   }
 
   if (x_strnlen(Memo1->Text.c_str(), 2048) == 0) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Пароль или имя ключевого файла не введены!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_PASS_OR_KEYFILE_EMPTY);
     return;
   }
 /*****************************************************************************/
   if (Edit1->Text == Edit2->Text) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена обрабатываемого файла и файла назначения совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_IN_OUT_FILENAME_EQUAL);
     return;
   }
 
   if (Edit1->Text == Memo1->Text) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена обрабатываемого файла и ключевого файла совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_OUT_KEY_FILENAME_EQUAL);
     return;
   }
 
   if (Edit2->Text == Memo1->Text) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Имена файла назначения и ключевого файла совпадают!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_IN_KEY_FILENAME_EQUAL);
     return;
   }
 
 /*****************************************************************************/
   if (FileExists(Edit1->Text) == False) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Файл для обработки не существует!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_IN_FILENAME_NFOUND);
     return;
   }
 
   UnicodeMsg = "";
 
   if (FileExists(Edit2->Text) == True) {
-    UnicodeMsg = "Файл назначения существует! Старые данные будут утеряны!\n"
-                 "Вы уверены что хотите перезаписать его?";
+    UnicodeMsg = STR_OUT_FILE_FOUND;
 
-    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
-      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Измените имя файла назначения!");
+    if (MessageForUser(MB_ICONWARNING + MB_YESNO, STR_WARNING_MSG, UnicodeMsg.c_str()) == IDNO) {
+      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                     STR_CHANGE_OUT_FILENAME);
       UnicodeMsg = "";
       return;
     }
@@ -1325,7 +1344,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
 /*****************************************************************************/
   if (GLOBAL_MEMORY_ALLOCATOR(&memory) == false) {
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     return;
   }
 /*****************************************************************************/
@@ -1351,8 +1370,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   else {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Алгоритм шифрования не был выбран!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_CIPHER_NOT_ENTER);
     return;
   }
 /*****************************************************************************/
@@ -1383,8 +1402,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     }
     else {
       free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Длина ключа шифрования не была выбрана!");
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                     STR_KEY_SIZE_NOT_ENTER);
       return;
     }
   }
@@ -1407,8 +1426,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     }
     else {
       free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Длина ключа шифрования не была выбрана!");
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                     STR_KEY_SIZE_NOT_ENTER);
       return;
     }
   }
@@ -1434,8 +1453,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
   else {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Операция не была выбрана!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_OPERATION_NOT_ENTER);
     return;
   }
 
@@ -1444,7 +1463,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (!memory->real_key) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
 
     return;
   }
@@ -1455,7 +1474,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (!memory->new_key) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
 
     return;
   }
@@ -1465,7 +1484,12 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   real_read = readfromfile(Memo1->Text.c_str(), memory->real_key, memory->real_key_length);
 
   if (real_read == (int)(memory->real_key_length)) {
-    UnicodeMsg = "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n"; 
+	UnicodeMsg =
+#ifdef PTCL_RUSSIAN_LANGUAGE
+      "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n";
+#else
+      "Use " + IntToStr(memory->real_key_length * 8) + "-bit encryption key from file?\n";
+#endif
 	
     if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
       free_global_memory(memory, sizeof(GLOBAL_MEMORY));
@@ -1482,11 +1506,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if ((real_read > 0) && (real_read < (int)(memory->real_key_length))) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-    UnicodeMsg = "Недостаточно данных в ключевом файле!\n\n"
-                 "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                 "Необходимо:\t" + IntToStr(memory->real_key_length) + " Бт";
+    UnicodeMsg = 
+#ifdef PTCL_RUSSIAN_LANGUAGE
+      "Недостаточно данных в ключевом файле!\n\n"
+      "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+      "Необходимо:\t" + IntToStr(memory->real_key_length) + " Бт";
+#else
+	  "Not enough data in the key file!\n\n"
+      "Read:\t" + IntToStr(real_read) + " Bt\n"
+      "Required:\t" + IntToStr(memory->real_key_length) + " Bt";
+#endif
 
-    Application->MessageBox(UnicodeMsg.c_str(), WARNING_MSG, MB_ICONWARNING + MB_OK);
+    Application->MessageBox(UnicodeMsg.c_str(), STR_WARNING_MSG, MB_ICONWARNING + MB_OK);
 
     UnicodeMsg = "";
 
@@ -1497,7 +1528,14 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     real_read = (int)x_strnlen(Memo1->Text.c_str(), 256);
 
     if ((real_read > 7) && (real_read < 257)) {
-      UnicodeMsg = "Сгенерировать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из пароля?\n";
+	  UnicodeMsg = 
+#ifdef PTCL_RUSSIAN_LANGUAGE
+        "Сгенерировать " + IntToStr(memory->real_key_length * 8) +
+		"-битный ключ шифрования из пароля?\n";
+#else
+        "Generate " + IntToStr(memory->real_key_length * 8) +
+        "-bit encryption key from password?\n";
+#endif
 	
       if (GeneratingCryptKey(UnicodeMsg.c_str()) == IDNO) {
         free_global_memory(memory, sizeof(GLOBAL_MEMORY));
@@ -1519,11 +1557,18 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     else {
       free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-      UnicodeMsg = "Длина строкового ключа некорректна!\n\n"
-                   "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-                   "Необходимо:\tот 8 до 256 Бт";
+      UnicodeMsg = 
+#ifdef PTCL_RUSSIAN_LANGUAGE
+        "Длина строкового ключа некорректна!\n\n"
+        "Было считано:\t" + IntToStr(real_read) + " Бт\n"
+        "Необходимо:\tот 8 до 256 Бт";
+#else
+	    "The string key length is incorrect!\n\n"
+        "Read:\t" + IntToStr(real_read) + " Bt\n"
+        "Required:\tfrom 8 to 256 Bt";
+#endif
 
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG, UnicodeMsg.c_str());
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG, UnicodeMsg.c_str());
 
       UnicodeMsg = "";
 
@@ -1565,7 +1610,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (!memory->vector) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
 
     return;
   }
@@ -1575,7 +1620,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (ENCRYPT == memory->operation) {
     if (!vector_init(memory->vector, memory->vector_length)) {
       free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
 
       Form1->Close();
     }
@@ -1586,21 +1631,28 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   if (NULL == cipher_pointer) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     return;
   }
 
   result = 0xDE;
 
   UnicodeMsg =
+#ifdef PTCL_RUSSIAN_LANGUAGE
     "Приступить к выбранной вами операции?\n\n"
     "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
     "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
     "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() + " бит" +
                        CharA_Or_CharOV(memory->real_key_length);
+#else
+    "Proceed with the operation you selected?\n\n"
+    "Operation:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "Algorithm:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
+    "Key length:\t" + IntToStr(memory->real_key_length * 8).c_str() + " bit";
+#endif
 
-  if (MessageForUser(MB_ICONQUESTION + MB_YESNO, OK_MSG, UnicodeMsg.c_str()) == IDYES) {
-    Button4->Caption = STOP_STR;
+  if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
+    Button4->Caption = STR_STOP;
     Form1->ProgressBar1->Position = 0;
     Form1->ProgressBar1->Update();
     FormActivate(false);
@@ -1611,7 +1663,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     SET_STOP_STREAM;
 /*****************************************************************************/
 
-    Button4->Caption = START_STR;
+    Button4->Caption = STR_START;
     FormActivate(true);
   }
 
@@ -1619,56 +1671,53 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   switch (result) {
     case  0xDE:
-      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Операция была отменена!");
+      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                     STR_OPERATION_STOPPED);
       break;
     case OK:
-      MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                     "Файл успешно обработан!");
+      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                     STR_OK);
       break;
     case READ_FILE_NOT_OPEN:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Файл для обработки не был открыт!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_READ_FILE_NOT_OPEN);
       break;
     case WRITE_FILE_NOT_OPEN:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Файл назначения не был открыт!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_WRITE_FILE_NOT_OPEN);
       break;
     case SIZE_FILE_ERROR:
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Файл для обработки пуст или его размер"
-                     " превышает 2 ЭиБ!");
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                    STR_SIZE_FILE_ERROR);
       break;
     case WRITE_FILE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Ошибка записи в файл!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_WRITE_FILE_ERROR);
       break;
     case READ_FILE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Ошибка чтения из файла!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_READ_FILE_ERROR);
       break;
     case STREAM_INPUT_CLOSE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Поток ввода не был закрыт!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_STREAM_IN_CLOSE_ERROR);
       break;
     case STREAM_OUTPUT_CLOSE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                     "Поток вывода не был закрыт!");
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_STREAM_OUT_CLOSE_ERROR);
       break;
     case SIZE_DECRYPT_FILE_INCORRECT:
-      MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                     "Размер файла для расшифровки некорректен!\n"
-                     "Обрабатываемый файл ранее был зашифрован?");
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                     STR_SIZE_DECRYPT_FILE_INCORRECT);
   }
 /*****************************************************************************/
   if (result == OK && CheckBox1->Checked == True) {
-    UnicodeMsg = "Вы уверены что хотите уничтожить файл для обработки?\n"
-                 "Стертые данные будет невозможно восстановить!";
+    UnicodeMsg = STR_ERASED_FILE_QUES;
 
-    if (MessageForUser(MB_ICONWARNING + MB_YESNO, WARNING_MSG,
+    if (MessageForUser(MB_ICONWARNING + MB_YESNO, STR_WARNING_MSG,
                        UnicodeMsg.c_str()) == IDYES) {
 
-      Button4->Caption = STOP_STR;               
+      Button4->Caption = STR_STOP;               
 
       Form1->ProgressBar1->Position = 0;
       Form1->ProgressBar1->Update();
@@ -1683,29 +1732,35 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       if (result == 0) {
         if (DeleteFile(Edit1->Text) != False) {
-          MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG,
-                        "Файл назначения был уничтожен!");
+          MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                        STR_ERASED_FILE_OK);
         }
         else {
           /* if file rewriting and not delete -> show error code for user */
           unsigned long error_delete = GetLastError();
 
-          UnicodeMsg = "Ошибка удаления файла!\n\n"
-                       "Файл: " + Form1->Edit1->Text + "\n\n"
-                       "был перезаписан но не был удален с диска!\n\n"
-                       "Код ошибки: " + IntToStr(error_delete);
-
-          MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, UnicodeMsg.c_str());
+          UnicodeMsg = 
+#ifdef PTCL_RUSSIAN_LANGUAGE
+            "Ошибка удаления файла!\n\n"
+             "Файл: " + Form1->Edit1->Text + "\n\n"
+             "был перезаписан но не был удален с диска!\n\n"
+             "Код ошибки: " + IntToStr(error_delete);
+#else
+             "Error delete file!\n\n"
+             "Filename: " + Form1->Edit1->Text + "\n\n"
+             "was overwritten but not deleted from the disk!\n\n"
+             "Error code: " + IntToStr(error_delete);
+#endif
+          MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, UnicodeMsg.c_str());
         }
       }
       else
       if (result == 0xDE) {
-        MessageForUser(MB_ICONINFORMATION + MB_OK, OK_MSG, "Операция была отменена!");
+        MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME, STR_OPERATION_STOPPED);
       }
       else {
-        MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG,
-                      "Ошибка перезаписи файла!\n"
-                      "Возможно файл не существует или защищен от записи!");
+        MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                       STR_ERROR_ERASED_FILE);
       }
     }
   }
@@ -1716,7 +1771,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   cipher_free(cipher_pointer, cipher_length);
   free_global_memory(memory, sizeof(GLOBAL_MEMORY));
 
-  Button4->Caption = START_STR; 
+  Button4->Caption = STR_START; 
 
   Form1->ProgressBar1->Position = 0;
   Form1->ProgressBar1->Update();
@@ -1742,7 +1797,7 @@ void __fastcall TForm1::Label5Click(TObject *Sender) {
 }
 
 void __fastcall TForm1::Label7Click(TObject *Sender) {
-  Form2->Label4->Caption = PROGRAMM_NAME;
+  Form2->Label4->Caption = STR_PROGRAMM_NAME;
 
   Form2->Shape1->Brush->Color = FORM_HEAD_COLOR;
   Form2->Shape1->Pen->Color   = FORM_HEAD_COLOR;
@@ -1762,8 +1817,8 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
   int len = atoi(Edit3->Text.c_str());
 
   if ((len < 8) || (len > 256)) {
-    MessageForUser(MB_ICONWARNING + MB_OK, WARNING_MSG,
-                   "Введите число от 8 до 256!");
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_ENTER_8_TO_256);
     return;
   }
 
@@ -1774,7 +1829,7 @@ void __fastcall TForm1::Button5Click(TObject *Sender) {
     free(memory);
     free(arc4_ctx);
 
-    MessageForUser(MB_ICONERROR + MB_OK, ERROR_MSG, MEMORY_BLOCKED);
+    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
     return;
   }
 
