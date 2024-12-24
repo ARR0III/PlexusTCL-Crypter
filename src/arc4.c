@@ -1,45 +1,47 @@
 #include "arc4.h"
 
-void arc4_init(ARC4_CTX * ctx, const uint8_t * key, size_t length) {
+void arc4_init(ARC4_CTX * ctx, const uint8_t * key, const size_t length) {
   uint8_t t;
-
-  if (length > 256) {
-    length = 256;
-  }
+  size_t i, j, k;
 	  
-  for (ctx->i = 0; ctx->i < 256; ctx->i++) {
-    ctx->secret_key[ctx->i] = (uint8_t)(ctx->i);
+  for (i = 0; i < 256; i++) {
+    ctx->arc4_key[i] = (uint8_t)(i);
   }
  
-  for (ctx->i = ctx->j = 0; ctx->i < 256; ctx->i++) {
-    ctx->j = (ctx->j + key[ctx->i % length] + ctx->secret_key[ctx->i]) & 255;
+  for (i = j = k = 0; i < 256; i++) {
+    j = (j + key[k] + ctx->arc4_key[i]) & 255;
 
+    k++;
+	
+    if (k >= length) {
+      k = 0;
+    }
      
-    t = ctx->secret_key[ctx->i];
-    ctx->secret_key[ctx->i] = ctx->secret_key[ctx->j];
-    ctx->secret_key[ctx->j] = t;
-    
+    t = ctx->arc4_key[i];
+    ctx->arc4_key[i] = ctx->arc4_key[j];
+    ctx->arc4_key[j] = t;
   }
-
-  ctx->i = ctx->j = 0;
 }
 
 /* MAX size data for encrypt = 4 GiB */
 void arc4(ARC4_CTX * ctx, const uint8_t * input, uint8_t * output, size_t length) {
   uint8_t t;  
-  register size_t position = 0;
+  register size_t pos = 0;
+  size_t i, j;
+  
+  i = j = 0;
   
   while (length--) {
-    ctx->i = (ctx->i + 1) & 255;
-    ctx->j = (ctx->j + ctx->secret_key[ctx->i]) & 255;
+    i = (i + 1) & 255;
+    j = (j + ctx->arc4_key[i]) & 255;
     
-    t = ctx->secret_key[ctx->i];
-    ctx->secret_key[ctx->i] = ctx->secret_key[ctx->j];
-    ctx->secret_key[ctx->j] = t;
+    t = ctx->arc4_key[i];
+    ctx->arc4_key[i] = ctx->arc4_key[j];
+    ctx->arc4_key[j] = t;
     
-    output[position] = 
-      input[position] ^ ctx->secret_key[(ctx->secret_key[ctx->i] +
-                                         ctx->secret_key[ctx->j]) & 255];
-    position++;
+    output[pos] =
+     input[pos] ^ ctx->arc4_key[(ctx->arc4_key[i] +
+                                 ctx->arc4_key[j]) & 255];
+    pos++;
   }
 }

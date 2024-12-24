@@ -9,8 +9,7 @@ extern "C" {
 #endif
 
 typedef struct {
-  uint32_t i, j;
-  uint8_t  secret_key[256];
+  uint8_t  arc4_key[256];
 } ARC4_CTX;
 
 void arc4_init(ARC4_CTX * ctx, const uint8_t * key, size_t length);
