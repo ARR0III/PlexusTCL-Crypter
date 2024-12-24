@@ -26,7 +26,7 @@
 
 /****************************************************************************/
 /* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
-#define PTCL_RUSSIAN_LANGUAGE
+/* #define PTCL_RUSSIAN_LANGUAGE                                            */
 #include "LANGUAGE_STRINGS.h"
 /****************************************************************************/
 
@@ -1234,8 +1234,9 @@ bool GLOBAL_MEMORY_ALLOCATOR(GLOBAL_MEMORY ** memory) {
   (*memory)->sha256sum = (SHA256_CTX *)malloc(sizeof(SHA256_CTX));
 
   if (NULL == (*memory)->sha256sum) {
+    free(*memory);
     return false;
-  }	
+  }
   
   meminit((*memory)->sha256sum, 0x00, sizeof(SHA256_CTX));
   
@@ -1348,6 +1349,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 /*****************************************************************************/
+
   if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) {
     memory->cipher_number = AES;
   }
