@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 08 OKT 2024;
+ * Modification date: 26 DEC 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -78,9 +78,9 @@
 #define STRING_MAX_LENGTH         2048
 #define DATA_SIZE     ((1024*1024) * 8 /*MiB*/ ) /* READ AND WRITE FROM DRIVE */
 /*****************************************************************************/
-const char * PARAM_READ_BYTE  = "rb";
-const char * PARAM_WRITE_BYTE = "wb";
-const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 08OKT24 [EN]";
+static const char * PARAM_READ_BYTE  = "rb";
+static const char * PARAM_WRITE_BYTE = "wb";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 08OKT24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -165,6 +165,10 @@ typedef struct {
 } GLOBAL_MEMORY;
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+  if (NULL == ctx) {
+    return;
+  }
+
   if (ctx->real_key && ctx->real_key_length > 0) {
     meminit(ctx->real_key, 0x00, ctx->real_key_length);
   }
@@ -432,9 +436,12 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     hmac_ctx->KEY_1[i] = 0x00;
   }
 
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
-    hmac_ctx->KEY_1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
+  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
+    *(((uint32_t *)hmac_ctx->KEY_0) + i) ^= 0x55555555;
+  }
+
+  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
+    *(((uint32_t *)hmac_ctx->KEY_1) + i) ^= 0x66666666;
   }
 
 #if CRYCON_DEBUG
@@ -691,7 +698,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
           return close_in_out_files(fi, fo, READ_FILE_ERROR);
         }
 		
-      position += (int32_t)ctx->vector_length;
+      position += (off_t)ctx->vector_length;
 #if CRYCON_DEBUG
   printf("[DEBUG] vector data read from file in pointer: %p\n", ctx->vector);
 #endif
@@ -1039,23 +1046,12 @@ int main(int argc, char * argv[]) {
 
   GLOBAL_MEMORY * ctx;
   void * cipher_pointer;
-/*****************************************************************************/
-  srand(trash + time(NULL));
-/*****************************************************************************/
+
   if (!isatty(0)) {
     fprintf(stderr, "[X] Not terminal!\n");
     return ERROR_TERMINAL;
   }
-/*****************************************************************************/
-  ctx_length = sizeof(GLOBAL_MEMORY);
-  result = INITIALIZED_GLOBAL_MEMORY(&ctx, ctx_length);
 
-  if (result != OK) {
-    free_global_memory(ctx, ctx_length);
-    MEMORY_ERROR;
-    return result;
-  }
-/*****************************************************************************/
   if (argc > 1 && argc < 7) {
     for (i = 1; i < (argc - 1); i++) {
       if (x_strnlen(argv[i], STRING_MAX_LENGTH) == STRING_MAX_LENGTH) { /* if length argument >= 2048 */
@@ -1067,7 +1063,7 @@ int main(int argc, char * argv[]) {
   else
   if (1 == argc || argc >= 7) {
     fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings.\n", argc);
-    return 0;
+    return 1;
   }
 
   if (2 == argc) {
@@ -1099,8 +1095,21 @@ int main(int argc, char * argv[]) {
 
   if (argc < 4) {
     fprintf(stderr, "[!] Error: count arguments %d; necessary to 2 do 7 strings.\n", argc);
-    return 0;
+    return 1;
   }
+
+  srand(trash ^ time(NULL) + result);
+
+/*****************************************************************************/
+  ctx_length = sizeof(GLOBAL_MEMORY);
+  result = INITIALIZED_GLOBAL_MEMORY(&ctx, ctx_length);
+
+  if (result != OK) {
+    free_global_memory(ctx, ctx_length);
+    MEMORY_ERROR;
+    return result;
+  }
+/*****************************************************************************/
 
   ctx->foutput = argv[argc - 1];
   ctx->finput  = argv[argc - 2];
