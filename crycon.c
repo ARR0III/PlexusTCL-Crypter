@@ -998,6 +998,9 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->foutput            = NULL;
   (*ctx)->vector             = NULL;
   (*ctx)->real_key           = NULL;
+  (*ctx)->new_key            = NULL;
+  (*ctx)->password           = NULL;
+  (*ctx)->sha256sum          = NULL;
   (*ctx)->hmac               = NULL;
 
   (*ctx)->operation          = ENCRYPT;
