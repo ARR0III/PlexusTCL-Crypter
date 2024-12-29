@@ -80,7 +80,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 08OKT24 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 29DEC24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
