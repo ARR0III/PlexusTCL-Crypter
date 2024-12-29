@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 26 DEC 2024;
+ * Modification date: 29 DEC 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -132,7 +132,7 @@ typedef struct {
   uint8_t hash[SHA256_BLOCK_SIZE];
   uint8_t KEY_0[SHA256_BLOCK_SIZE];
   uint8_t KEY_1[SHA256_BLOCK_SIZE];
-} HMAC_CTX;
+} HMAC;
 
 /* Global struct for data */
 typedef struct {
@@ -151,6 +151,9 @@ typedef struct {
 
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
   size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
+
+  HMAC       * hmac;                /* memory for hmac struct */
+  size_t       hmac_length;         /* size struct hmac */
 
   uint8_t    * vector;              /* initialized vector for crypt data */
   size_t       vector_length;       /* block size cipher execution */
@@ -185,6 +188,10 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
     meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   }
 
+  if (ctx->hmac && ctx->hmac_length > 0) {
+    meminit(ctx->hmac, 0x00, ctx->hmac_length);
+  }
+
   if (ctx->vector && ctx->vector_length > 0) {
     meminit(ctx->vector, 0x00, ctx->vector_length);
   }
@@ -193,6 +200,7 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free(ctx->new_key);
   free(ctx->password);
   free(ctx->sha256sum);
+  free(ctx->hmac);
   free(ctx->vector);
 	
   /* clear all memory and all pointers */
@@ -235,7 +243,7 @@ static double sizetodoubleprint(const int status, const double size) {
   return (status ? (size / (double)INT_SIZE_DATA[status - 1]) : size);
 }
 
-/* TESTING NEW KEY DERIVATION FUNCTION */
+/* TESTING NEW KEY DERIVATION FUNCTION
 static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
                       const uint8_t  * password, const size_t password_len,
                             uint8_t  * key,      const size_t key_len) {
@@ -243,7 +251,6 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
   uint32_t i, j;
   uint32_t count;
 
-/*uint32_t pmem_size = (key_len + password_len + CLOMUL_CONST) * SHA256_BLOCK_SIZE*/
   uint32_t pmem_size = (key_len + password_len + CLOMUL_CONST) << 5;
 
   uint8_t * pmem = (uint8_t *)malloc(pmem_size);
@@ -261,9 +268,6 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
   clock_t min = clock();
 #endif
 
-/*****************************************************************************/
-/* GENERATION COUNTER */
-
   count  = CRC32(password, password_len);
   count  = count >> 16;
   count |= ((uint32_t)1 << 14);
@@ -274,8 +278,6 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
          (count * (pmem_size >> 5)) + (key_len >> 5));
 #endif
 
-/*****************************************************************************/
-/* INITIALIZED MEMORY */
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
 
   sha256_init(ctx->sha256sum);
@@ -297,8 +299,6 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
   }
 
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
-/*****************************************************************************/
-/* HASHING MEMORY FOR GENERATION CRYPT KEY */
 
   sha256_init(ctx->sha256sum);
 
@@ -314,7 +314,7 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
 
     memcpy(key + i, ctx->sha256sum->hash, j);
   }
-/*****************************************************************************/
+
 #if CRYCON_DEBUG
   printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
   printf("[DEBUG] hash matrix for key generation:\n");
@@ -326,6 +326,7 @@ static void KDFCLOMUL2(GLOBAL_MEMORY * ctx,
   free(pmem);
   pmem = NULL;
 }
+*/
 
 static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
                      const uint8_t  * password, const size_t password_len,
@@ -409,47 +410,36 @@ static void cipher_free(void * ctx, size_t ctx_length) {
 static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   size_t i;
   size_t size_copy_data;
-  size_t hmac_ctx_length;
-
-  HMAC_CTX * hmac_ctx;
-	
-  hmac_ctx_length = sizeof(HMAC_CTX);	
-  hmac_ctx = (HMAC_CTX *)malloc(hmac_ctx_length);
-
-  if (!hmac_ctx) {
-    MEMORY_ERROR;
-    exit(1);
-  }
 
   size_copy_data = MINIMAL(ctx->real_key_length, SHA256_BLOCK_SIZE);
 
   /* copy hash sum file in local buffer "hash" */
-  memcpy((void *)hmac_ctx->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
+  memcpy((void *)ctx->hmac->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
 
   /* generate two secret const for hash update */
-  memcpy(hmac_ctx->KEY_0, ctx->real_key, size_copy_data);
-  memcpy(hmac_ctx->KEY_1, ctx->real_key, size_copy_data);
+  memcpy(ctx->hmac->KEY_0, ctx->real_key, size_copy_data);
+  memcpy(ctx->hmac->KEY_1, ctx->real_key, size_copy_data);
 
-  /* if length real_key equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
+  /* if length real_key >= SHA256_BLOCK_SIZE then cycle NOT executable */
   for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_0[i] = 0x00;
-    hmac_ctx->KEY_1[i] = 0x00;
+    ctx->hmac->KEY_0[i] = 0x00;
+    ctx->hmac->KEY_1[i] = 0x00;
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
-    *(((uint32_t *)hmac_ctx->KEY_0) + i) ^= 0x55555555;
+    *(((uint32_t *)ctx->hmac->KEY_0) + i) ^= 0x55555555;
   }
 
   for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
-    *(((uint32_t *)hmac_ctx->KEY_1) + i) ^= 0x66666666;
+    *(((uint32_t *)ctx->hmac->KEY_1) + i) ^= 0x66666666;
   }
 
 #if CRYCON_DEBUG
   printf("[DEBUG] authentification key \'U\':\n");
-  printhex(HEX_TABLE, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
+  printhex(HEX_TABLE, ctx->hmac->KEY_0, SHA256_BLOCK_SIZE);
 
   printf("[DEBUG] authentification key \'f\':\n");
-  printhex(HEX_TABLE, hmac_ctx->KEY_1, SHA256_BLOCK_SIZE);
+  printhex(HEX_TABLE, ctx->hmac->KEY_1, SHA256_BLOCK_SIZE);
 #endif
 
   /* clear sha256sum struct */
@@ -457,25 +447,24 @@ static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 
   /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, ctx->hmac->KEY_0, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, ctx->hmac->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  memcpy(ctx->hmac->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
   /* clear sha256sum struct */
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
 
   /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, hmac_ctx->KEY_1, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, ctx->hmac->KEY_1, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, ctx->hmac->hash, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
   /* clear memory for security */
-  meminit(hmac_ctx, 0x00, hmac_ctx_length);
-  free(hmac_ctx);
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
+  meminit(ctx->hmac, 0x00, ctx->hmac_length);
 }
 
 static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
@@ -524,8 +513,8 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
   }
 
   if (ENCRYPT == ctx->operation) {
-/* if post encrypt size of file >= 4 EiB then this operation BAD ->> don't for decrypting */
-    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((off_t)1 << 63)) {
+/* if post encrypt size of file >= 8 EiB then this operation BAD ->> don't for decrypting */
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((off_t)1 << 62)) {
       return SIZE_FILE_ERROR;
     }
   }
@@ -1009,6 +998,7 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->foutput            = NULL;
   (*ctx)->vector             = NULL;
   (*ctx)->real_key           = NULL;
+  (*ctx)->hmac               = NULL;
 
   (*ctx)->operation          = ENCRYPT;
   (*ctx)->cipher_number      = AES;
@@ -1018,6 +1008,7 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->real_key_length    = 0;
   (*ctx)->password_length    = STRING_MAX_LENGTH;
   (*ctx)->sha256sum_length   = sizeof(SHA256_CTX);
+  (*ctx)->hmac_length        = sizeof(HMAC);
 
   (*ctx)->password = (char *)malloc((*ctx)->password_length);
 
@@ -1030,9 +1021,16 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   if (NULL == (*ctx)->sha256sum) {
     return 3;
   }
+	
+  (*ctx)->hmac = (HMAC *)malloc(sizeof(HMAC));
+
+  if (NULL == (*ctx)->hmac) {
+    return 4;
+  }
 
   meminit((*ctx)->password,  0x00, (*ctx)->password_length);
   meminit((*ctx)->sha256sum, 0x00, (*ctx)->sha256sum_length);
+  meminit((*ctx)->hmac,      0x00, (*ctx)->hmac_length);
 
   return OK;
 }
