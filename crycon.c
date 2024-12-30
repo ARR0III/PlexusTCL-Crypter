@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 29 DEC 2024;
+ * Modification date: 31 DEC 2024;
  * Modification:      Release;
  * Language:          English;
  */
@@ -66,7 +66,6 @@
 #define STREAM_INPUT_CLOSE_ERROR     6
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
-#define REKEYING_PROCESS_ERROR       9
 /*****************************************************************************/
 #define LENGTH_DATA_FOR_CHECK     1024
 /*****************************************************************************/
@@ -80,7 +79,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 29DEC24 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 31DEC24 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -948,9 +947,6 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
     case SIZE_DECRYPT_FILE_INCORRECT:
       fprintf(stderr, "[!] Size of file for decrypt \"%s\" incorrect.\n", ctx->finput);
       break;
-    case REKEYING_PROCESS_ERROR:
-      fprintf(stderr, "[!] Cannot allocate memory for re-keying.\n");
-      break;
   }
 }
 
@@ -968,7 +964,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
   fflush(stdin);
 
   if (!fgets(ctx->password, ctx->password_length, stdin)) {
-    fprintf(stderr, "[X] Password not read from command line.\n");
+    tcsetattr(0, TCSANOW, &trms_old);
+    fprintf(stderr, "\n[X] Password not read from command line.\n");
     return ERROR_GET_STRING;
   }
 
@@ -977,6 +974,11 @@ int password_read(GLOBAL_MEMORY * ctx) {
       ctx->password[i] = '\0';
       break;
     }
+  }
+
+  if (i >= ctx->password_length) {
+    tcsetattr(0, TCSANOW, &trms_old);
+    return ERROR_GET_STRING;
   }
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
@@ -1099,7 +1101,7 @@ int main(int argc, char * argv[]) {
     return 1;
   }
 
-  srand(trash ^ time(NULL) + result);
+  srand(trash ^ time(NULL) + ctx_length);
 
 /*****************************************************************************/
   ctx_length = sizeof(GLOBAL_MEMORY);
