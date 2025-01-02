@@ -3,7 +3,7 @@
  * Console Encryption Software v5.10;
  *
  * Developer:         ARR0III;
- * Modification date: 31 DEC 2024;
+ * Modification date: 03 JAN 2025;
  * Modification:      Release;
  * Language:          English;
  */
@@ -79,7 +79,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 31DEC24 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.10 03JAN25 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -950,9 +950,13 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
   }
 }
 
+/* function return code OK only if string
+   read and string length > 0 and < 2048  */
 int password_read(GLOBAL_MEMORY * ctx) {
   int i;
   struct termios trms, trms_old;
+
+  int result = ERROR_GET_STRING;
 
   tcgetattr(0, &trms);                    /* get settings termios system */
   memcpy(&trms_old, &trms, sizeof(trms)); /* copy normal settings */
@@ -963,28 +967,27 @@ int password_read(GLOBAL_MEMORY * ctx) {
   fflush(stdout);
   fflush(stdin);
 
-  if (!fgets(ctx->password, ctx->password_length, stdin)) {
-    tcsetattr(0, TCSANOW, &trms_old);
-    fprintf(stderr, "\n[X] Password not read from command line.\n");
-    return ERROR_GET_STRING;
-  }
+  if (fgets(ctx->password, ctx->password_length, stdin)) {
+    for (i = 0; i < ctx->password_length; i++) {
+      if ('\0' == ctx->password[i]) {
+        break;
+      }
 
-  for (i = 0; i < (ctx->password_length); i++) {
-    if ('\n' == ctx->password[i]) {
-      ctx->password[i] = '\0';
-      break;
+      if ('\n' == ctx->password[i]) {
+        ctx->password[i] = '\0';
+        break;
+      }
     }
-  }
 
-  if (i >= ctx->password_length) {
-    tcsetattr(0, TCSANOW, &trms_old);
-    return ERROR_GET_STRING;
+    if (i > 0 && i < ctx->password_length) {
+      result = OK;
+    }
   }
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
   putc('\n', stdout);
 
-  return OK;
+  return result;
 }
 
 int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
@@ -1218,7 +1221,8 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  if (password_read(ctx) != OK) {
+  if (password_read(ctx) == ERROR_GET_STRING) {
+    fprintf(stderr, "[X] Password not read from command line.\n");
     free_global_memory(ctx, ctx_length);
     return 1;
   }
