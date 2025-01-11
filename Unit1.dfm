@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 345
-  Top = 211
+  Left = 209
+  Top = 332
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -138,25 +138,16 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
   end
-  object Shape4: TShape
-    Left = 10
-    Top = 236
-    Width = 0
-    Height = 14
-    Brush.Color = clGreen
-    Pen.Color = clGreen
-  end
   object ComboBox1: TComboBox
     Left = 8
     Top = 48
     Width = 137
     Height = 21
-    Style = csDropDownList
     Ctl3D = False
     ItemHeight = 13
     MaxLength = 20
     ParentCtl3D = False
-    TabOrder = 0
+    TabOrder = 3
     TabStop = False
     OnChange = ComboBox1Change
   end
@@ -165,12 +156,11 @@ object Form1: TForm1
     Top = 96
     Width = 137
     Height = 21
-    Style = csDropDownList
     Ctl3D = False
     ItemHeight = 13
     MaxLength = 20
     ParentCtl3D = False
-    TabOrder = 1
+    TabOrder = 0
     TabStop = False
     Visible = False
   end
@@ -194,7 +184,7 @@ object Form1: TForm1
     Ctl3D = True
     MaxLength = 2048
     ParentCtl3D = False
-    TabOrder = 3
+    TabOrder = 1
   end
   object Button1: TButton
     Left = 424

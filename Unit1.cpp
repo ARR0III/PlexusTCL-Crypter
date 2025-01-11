@@ -35,8 +35,9 @@
 
 #include "LICENSE.h"
 
-#define EMPTY_FILENAME "output.dat"
-#define EXT_CRYCON     ".crycon"
+#define SETTINGS_FILENAME  "settings.cry"
+#define EMPTY_FILENAME     "output.dat"
+#define EXT_CRYCON         ".crycon"
 
 #define KiB                          1
 #define MiB                          2
@@ -71,18 +72,31 @@
 
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
 
-#define SET_START_STREAM                 \
-  do {                                   \
-    EnterCriticalSection(&Form1->CrSec); \
-    PROCESSING = true;                   \
-    LeaveCriticalSection(&Form1->CrSec); \
+#define SET_START_STREAM                  \
+  do {                                    \
+    EnterCriticalSection(&Form1->CrSec);  \
+    PROCESSING = true;                    \
+    LeaveCriticalSection(&Form1->CrSec);  \
   } while(0)
 
-#define SET_STOP_STREAM                  \
-  do {                                   \
-    EnterCriticalSection(&Form1->CrSec); \
-    PROCESSING = false;                  \
-    LeaveCriticalSection(&Form1->CrSec); \
+#define SET_STOP_STREAM                   \
+  do {                                    \
+    EnterCriticalSection(&Form1->CrSec);  \
+    PROCESSING = false;                   \
+    LeaveCriticalSection(&Form1->CrSec);  \
+  } while(0)
+
+#define CHECK_BREAK_STREAM                                  \
+  do {                                                      \
+    if (TryEnterCriticalSection(&Form1->CrSec)) {           \
+      if (false == PROCESSING) {                            \
+        LeaveCriticalSection(&Form1->CrSec);                \
+        meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));  \
+        return close_in_out_files(fi, fo, 0xDE);            \
+      }                                                     \
+                                                            \
+      LeaveCriticalSection(&Form1->CrSec);                  \
+    }                                                       \
   } while(0)
 
 #pragma hdrstop
@@ -91,7 +105,7 @@
 
 TForm1 *Form1;
 
-bool PROCESSING = false;
+static bool PROCESSING = false;
 
 typedef int64_t fsize_t;
 
@@ -103,20 +117,20 @@ typedef enum cipher_number_enum {
   THREEFISH = 4
 } cipher_t;
 
-const char * PARAM_APPEND_BYTE  = "ab";
-const char * PARAM_READ_BYTE    = "rb";
-const char * PARAM_WRITE_BYTE   = "wb";
-const char * PARAM_REWRITE_BYTE = "r+b";
+static const char * PARAM_APPEND_BYTE  = "ab";
+static const char * PARAM_READ_BYTE    = "rb";
+static const char * PARAM_WRITE_BYTE   = "wb";
+static const char * PARAM_REWRITE_BYTE = "r+b";
 
-const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
+static const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
 
-const char * CHAR_KEY_LENGTH_AES[] = {
+static const char * CHAR_KEY_LENGTH_AES[] = {
   "128",
   "192",
   "256"
 };
 
-const char * CHAR_KEY_LENGTH_THREEFISH[] ={
+static const char * CHAR_KEY_LENGTH_THREEFISH[] = {
   "256",
   "512",
   "1024"
@@ -140,7 +154,7 @@ static const char * CHAR_SIZE_DATA[] = {
 };
 
 
-const char * OPERATION_NAME[] = {
+static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
   "Шифрование", "Расшифровка",
 #else
@@ -148,7 +162,7 @@ const char * OPERATION_NAME[] = {
 #endif
 };
 
-const char * ALGORITM_NAME[] = {
+static const char * ALGORITM_NAME[] = {
   "AES-CFB",
   "SERPENT-CFB",
   "TWOFISH-CFB",
@@ -158,11 +172,11 @@ const char * ALGORITM_NAME[] = {
 
 /*******************************************/
 
-uint32_t      * rijndael_ctx  = NULL;
-SERPENT_CTX   * serpent_ctx   = NULL;
-TWOFISH_CTX   * twofish_ctx   = NULL;
-BLOWFISH_CTX  * blowfish_ctx  = NULL;
-THREEFISH_CTX * threefish_ctx = NULL;
+static uint32_t      * rijndael_ctx  = NULL;
+static SERPENT_CTX   * serpent_ctx   = NULL;
+static TWOFISH_CTX   * twofish_ctx   = NULL;
+static BLOWFISH_CTX  * blowfish_ctx  = NULL;
+static THREEFISH_CTX * threefish_ctx = NULL;
 
 typedef struct {
   uint8_t hash[SHA256_BLOCK_SIZE];
@@ -177,23 +191,35 @@ typedef struct {
 
 typedef struct {
 /* pointers for */
-  SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
+  SHA256_CTX * sha256sum;          /* memory for sha256 hash function */
 
-  uint8_t    * vector;              /* initialized vector for crypt data */
-  size_t       vector_length;       /* block size cipher execution */
+  uint8_t    * vector;             /* initialized vector for crypt data */
+  size_t       vector_length;      /* block size cipher execution */
 
-  uint8_t    * real_key;            /* real_key for temp key data */
-  size_t       real_key_length;     /* size buffer for crypt key */
+  uint8_t    * real_key;           /* real_key for temp key data */
+  size_t       real_key_length;    /* size buffer for crypt key */
 
   uint8_t    * new_key;            /* real_key for temp key data */
   size_t       new_key_length;     /* size buffer for crypt key */
 
-  int          operation;           /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
-  cipher_t     cipher_number;       /* search type name cipher_number_enum */
+  int          operation;          /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
+  cipher_t     cipher_number;      /* search type name cipher_number_enum */
   
-  uint8_t      input  [DATA_SIZE];  /* memory for read */
-  uint8_t      output [DATA_SIZE];  /* memory for write */
+  uint8_t      input  [DATA_SIZE]; /* memory for read */
+  uint8_t      output [DATA_SIZE]; /* memory for write */
 } GLOBAL_MEMORY;
+
+typedef struct {
+  TColor   top_color;
+  cipher_t cipher;
+
+  int  key_size;
+  int  pass_gen_size;
+  int  operation;
+  
+  bool erased;
+
+} SETTINGS;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
@@ -299,14 +325,157 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
   }
 }
 
+void pars_str(const char * key, const char * data, SETTINGS * settings) {
+  size_t result;	
+	
+  result = atoi(data);
+	
+  if (strcmp(key, "CIPHER") == 0) {
+    if (strcmp(data, "AES") == 0) {
+      settings->cipher = AES;
+    }
+    else
+    if (strcmp(data, "BLOWFISH") == 0) {
+      settings->cipher = BLOWFISH;
+    }
+    else
+    if (strcmp(data, "SERPENT") == 0) {
+      settings->cipher = SERPENT;
+    }
+    else
+    if (strcmp(data, "THREEFISH") == 0) {
+      settings->cipher = THREEFISH;
+    }
+    else
+    if (strcmp(data, "TWOFISH") == 0) {
+      settings->cipher = TWOFISH;
+    }
+  }
+  else
+  if (strcmp(key, "ERASED") == 0) {
+    if (strcmp(data, "TRUE") == 0) {
+      settings->erased = true;
+    }
+    else
+    if (strcmp(data, "FALSE") == 0) {
+      settings->erased = false;
+    }
+  }
+  else
+  if (strcmp(key, "KEY_SIZE") == 0) {
+    switch(settings->cipher) {
+      case AES:
+      case TWOFISH:
+      case SERPENT:   if (result == 128 || result == 192 || result == 256) {
+                        settings->key_size = result;
+                      }
+                      break;
+		
+      case THREEFISH: if (result == 256 || result == 512 || result == 1024) {
+                        settings->key_size = result;
+                      }
+                      break;
+    }
+  }
+  else
+  if (strcmp(key, "OPERATION") == 0) {
+    if (strcmp(data, "ENCRYPT") == 0) {
+      settings->operation = ENCRYPT;
+    }
+    else
+    if (strcmp(data, "DECRYPT") == 0) {
+      settings->operation = DECRYPT;
+    }
+  }
+  else
+  if (strcmp(key, "PASS_GEN_SIZE") == 0) {
+    if (result > 7 && result < 257) {
+      settings->pass_gen_size = result;
+    }
+  }
+  else
+  if (strcmp(key, "TOP_COLOR") == 0) {
+    settings->top_color = (TColor)HexToInt32(data);
+  }
+}
+
+void init_settings(const char * filename, SETTINGS * settings) {
+#define SETTINGS_BLOCK_SIZE 128
+  FILE * fs;
+  char *key, *data;
+  int  realread, strcount;
+  char buffer[SETTINGS_BLOCK_SIZE];	
+	
+  if (NULL == filename || NULL == settings) {
+    return;
+  }
+  
+  fs = fopen(filename, PARAM_READ_BYTE);
+  
+  if (NULL == fs) {
+    return;
+  }
+
+  strcount = 0;
+
+  while (1) {
+    realread = readstr(buffer, SETTINGS_BLOCK_SIZE, fs);
+	
+    if (realread < 1) {
+      break;
+    }
+    /*
+    ShowMessage(AnsiString(buffer));
+    */
+    if (buffer[0] == '#') { /* comment from configurate file */
+      continue;
+    }
+
+    strcount++;
+
+    if (strcount >= 1000) { /* max read strings from settings file */
+      break;
+    }
+
+    key = buffer;
+    data = strchr(buffer, '=');
+	
+    if (NULL == data) { /* this is not parameter  */
+      continue;
+    }
+
+    if (key >= data){
+      continue;
+    }
+	
+    *data = '\0';
+    data = data + 1;
+
+    if (*key == '\0' || *data == '\0') {
+      continue;
+    }
+
+    pars_str(key, data, settings);
+    buffer[0] = '\0';
+  }
+
+  fclose(fs);
+}
+
 void __fastcall TForm1::FormCreate(TObject *Sender) {
-  unsigned int trash[2]; /* buffer 8 byte for trash from stack */
-
-  srand((unsigned int)((trash[0] ^ (unsigned int)time(NULL)) + trash[1]));
-
-  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
+  SETTINGS settings;
 
   InitializeCriticalSection(&CrSec);
+  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
+
+  settings.top_color     = FORM_HEAD_COLOR;
+  settings.cipher        = AES;
+  settings.key_size      = 128;
+  settings.pass_gen_size =  64;
+  settings.operation     = ENCRYPT;
+  settings.erased        = false;
+
+  init_settings(SETTINGS_FILENAME, &settings);
 
   for (int i = 0; i < 5; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
@@ -331,15 +500,43 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   Form1->RadioButton1->Caption = STR_EN;
   Form1->RadioButton2->Caption = STR_DE;
 
-  Form1->CheckBox1->Caption = STR_ERASED;
+  Form1->CheckBox1->Caption    = STR_ERASED;
 
-  Form1->Shape1->Pen->Color   = FORM_HEAD_COLOR;
-  Form1->Shape2->Brush->Color = FORM_HEAD_COLOR;
-  Form1->Shape2->Pen->Color   = FORM_HEAD_COLOR;
+/* this is code work with data from configurate file */
 
-  Form1->Label5->Color = FORM_HEAD_COLOR;
-  Form1->Label6->Color = FORM_HEAD_COLOR;
-  Form1->Label7->Color = FORM_HEAD_COLOR;
+  Form1->Shape1->Pen->Color    = settings.top_color;
+  Form1->Shape2->Brush->Color  = settings.top_color;
+  Form1->Shape2->Pen->Color    = settings.top_color;
+  Form1->Label5->Color         = settings.top_color;
+  Form1->Label6->Color         = settings.top_color;
+  Form1->Label7->Color         = settings.top_color;
+
+  Form1->Edit3->Text           = IntToStr(settings.pass_gen_size);
+  Form1->ComboBox1->Text       = AnsiString(ALGORITM_NAME[settings.cipher]);
+
+  Form1->CheckBox1->Checked    = settings.erased;
+
+  switch(settings.cipher) {
+    case AES:
+    case TWOFISH:
+    case SERPENT:
+    case THREEFISH: Form1->ComboBox2->Visible = True;
+                    Form1->ComboBox2->Text = IntToStr(settings.key_size);
+                    break;
+  }
+
+  Form1->ComboBox1->Style = csDropDown;
+  Form1->ComboBox2->Style = csDropDown;
+
+  switch(settings.operation) {
+    case ENCRYPT:  Form1->RadioButton1->Checked = true;
+                   break;
+    case DECRYPT:  Form1->RadioButton2->Checked = true;
+                   break;
+	  
+  }
+  
+/* this is code work with data from configurate file */
 
   Form1->ProgressBar1->Min = 0;
   Form1->ProgressBar1->Max = 100;
@@ -348,12 +545,12 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
   int i;
 
+  ComboBox2->Items->Clear();
+
   if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))     ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ||
        (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) ) {
-
-    ComboBox2->Items->Clear();
 
     if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
       for (i = 0; i < 3; i++) {
@@ -381,6 +578,10 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
 }
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
+  if (NULL == ctx) {
+    return;
+  }
+	
   if (ctx->real_key && ctx->real_key_length > 0) {
     meminit(ctx->real_key, 0x00, ctx->real_key_length);
   }
@@ -401,7 +602,7 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free(ctx->new_key);
   free(ctx->sha256sum);
   free(ctx->vector);
-	
+
   /* clear all memory and all pointers */
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
@@ -418,7 +619,7 @@ void cursorpos(uint8_t * data) {
 /*
   position->x = 0;
   position->y = 0;
-  function meminit32 this is analog standart C library memset function
+  function meminit this is analog standart C library memset function
 */
   meminit(&position, 0x00, sizeof(TPoint));
 }
@@ -495,7 +696,7 @@ void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 }
 
 /* Function size_check checked size = Bt, KiB, MiB, GiB or TiB */
-static int size_check(fsize_t size) {
+static int size_check(const fsize_t size) {
   int result = 0;
 
   if (size >= INT_SIZE_DATA[0] && size < INT_SIZE_DATA[1]) {
@@ -651,15 +852,17 @@ int erasedfile(const char * filename) {
     }
 
 /*****************************************************************************/
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
+    if (TryEnterCriticalSection(&Form1->CrSec)) {
+      if (false == PROCESSING) {
+        LeaveCriticalSection(&Form1->CrSec);
+        meminit(data, 0x00, DATA_SIZE);
+        free(data);
+        fclose(f);
+        return 0xDE;
+      }
+
       LeaveCriticalSection(&Form1->CrSec);
-      meminit(data, 0x00, DATA_SIZE);
-      free(data);
-      fclose(f);
-      return 0xDE;
     }
-    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
 
     realread = fread(data, 1, size_for_erased, f);
@@ -668,15 +871,17 @@ int erasedfile(const char * filename) {
     fseek(f, position, SEEK_SET);
     
 /*****************************************************************************/
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
+    if (TryEnterCriticalSection(&Form1->CrSec)) {
+      if (false == PROCESSING) {
+        LeaveCriticalSection(&Form1->CrSec);
+        meminit(data, 0x00, DATA_SIZE);
+        free(data);
+        fclose(f);
+        return 0xDE;
+      }
+
       LeaveCriticalSection(&Form1->CrSec);
-      meminit(data, 0x00, DATA_SIZE);
-      free(data);
-      fclose(f);
-      return 0xDE;
     }
-    LeaveCriticalSection(&Form1->CrSec);
 /*****************************************************************************/
 
     if (fwrite(data, 1, realread, f) != realread) {
@@ -728,7 +933,7 @@ int erasedfile(const char * filename) {
   return erased_head_of_file(filename);
 }
 
-void cipher_free(void * ctx, size_t ctx_length) {
+void cipher_free(void * ctx, const size_t ctx_length) {
   /* clear crypt key and struct cipher */
   meminit(ctx, 0x00, ctx_length);
   free(ctx);
@@ -761,9 +966,14 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
     hmac_ctx->KEY_1[i] = 0x00;
   }
 
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_0[i] ^= 0x55; /* simbol 'U', decimal  85, bits 01010101 */
-    hmac_ctx->KEY_1[i] ^= 0x66; /* simbol 'f', decimal 102, bits 10101010 */
+  /* simbol 'U', decimal  85, bits 01010101 */
+  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
+    *(((uint32_t *)hmac_ctx->KEY_0) + i) ^= 0x55555555;
+  }
+
+  /* simbol 'f', decimal 102, bits 10101010 */
+  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
+    *(((uint32_t *)hmac_ctx->KEY_1) + i) ^= 0x66666666;
   }
 
   /* clear sha256sum struct */
@@ -949,20 +1159,14 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 /*****************************************************************************/
 
   status_buffer_pos = snprintf(status_buffer, STATUS_BUFFER_SIZE,
-        STR_ENCRYPT_FILE_PROC,
-	OPERATION_NAME[ctx->operation ? 1 : 0],
-	ALGORITM_NAME[ctx->cipher_number]);
+    STR_ENCRYPT_FILE_PROC,
+    OPERATION_NAME[ctx->operation ? 1 : 0],
+    ALGORITM_NAME[ctx->cipher_number]);
 
   while (position < fsize) {  
-/*****************************************************************************/
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
-      LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
-      return close_in_out_files(fi, fo, 0xDE);
-    }
-    LeaveCriticalSection(&Form1->CrSec);
-/*****************************************************************************/
+
+    CHECK_BREAK_STREAM;
+
     if (0LL == position) {
       if (ENCRYPT == ctx->operation) {
         switch (ctx->cipher_number) {
@@ -1001,15 +1205,8 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       }
     }
 
-/*****************************************************************************/
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
-      LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
-      return close_in_out_files(fi, fo, 0xDE);
-    }
-    LeaveCriticalSection(&Form1->CrSec);
-/*****************************************************************************/
+    CHECK_BREAK_STREAM;
+
     realread = fread(ctx->input, 1, DATA_SIZE, fi);
 
     for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
@@ -1049,15 +1246,9 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
     /* control sum all read 1 MB data for [en/de]crypt + crypt key */
     control_sum_buffer(ctx, realread);
-/*****************************************************************************/
-    EnterCriticalSection(&Form1->CrSec);
-    if (false == PROCESSING) {
-      LeaveCriticalSection(&Form1->CrSec);
-      meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
-      return close_in_out_files(fi, fo, 0xDE);
-    }
-    LeaveCriticalSection(&Form1->CrSec);
-/*****************************************************************************/
+
+    CHECK_BREAK_STREAM;
+
     if (fwrite(ctx->output, 1, realread, fo) != realread) {
       return close_in_out_files(fi, fo, WRITE_FILE_ERROR);
     }
@@ -1178,7 +1369,7 @@ int GeneratingCryptKey(const char * message) {
   if (MessageForUser(MB_ICONINFORMATION + MB_YESNO, STR_PROGRAMM_NAME, message) == IDNO) {
     return IDNO;
   }
-  
+
   return IDYES;
 }
 
@@ -1196,29 +1387,29 @@ void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_length) {
       rijndael_ctx = (uint32_t *)cipher_ptr;
       rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
       break;
-				  
+
     case SERPENT:
       serpent_ctx = (SERPENT_CTX *)cipher_ptr;
       serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
       break;
-	  
+
     case TWOFISH:
       twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
       twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
       break;
-	
+
     case BLOWFISH:
       blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
       blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
       break;
-	  
+
     case THREEFISH:
       threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
       threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
                      (uint64_t *)ctx->real_key, (uint64_t *)ctx->real_key);
       break;
   }
-  
+
   return cipher_ptr;
 }
 
@@ -1237,9 +1428,9 @@ bool GLOBAL_MEMORY_ALLOCATOR(GLOBAL_MEMORY ** memory) {
     free(*memory);
     return false;
   }
-  
+
   meminit((*memory)->sha256sum, 0x00, sizeof(SHA256_CTX));
-  
+
   return true;
 }
 
@@ -1672,7 +1863,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   UnicodeMsg = "";
 
   switch (result) {
-    case  0xDE:
+    case 0xDE:
       MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
                      STR_OPERATION_STOPPED);
       break;

@@ -1,6 +1,6 @@
 object Form2: TForm2
-  Left = 311
-  Top = 396
+  Left = 230
+  Top = 433
   BorderStyle = bsNone
   Caption = #1057#1055#1056#1040#1042#1050#1040
   ClientHeight = 155
@@ -70,8 +70,8 @@ object Form2: TForm2
   object Label3: TLabel
     Left = 8
     Top = 134
-    Width = 329
-    Height = 14
+    Width = 3
+    Height = 13
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
@@ -89,20 +89,20 @@ object Form2: TForm2
   object Label2: TLabel
     Left = 14
     Top = 56
-    Width = 315
+    Width = 3
     Height = 13
   end
   object Label1: TLabel
-    Left = 40
+    Left = 20
     Top = 30
-    Width = 266
+    Width = 306
     Height = 13
     Caption = 'PLEXUS TECHNOLOGY CYBERNETIC LABORATORY'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
-    Font.Style = []
+    Font.Style = [fsBold]
     ParentFont = False
   end
 end

@@ -58,7 +58,6 @@ __published:	// IDE-managed Components
         TButton *Button4;
         TOpenDialog *OpenDialog1;
         TSaveDialog *SaveDialog1;
-        TShape *Shape4;
         TProgressBar *ProgressBar1;
         void __fastcall Button1Click(TObject *Sender);
         void __fastcall Button2Click(TObject *Sender);

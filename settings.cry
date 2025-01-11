@@ -1,0 +1,11 @@
+# This is configurate text file for initialized settings
+# Left string set what you be change, right string what you set
+# if you want change this file, just do it, BUT BE KWON WHAT WRITE!
+
+TOP_COLOR     = 00004A10 # 00|RED|GREEN|BLUE
+
+CIPHER        = AES
+KEY_SIZE      = 128
+OPERATION     = ENCRYPT
+PASS_GEN_SIZE = 32
+ERASED        = FALSE
