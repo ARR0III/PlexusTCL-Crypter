@@ -109,6 +109,18 @@ static bool PROCESSING = false;
 
 typedef int64_t fsize_t;
 
+/* Only rows sorted in ascending order */
+typedef enum config_enum {
+  CIPHER           = 0,
+  ERASED           = 1,
+  KEY_SIZE         = 2,
+  OPERATION        = 3,
+  PASS_GEN_SIZE    = 4,
+  TOP_COLOR        = 5,
+  TOP_TEXT_B_COLOR = 6,
+  TOP_TEXT_COLOR   = 7
+} config_key;
+
 typedef enum cipher_number_enum {
   AES       = 0,
   SERPENT   = 1,
@@ -122,7 +134,9 @@ static const char * PARAM_READ_BYTE    = "rb";
 static const char * PARAM_WRITE_BYTE   = "wb";
 static const char * PARAM_REWRITE_BYTE = "r+b";
 
-static const TColor FORM_HEAD_COLOR = TColor(0x00623E00);
+static const TColor FORM_HEAD_COLOR        = TColor(0x00623E00);
+static const TColor FORM_HEAD_TEXT_B_COLOR = TColor(0x00623E00);
+static const TColor FORM_HEAD_TEXT_COLOR   = TColor(0x00000000);
 
 static const char * CHAR_KEY_LENGTH_AES[] = {
   "128",
@@ -170,6 +184,27 @@ static const char * ALGORITM_NAME[] = {
   "THREEFISH-CFB"
 };
 
+#define CONFIG_PARAM_COUNT 5
+const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
+  "AES",
+  "SERPENT",
+  "TWOFISH",
+  "BLOWFISH",
+  "THREEFISH"
+};
+
+#define CONFIG_KEYS_COUNT 8
+const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
+  "CIPHER",
+  "ERASED",
+  "KEY_SIZE",
+  "OPERATION",
+  "PASS_GEN_SIZE",
+  "TOP_COLOR",
+  "TOP_TEXT_B_COLOR",
+  "TOP_TEXT_COLOR"
+};
+
 /*******************************************/
 
 static uint32_t      * rijndael_ctx  = NULL;
@@ -211,6 +246,8 @@ typedef struct {
 
 typedef struct {
   TColor   top_color;
+  TColor   top_text_color;
+  TColor   top_text_b_color;
   cipher_t cipher;
 
   int  key_size;
@@ -218,7 +255,6 @@ typedef struct {
   int  operation;
   
   bool erased;
-
 } SETTINGS;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
@@ -325,77 +361,108 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
   }
 }
 
+int str_list_search(const char * str, const char * list[], int length) {
+  int found;
+  int pos, left, right, result;
+	
+  found = -1;
+
+  left  = 0;
+  right = length - 1;
+  pos   = (left + right) / 2;
+	
+  while (left <= right) {
+    result = strcmp(str, list[pos]);
+
+    if (result == 0) {
+      found = pos;
+      break;
+    }
+
+    if (result < 0) {
+      right = pos - 1;
+    }
+    else
+    if (result > 0) {
+      left = pos + 1;
+    }
+	
+    pos = (left + right) / 2;
+  }
+  
+  return found;
+}
+
 void pars_str(const char * key, const char * data, SETTINGS * settings) {
   size_t result;	
+  int key_found;
+  int data_found;
 	
-  result = atoi(data);
-	
-  if (strcmp(key, "CIPHER") == 0) {
-    if (strcmp(data, "AES") == 0) {
-      settings->cipher = AES;
+  key_found = str_list_search(key, CONFIG_KEYS, CONFIG_KEYS_COUNT); /* -1 == not found string in list */
+
+  if (key_found != -1) {
+    result = atoi(data);
+	  
+    switch (key_found) {
+      case CIPHER:
+        data_found = str_list_search(data, CONFIG_PARAM, CONFIG_PARAM_COUNT);
+        if (data_found != -1) {
+          settings->cipher = (cipher_t)data_found;
+        }
+        break;
+
+      case ERASED:
+        if (strcmp(data, "TRUE") == 0) {
+          settings->erased = true;
+        }
+        else
+        if (strcmp(data, "FALSE") == 0) {
+          settings->erased = false;
+        }
+        break;
+
+      case KEY_SIZE:
+        if (settings->cipher == AES || settings->cipher == TWOFISH || settings->cipher == SERPENT) {
+          if (result == 128 || result == 192 || result == 256) {
+            settings->key_size = result;
+          }
+        }
+        else
+        if  (settings->cipher == THREEFISH ) {
+          if (result == 256 || result == 512 || result == 1024) {
+            settings->key_size = result;
+          }
+        }
+        break;
+	   
+      case OPERATION:
+        if (strcmp(data, "ENCRYPT") == 0) {
+          settings->operation = ENCRYPT;
+        }
+        else
+        if (strcmp(data, "DECRYPT") == 0) {
+          settings->operation = DECRYPT;
+        }
+        break;
+
+      case PASS_GEN_SIZE:
+        if (result > 7 && result < 257) {
+          settings->pass_gen_size = result;
+        }
+        break;
+
+      case TOP_COLOR:
+        settings->top_color = (TColor)HexToInt32(data);
+        break;
+
+      case TOP_TEXT_B_COLOR:
+        settings->top_text_b_color = (TColor)HexToInt32(data);
+        break;
+
+      case TOP_TEXT_COLOR:
+        settings->top_text_color = (TColor)HexToInt32(data);
+        break;
     }
-    else
-    if (strcmp(data, "BLOWFISH") == 0) {
-      settings->cipher = BLOWFISH;
-    }
-    else
-    if (strcmp(data, "SERPENT") == 0) {
-      settings->cipher = SERPENT;
-    }
-    else
-    if (strcmp(data, "THREEFISH") == 0) {
-      settings->cipher = THREEFISH;
-    }
-    else
-    if (strcmp(data, "TWOFISH") == 0) {
-      settings->cipher = TWOFISH;
-    }
-  }
-  else
-  if (strcmp(key, "ERASED") == 0) {
-    if (strcmp(data, "TRUE") == 0) {
-      settings->erased = true;
-    }
-    else
-    if (strcmp(data, "FALSE") == 0) {
-      settings->erased = false;
-    }
-  }
-  else
-  if (strcmp(key, "KEY_SIZE") == 0) {
-    switch(settings->cipher) {
-      case AES:
-      case TWOFISH:
-      case SERPENT:   if (result == 128 || result == 192 || result == 256) {
-                        settings->key_size = result;
-                      }
-                      break;
-		
-      case THREEFISH: if (result == 256 || result == 512 || result == 1024) {
-                        settings->key_size = result;
-                      }
-                      break;
-    }
-  }
-  else
-  if (strcmp(key, "OPERATION") == 0) {
-    if (strcmp(data, "ENCRYPT") == 0) {
-      settings->operation = ENCRYPT;
-    }
-    else
-    if (strcmp(data, "DECRYPT") == 0) {
-      settings->operation = DECRYPT;
-    }
-  }
-  else
-  if (strcmp(key, "PASS_GEN_SIZE") == 0) {
-    if (result > 7 && result < 257) {
-      settings->pass_gen_size = result;
-    }
-  }
-  else
-  if (strcmp(key, "TOP_COLOR") == 0) {
-    settings->top_color = (TColor)HexToInt32(data);
   }
 }
 
@@ -468,12 +535,14 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   InitializeCriticalSection(&CrSec);
   SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
 
-  settings.top_color     = FORM_HEAD_COLOR;
-  settings.cipher        = AES;
-  settings.key_size      = 128;
-  settings.pass_gen_size =  64;
-  settings.operation     = ENCRYPT;
-  settings.erased        = false;
+  settings.top_color        = FORM_HEAD_COLOR;
+  settings.top_text_color   = FORM_HEAD_TEXT_COLOR;
+  settings.top_text_b_color = FORM_HEAD_TEXT_B_COLOR;
+  settings.cipher           = AES;
+  settings.key_size         = 128;
+  settings.pass_gen_size    =  64;
+  settings.operation        = ENCRYPT;
+  settings.erased           = false;
 
   init_settings(SETTINGS_FILENAME, &settings);
 
@@ -507,9 +576,14 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   Form1->Shape1->Pen->Color    = settings.top_color;
   Form1->Shape2->Brush->Color  = settings.top_color;
   Form1->Shape2->Pen->Color    = settings.top_color;
-  Form1->Label5->Color         = settings.top_color;
-  Form1->Label6->Color         = settings.top_color;
-  Form1->Label7->Color         = settings.top_color;
+  
+  Form1->Label5->Color         = settings.top_text_b_color;
+  Form1->Label6->Color         = settings.top_text_b_color;
+  Form1->Label7->Color         = settings.top_text_b_color;
+
+  Form1->Label5->Font->Color   = settings.top_text_color;
+  Form1->Label6->Font->Color   = settings.top_text_color;
+  Form1->Label7->Font->Color   = settings.top_text_color;
 
   Form1->Edit3->Text           = IntToStr(settings.pass_gen_size);
   Form1->ComboBox1->Text       = AnsiString(ALGORITM_NAME[settings.cipher]);
@@ -525,9 +599,6 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
                     break;
   }
 
-  Form1->ComboBox1->Style = csDropDown;
-  Form1->ComboBox2->Style = csDropDown;
-
   switch(settings.operation) {
     case ENCRYPT:  Form1->RadioButton1->Checked = true;
                    break;
@@ -535,7 +606,10 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
                    break;
 	  
   }
-  
+
+  Form1->ComboBox1->Style = csDropDown;
+  Form1->ComboBox2->Style = csDropDown;
+
 /* this is code work with data from configurate file */
 
   Form1->ProgressBar1->Min = 0;
@@ -2057,25 +2131,25 @@ void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
 }
 void __fastcall TForm1::Label5MouseEnter(TObject *Sender)
 {
-  Label5->Font->Color = clRed;      
+  Label5->Font->Color = -Label5->Font->Color;
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TForm1::Label5MouseLeave(TObject *Sender)
 {
-  Label5->Font->Color = clWhite;        
+  Label5->Font->Color = -Label5->Font->Color;
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TForm1::Label7MouseLeave(TObject *Sender)
 {
-  Label7->Font->Color = clWhite;        
+  Label7->Font->Color = -Label7->Font->Color;
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
 {
-  Label7->Font->Color = clRed;        
+  Label7->Font->Color = -Label7->Font->Color;
 }
 //---------------------------------------------------------------------------
 

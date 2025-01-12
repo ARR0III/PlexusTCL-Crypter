@@ -2,10 +2,14 @@
 # Left string set what you be change, right string what you set
 # if you want change this file, just do it, BUT BE KWON WHAT WRITE!
 
-TOP_COLOR     = 00004A10 # 00|RED|GREEN|BLUE
+# FRONTEND
+TOP_COLOR        = 00004D10  # 00|RED|GREEN|BLUE
+TOP_TEXT_B_COLOR = 00004D10
+TOP_TEXT_COLOR   = 00EEEEEE
 
-CIPHER        = AES
-KEY_SIZE      = 128
-OPERATION     = ENCRYPT
-PASS_GEN_SIZE = 32
-ERASED        = FALSE
+# BEHAVIOR
+CIPHER           = AES
+KEY_SIZE         = 128
+OPERATION        = ENCRYPT
+PASS_GEN_SIZE    = 32
+ERASED           = FALSE
