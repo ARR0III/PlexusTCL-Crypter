@@ -1,11 +1,33 @@
-# This is configurate text file for initialized settings
-# Left string set what you be change, right string what you set
-# if you want change this file, just do it, BUT BE KWON WHAT WRITE!
+# EN
+# This configuration file is intended for the PlexusTCL Crypter program
+# version 5.12 and higher.
+#
+# A comment in this configuration file is:
+#   1.) A line starting with the # sign and ending with a line feed
+#       (single-line comment).
+#   2.) The rest of the line starting with the # sign and ending with a
+#       line feed (such a comment can be inserted at the end of the line).
+#   3.) Any group of characters anywhere in the line starting with the 
+#       # sign and ending with a semicolon (such a comment can be inserted
+#       even in the middle of a parameter).
+#
+# RU
+# Этот файл конфигурации предназначен для программы PlexusTCL Crypter
+# версии 5.12 и выше.
+# 
+# Комментарий в этом файле конфигурации:
+#   1.) Строка начинающаяся со знака # и заканчивающаяся переводом строки
+#       (однострочный коментарий).
+#   2.) Остаток строки начинающийся со знака # и заканчивающаяся переводом
+#       строки (такой коментарий можно встявлять в конце строки).
+#   3.) Любая группа символов в любом месте строки начинающаяся со знака
+#       # и заканчивающаяся точкой с запятой (такой комментарий можно
+#       вставлять даже посередине параметра).
 
 # FRONTEND
-TOP_COLOR        = 00004D10  # 00|RED|GREEN|BLUE
-TOP_TEXT_B_COLOR = 00004D10
-TOP_TEXT_COLOR   = 00EEEEEE
+TOP_COLOR        = 00623E00  #00|RED|GREEN|BLUE
+TOP_TEXT_B_COLOR = 00623E00
+TOP_TEXT_COLOR   = 00FFFFFF
 
 # BEHAVIOR
 CIPHER           = AES
@@ -13,3 +35,4 @@ KEY_SIZE         = 128
 OPERATION        = ENCRYPT
 PASS_GEN_SIZE    = 32
 ERASED           = FALSE
+

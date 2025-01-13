@@ -109,6 +109,14 @@ static bool PROCESSING = false;
 
 typedef int64_t fsize_t;
 
+typedef enum cipher_number_enum {
+  AES       = 0,
+  BLOWFISH  = 1,
+  SERPENT   = 2,
+  THREEFISH = 3,
+  TWOFISH   = 4,
+} cipher_t;
+
 /* Only rows sorted in ascending order */
 typedef enum config_enum {
   CIPHER           = 0,
@@ -121,13 +129,39 @@ typedef enum config_enum {
   TOP_TEXT_COLOR   = 7
 } config_key;
 
-typedef enum cipher_number_enum {
-  AES       = 0,
-  SERPENT   = 1,
-  TWOFISH   = 2,
-  BLOWFISH  = 3,
-  THREEFISH = 4
-} cipher_t;
+typedef struct {
+  TColor   top_color;
+  TColor   top_text_color;
+  TColor   top_text_b_color;
+  cipher_t cipher;
+
+  int  key_size;
+  int  pass_gen_size;
+  int  operation;
+
+  bool erased;
+} SETTINGS;
+
+#define CONFIG_KEYS_COUNT 8
+const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
+  "CIPHER",
+  "ERASED",
+  "KEY_SIZE",
+  "OPERATION",
+  "PASS_GEN_SIZE",
+  "TOP_COLOR",
+  "TOP_TEXT_B_COLOR",
+  "TOP_TEXT_COLOR"
+};
+
+#define CONFIG_PARAM_COUNT 5
+const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
+  "AES",
+  "BLOWFISH",
+  "SERPENT",
+  "THREEFISH",
+  "TWOFISH"
+};
 
 static const char * PARAM_APPEND_BYTE  = "ab";
 static const char * PARAM_READ_BYTE    = "rb";
@@ -176,36 +210,16 @@ static const char * OPERATION_NAME[] = {
 #endif
 };
 
-static const char * ALGORITM_NAME[] = {
+#define ALGORITM_NAME_COUNT 5
+static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
   "AES-CFB",
-  "SERPENT-CFB",
-  "TWOFISH-CFB",
   "BLOWFISH-CFB",
-  "THREEFISH-CFB"
+  "SERPENT-CFB",
+  "THREEFISH-CFB",
+  "TWOFISH-CFB",
 };
 
-#define CONFIG_PARAM_COUNT 5
-const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
-  "AES",
-  "SERPENT",
-  "TWOFISH",
-  "BLOWFISH",
-  "THREEFISH"
-};
-
-#define CONFIG_KEYS_COUNT 8
-const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
-  "CIPHER",
-  "ERASED",
-  "KEY_SIZE",
-  "OPERATION",
-  "PASS_GEN_SIZE",
-  "TOP_COLOR",
-  "TOP_TEXT_B_COLOR",
-  "TOP_TEXT_COLOR"
-};
-
-/*******************************************/
+/****************************************************************************/
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -243,19 +257,6 @@ typedef struct {
   uint8_t      input  [DATA_SIZE]; /* memory for read */
   uint8_t      output [DATA_SIZE]; /* memory for write */
 } GLOBAL_MEMORY;
-
-typedef struct {
-  TColor   top_color;
-  TColor   top_text_color;
-  TColor   top_text_b_color;
-  cipher_t cipher;
-
-  int  key_size;
-  int  pass_gen_size;
-  int  operation;
-  
-  bool erased;
-} SETTINGS;
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
 }
@@ -364,13 +365,13 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
 int str_list_search(const char * str, const char * list[], int length) {
   int found;
   int pos, left, right, result;
-	
+
   found = -1;
 
   left  = 0;
   right = length - 1;
-  pos   = (left + right) / 2;
-	
+  pos   = (left + right) >> 1; /* (left + right) div 2 */
+
   while (left <= right) {
     result = strcmp(str, list[pos]);
 
@@ -386,10 +387,10 @@ int str_list_search(const char * str, const char * list[], int length) {
     if (result > 0) {
       left = pos + 1;
     }
-	
-    pos = (left + right) / 2;
+
+    pos = (left + right) >> 1;
   }
-  
+
   return found;
 }
 
@@ -472,11 +473,11 @@ void init_settings(const char * filename, SETTINGS * settings) {
   char *key, *data;
   int  realread, strcount;
   char buffer[SETTINGS_BLOCK_SIZE];	
-	
+
   if (NULL == filename || NULL == settings) {
     return;
   }
-  
+
   fs = fopen(filename, PARAM_READ_BYTE);
   
   if (NULL == fs) {
@@ -494,10 +495,6 @@ void init_settings(const char * filename, SETTINGS * settings) {
     /*
     ShowMessage(AnsiString(buffer));
     */
-    if (buffer[0] == '#') { /* comment from configurate file */
-      continue;
-    }
-
     strcount++;
 
     if (strcount >= 1000) { /* max read strings from settings file */
@@ -544,7 +541,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   settings.operation        = ENCRYPT;
   settings.erased           = false;
 
-  init_settings(SETTINGS_FILENAME, &settings);
+  init_settings(SETTINGS_FILENAME, &settings); /* in settings.h */
 
   for (int i = 0; i < 5; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
@@ -590,13 +587,14 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 
   Form1->CheckBox1->Checked    = settings.erased;
 
-  switch(settings.cipher) {
-    case AES:
-    case TWOFISH:
-    case SERPENT:
-    case THREEFISH: Form1->ComboBox2->Visible = True;
-                    Form1->ComboBox2->Text = IntToStr(settings.key_size);
-                    break;
+  if (settings.cipher == BLOWFISH) {
+    Label4->Visible = False;
+    Form1->ComboBox2->Visible = False;
+  }
+  else { /* other ciphers */
+    Label4->Visible = True;
+    Form1->ComboBox2->Visible = True;
+    Form1->ComboBox2->Text = IntToStr(settings.key_size);
   }
 
   switch(settings.operation) {
@@ -617,37 +615,36 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 }
 
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
-  int i;
+  int i, result;
 
+  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, 5);
+
+  if (result == -1) {
+    return;
+  }
+  
   ComboBox2->Items->Clear();
 
-  if ( (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES]))     ||
-       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) ||
-       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) ||
-       (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) ) {
-
-    if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
+  if (result != BLOWFISH) {
+    if (result == THREEFISH) {
       for (i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
       }
+      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
     }
     else {
       for (i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
       }
+      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
     }
 
     Label4->Visible = True;
     ComboBox2->Visible = True;
-    RadioButton1->Visible = True;
-    RadioButton2->Visible = True;
   }
-  else
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) {
+  else {
     Label4->Visible = False;
     ComboBox2->Visible = False;
-    RadioButton1->Visible = True;
-    RadioButton2->Visible = True;
   }
 }
 
@@ -1132,22 +1129,18 @@ static void internal_re_keying(GLOBAL_MEMORY * ctx) {
     case AES:
       rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
       break;
-
-    case TWOFISH:
-      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
-      break;
-
-    case SERPENT:
-      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
-      break;
-
     case BLOWFISH:
       blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
       break;
-
+    case SERPENT:
+      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
+      break;
     case THREEFISH:
       threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
                      (uint64_t*)ctx->real_key, (uint64_t*)ctx->real_key);
+      break;
+    case TWOFISH:
+      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
       break;
   }
 }
@@ -1247,18 +1240,18 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
           case AES:
             rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output);
             break;
-          case SERPENT:
-            serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
-            break;
-          case TWOFISH:
-            twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
-            break;
           case BLOWFISH:
             memcpy(ctx->output, ctx->vector, ctx->vector_length);
             blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->output, (uint32_t *)(ctx->output + 4));
             break;
+          case SERPENT:
+            serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)ctx->output);
+            break;
           case THREEFISH:
             threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)ctx->output);
+            break;
+          case TWOFISH:
+            twofish_encrypt(twofish_ctx, ctx->vector, ctx->output);
             break;
         }
 
@@ -1288,18 +1281,18 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
         case AES:
           rijndael_encrypt(rijndael_ctx, ctx->vector, ctx->output + nblock);
           break;
-        case SERPENT:
-          serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->output + nblock));
-          break;
-        case TWOFISH:
-          twofish_encrypt(twofish_ctx, ctx->vector, ctx->output + nblock);
-          break;
         case BLOWFISH:
           blowfish_encrypt(blowfish_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->vector + 4));
           memcpy(ctx->output + nblock, ctx->vector, ctx->vector_length);
           break;
+        case SERPENT:
+          serpent_encrypt(serpent_ctx, (uint32_t *)ctx->vector, (uint32_t *)(ctx->output + nblock));
+          break;
         case THREEFISH:
           threefish_encrypt(threefish_ctx, (uint64_t*)ctx->vector, (uint64_t*)(ctx->output + nblock));
+          break;
+        case TWOFISH:
+          twofish_encrypt(twofish_ctx, ctx->vector, ctx->output + nblock);
           break;
         }
 
@@ -1461,26 +1454,22 @@ void * CipherInitMemory(GLOBAL_MEMORY * ctx, size_t cipher_length) {
       rijndael_ctx = (uint32_t *)cipher_ptr;
       rijndael_key_encrypt_init(rijndael_ctx, ctx->real_key, ctx->real_key_length * 8);
       break;
-
-    case SERPENT:
-      serpent_ctx = (SERPENT_CTX *)cipher_ptr;
-      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
-      break;
-
-    case TWOFISH:
-      twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
-      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
-      break;
-
     case BLOWFISH:
       blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
       blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
       break;
-
+    case SERPENT:
+      serpent_ctx = (SERPENT_CTX *)cipher_ptr;
+      serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
+      break;
     case THREEFISH:
       threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
       threefish_init(threefish_ctx, (threefishkeysize_t)(ctx->real_key_length * 8),
                      (uint64_t *)ctx->real_key, (uint64_t *)ctx->real_key);
+      break;
+    case TWOFISH:
+      twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
+      twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
       break;
   }
 
@@ -1614,33 +1603,17 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 /*****************************************************************************/
-
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[AES])) {
-    memory->cipher_number = AES;
-  }
-  else
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[SERPENT])) {
-    memory->cipher_number = SERPENT;
-  }
-  else
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[TWOFISH])) {
-    memory->cipher_number = TWOFISH;
-  }
-  else
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[BLOWFISH])) {
-    memory->cipher_number = BLOWFISH;
-  }
-  else
-  if (AnsiString(ComboBox1->Text) == AnsiString(ALGORITM_NAME[THREEFISH])) {
-    memory->cipher_number = THREEFISH;
-  }
-  else {
+  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, ALGORITM_NAME_COUNT);
+  
+  if (-1 == result) {
     free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
                    STR_CIPHER_NOT_ENTER);
     return;
   }
+
+  memory->cipher_number = (cipher_t)result; /* search and set cipher number */
+
 /*****************************************************************************/
   memory->real_key_length = 0;
 
@@ -1850,25 +1823,25 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       memory->vector_length = 16;
       cipher_length = 4 * (AES_Rounds + 1) * 4;
       break;
-					
-    case SERPENT:
-      memory->vector_length = 16;
-      cipher_length = sizeof(SERPENT_CTX);
-      break;
-					
-    case TWOFISH:
-      memory->vector_length = 16;
-      cipher_length = sizeof(TWOFISH_CTX);
-      break;
-					
+			
     case BLOWFISH:
       memory->vector_length =  8;
       cipher_length = sizeof(BLOWFISH_CTX);
       break;
-
+			
+    case SERPENT:
+      memory->vector_length = 16;
+      cipher_length = sizeof(SERPENT_CTX);
+      break;
+			
     case THREEFISH:
       memory->vector_length = memory->real_key_length;
       cipher_length = sizeof(THREEFISH_CTX);
+      break;
+			
+    case TWOFISH:
+      memory->vector_length = 16;
+      cipher_length = sizeof(TWOFISH_CTX);
       break;
   }
 /*****************************************************************************/
@@ -2023,7 +1996,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
       }
       else
       if (result == 0xDE) {
-        MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME, STR_OPERATION_STOPPED);
+        MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                       STR_OPERATION_STOPPED);
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,

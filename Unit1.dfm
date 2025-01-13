@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 209
-  Top = 332
+  Left = 236
+  Top = 307
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -67,10 +67,11 @@ object Form1: TForm1
     OnMouseLeave = Label5MouseLeave
   end
   object Label6: TLabel
-    Left = 5
+    Left = 8
     Top = 5
-    Width = 3
+    Width = 45
     Height = 13
+    Caption = 'CRYCON'
     Color = clNavy
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWhite
@@ -306,7 +307,9 @@ object Form1: TForm1
     Cursor = crHandPoint
     Min = 0
     Max = 100
+    ParentShowHint = False
     Smooth = True
+    ShowHint = False
     TabOrder = 14
   end
   object OpenDialog1: TOpenDialog
