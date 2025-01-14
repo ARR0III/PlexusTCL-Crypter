@@ -26,7 +26,7 @@
 
 /****************************************************************************/
 /* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
-/* #define PTCL_RUSSIAN_LANGUAGE                                            */
+#define PTCL_RUSSIAN_LANGUAGE                                            
 #include "LANGUAGE_STRINGS.h"
 /****************************************************************************/
 
@@ -1307,20 +1307,17 @@ bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
   int result;
 
   if (ctx->cipher_number == THREEFISH) {
-    result = str_list_search(key_size, CHAR_KEY_LENGTH_THREEFISH, CHAR_KEY_LENGTH_THREEFISH_COUNT);
-		  
-    if (result == -1) {
-      return false;
-    }
-		
-    switch (result) {
-      case 0: ctx->real_key_length =  256;
-              break;
-      case 1: ctx->real_key_length =  512;
-              break;
-      case 2: ctx->real_key_length = 1024;
-              break;
-    }
+    if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[0]) == 0) {
+      ctx->real_key_length =  256;
+	}
+	else
+    if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[1]) == 0) {
+      ctx->real_key_length =  512;
+	}
+	else
+    if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[2]) == 0) {
+      ctx->real_key_length = 1024;
+	}
   }
   else
   if (ctx->cipher_number == BLOWFISH) {
