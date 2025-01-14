@@ -68,6 +68,8 @@
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
 
+#define STRINGS_COUNT_LIMIT      10000
+
 #define DATA_SIZE         (1024*1024*8) /* 8 MiB */
 
 #define MINIMAL(a,b) (((a) < (b)) ? (a) : (b))
@@ -142,91 +144,6 @@ typedef struct {
   bool erased;
 } SETTINGS;
 
-#define CONFIG_KEYS_COUNT 8
-const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
-  "CIPHER",
-  "ERASED",
-  "KEY_SIZE",
-  "OPERATION",
-  "PASS_GEN_SIZE",
-  "TOP_COLOR",
-  "TOP_TEXT_B_COLOR",
-  "TOP_TEXT_COLOR"
-};
-
-#define CONFIG_PARAM_COUNT 5
-const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
-  "AES",
-  "BLOWFISH",
-  "SERPENT",
-  "THREEFISH",
-  "TWOFISH"
-};
-
-static const char * PARAM_APPEND_BYTE  = "ab";
-static const char * PARAM_READ_BYTE    = "rb";
-static const char * PARAM_WRITE_BYTE   = "wb";
-static const char * PARAM_REWRITE_BYTE = "r+b";
-
-static const TColor FORM_HEAD_COLOR        = TColor(0x00623E00);
-static const TColor FORM_HEAD_TEXT_B_COLOR = TColor(0x00623E00);
-static const TColor FORM_HEAD_TEXT_COLOR   = TColor(0x00000000);
-
-static const char * CHAR_KEY_LENGTH_AES[] = {
-  "128",
-  "192",
-  "256"
-};
-
-static const char * CHAR_KEY_LENGTH_THREEFISH[] = {
-  "256",
-  "512",
-  "1024"
-};
-
-static const fsize_t INT_SIZE_DATA[] = {
-  (fsize_t)1 << 10, /* KiB */
-  (fsize_t)1 << 20, /* MiB */
-  (fsize_t)1 << 30, /* GiB */
-  (fsize_t)1 << 40, /* TiB */
-  (fsize_t)1 << 50, /* PiB */
-  (fsize_t)1 << 60  /* EiB */
-};
-
-static const char * CHAR_SIZE_DATA[] = {
-#ifdef PTCL_RUSSIAN_LANGUAGE
-  "Ѕт" , " иЅ", "ћиЅ", "√иЅ", "“иЅ", "ѕиЅ", "ЁиЅ"
-#else
-  "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
-#endif
-};
-
-
-static const char * OPERATION_NAME[] = {
-#ifdef PTCL_RUSSIAN_LANGUAGE
-  "Ўифрование", "–асшифровка",
-#else
-  "Encrypting", "Decrypting",
-#endif
-};
-
-#define ALGORITM_NAME_COUNT 5
-static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
-  "AES-CFB",
-  "BLOWFISH-CFB",
-  "SERPENT-CFB",
-  "THREEFISH-CFB",
-  "TWOFISH-CFB",
-};
-
-/****************************************************************************/
-
-static uint32_t      * rijndael_ctx  = NULL;
-static SERPENT_CTX   * serpent_ctx   = NULL;
-static TWOFISH_CTX   * twofish_ctx   = NULL;
-static BLOWFISH_CTX  * blowfish_ctx  = NULL;
-static THREEFISH_CTX * threefish_ctx = NULL;
-
 typedef struct {
   uint8_t hash[SHA256_BLOCK_SIZE];
   uint8_t KEY_0[SHA256_BLOCK_SIZE];
@@ -258,76 +175,92 @@ typedef struct {
   uint8_t      output [DATA_SIZE]; /* memory for write */
 } GLOBAL_MEMORY;
 
-__fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
-}
+#define CONFIG_KEYS_COUNT 8
+static const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
+  "CIPHER",
+  "ERASED",
+  "KEY_SIZE",
+  "OPERATION",
+  "PASS_GEN_SIZE",
+  "TOP_COLOR",
+  "TOP_TEXT_B_COLOR",
+  "TOP_TEXT_COLOR"
+};
 
-void PathToStrings(const AnsiString &FileName, AnsiString &path, AnsiString &name, AnsiString &ext) {
-  path = ExtractFilePath(FileName);
-  name = ExtractFileName(FileName);
-  ext  = ExtractFileExt(FileName);	
-}
+#define CONFIG_PARAM_COUNT 5
+static const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
+  "AES",
+  "BLOWFISH",
+  "SERPENT",
+  "THREEFISH",
+  "TWOFISH"
+};
 
-/* INPUT FILE */
-void __fastcall TForm1::Button1Click(TObject *Sender) {
-  OpenDialog1->Title = STR_INPUT_FILENAME;
+#define ALGORITM_NAME_COUNT 5
+static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
+  "AES-CFB",
+  "BLOWFISH-CFB",
+  "SERPENT-CFB",
+  "THREEFISH-CFB",
+  "TWOFISH-CFB",
+};
 
-  AnsiString path;
-  AnsiString name;
-  AnsiString ext;
+static const char * CHAR_SIZE_DATA[] = {
+#ifdef PTCL_RUSSIAN_LANGUAGE
+  "Ѕт" , " иЅ", "ћиЅ", "√иЅ", "“иЅ", "ѕиЅ", "ЁиЅ"
+#else
+  "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
+#endif
+};
 
-  if (OpenDialog1->Execute()) {
-    PathToStrings(OpenDialog1->FileName, path, name, ext);
 
-    Form1->Edit1->Clear();
-    Form1->Edit1->Text = OpenDialog1->FileName;
+static const char * OPERATION_NAME[] = {
+#ifdef PTCL_RUSSIAN_LANGUAGE
+  "Ўифрование", "–асшифровка",
+#else
+  "Encrypting", "Decrypting",
+#endif
+};
 
-    Form1->Edit2->Clear();
+#define CHAR_KEY_LENGTH_AES_COUNT 3
+static const char * CHAR_KEY_LENGTH_AES[CHAR_KEY_LENGTH_AES_COUNT] = {
+  "128",
+  "192",
+  "256"
+};
 
-    if (ext.LowerCase() == EXT_CRYCON) {
-      if (name.Length() < 8) {
-        Form1->Edit2->Text = path + EMPTY_FILENAME;
-      }
-      else {
-        Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
-      }
-    }
-    else {
-      Form1->Edit2->Text = OpenDialog1->FileName + EXT_CRYCON;
-    }
-  }
-}
+#define CHAR_KEY_LENGTH_THREEFISH_COUNT 3
+static const char * CHAR_KEY_LENGTH_THREEFISH[CHAR_KEY_LENGTH_THREEFISH_COUNT] = {
+  "256",
+  "512",
+  "1024"
+};
 
-/* OUTPUT FILE */
-void __fastcall TForm1::Button2Click(TObject *Sender) {
-  SaveDialog1->Title = STR_OUTPUT_FILENAME;
+static const char * PARAM_APPEND_BYTE  = "ab";
+static const char * PARAM_READ_BYTE    = "rb";
+static const char * PARAM_WRITE_BYTE   = "wb";
+static const char * PARAM_REWRITE_BYTE = "r+b";
 
-  AnsiString path;
-  AnsiString name;
-  AnsiString ext;
+static const TColor FORM_HEAD_COLOR        = TColor(0x00000000);
+static const TColor FORM_HEAD_TEXT_B_COLOR = TColor(0x00000000);
+static const TColor FORM_HEAD_TEXT_COLOR   = TColor(0x00FFFFFF);
 
-  if (SaveDialog1->Execute()) {
-    PathToStrings(SaveDialog1->FileName, path, name, ext);
+static const fsize_t INT_SIZE_DATA[] = {
+  (fsize_t)1 << 10, /* KiB */
+  (fsize_t)1 << 20, /* MiB */
+  (fsize_t)1 << 30, /* GiB */
+  (fsize_t)1 << 40, /* TiB */
+  (fsize_t)1 << 50, /* PiB */
+  (fsize_t)1 << 60  /* EiB */
+};
 
-    Form1->Edit2->Clear();
+/****************************************************************************/
 
-    if (Form1->Edit1->Text == SaveDialog1->FileName) {
-      if (ext.LowerCase() == EXT_CRYCON) {
-        if (name.Length() < 8) {
-          Form1->Edit2->Text = path + EMPTY_FILENAME;
-        }
-        else {
-          Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
-        }
-      }
-      else {
-        Form1->Edit2->Text = SaveDialog1->FileName + EXT_CRYCON;
-      }
-    }
-    else {
-      Form1->Edit2->Text = SaveDialog1->FileName;
-    }
-  }
-}
+static uint32_t      * rijndael_ctx  = NULL;
+static SERPENT_CTX   * serpent_ctx   = NULL;
+static TWOFISH_CTX   * twofish_ctx   = NULL;
+static BLOWFISH_CTX  * blowfish_ctx  = NULL;
+static THREEFISH_CTX * threefish_ctx = NULL;
 
 uint32_t MessageForUser(const int tumbler,
                         const char * head,
@@ -351,15 +284,6 @@ int close_in_out_files(FILE * file_input, FILE * file_output, const int return_c
 
 int operation_variant(const int operation) {
   return (operation ? 1 : 0);
-}
-
-void __fastcall TForm1::Button3Click(TObject *Sender) {
-  OpenDialog1->Title = STR_KEY_FILENAME;
-
-  if (OpenDialog1->Execute()) {
-    Form1->Memo1->Clear();
-    Form1->Memo1->Lines->Text = OpenDialog1->FileName;
-  }
 }
 
 int str_list_search(const char * str, const char * list[], int length) {
@@ -469,10 +393,10 @@ void pars_str(const char * key, const char * data, SETTINGS * settings) {
 
 void init_settings(const char * filename, SETTINGS * settings) {
 #define SETTINGS_BLOCK_SIZE 128
-  FILE * fs;
+  FILE *fs;
   char *key, *data;
   int  realread, strcount;
-  char buffer[SETTINGS_BLOCK_SIZE];	
+  char buffer[SETTINGS_BLOCK_SIZE];
 
   if (NULL == filename || NULL == settings) {
     return;
@@ -492,12 +416,10 @@ void init_settings(const char * filename, SETTINGS * settings) {
     if (realread < 1) {
       break;
     }
-    /*
-    ShowMessage(AnsiString(buffer));
-    */
+    
     strcount++;
 
-    if (strcount >= 1000) { /* max read strings from settings file */
+    if (strcount >= STRINGS_COUNT_LIMIT) { /* max read strings from settings file */
       break;
     }
 
@@ -524,128 +446,6 @@ void init_settings(const char * filename, SETTINGS * settings) {
   }
 
   fclose(fs);
-}
-
-void __fastcall TForm1::FormCreate(TObject *Sender) {
-  SETTINGS settings;
-
-  InitializeCriticalSection(&CrSec);
-  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
-
-  settings.top_color        = FORM_HEAD_COLOR;
-  settings.top_text_color   = FORM_HEAD_TEXT_COLOR;
-  settings.top_text_b_color = FORM_HEAD_TEXT_B_COLOR;
-  settings.cipher           = AES;
-  settings.key_size         = 128;
-  settings.pass_gen_size    =  64;
-  settings.operation        = ENCRYPT;
-  settings.erased           = false;
-
-  init_settings(SETTINGS_FILENAME, &settings); /* in settings.h */
-
-  for (int i = 0; i < 5; i++) {
-    ComboBox1->Items->Add(ALGORITM_NAME[i]);
-  }
-
-  Form1->Caption         = STR_PROGRAMM_NAME;
-  Form1->Label6->Caption = STR_PROGRAMM_NAME;
-
-  Form1->Label1->Caption = STR_CRYPT_ALG;
-  Form1->Label2->Caption = STR_INPUT_FILENAME;
-  Form1->Label3->Caption = STR_OUTPUT_FILENAME;
-  Form1->Label4->Caption = STR_KEY_LENGTH;
-  Form1->Label8->Caption = STR_KEY_OR_KEY_FILENAME;
-  Form1->Label9->Caption = STR_STATUS;
-
-  Form1->Button1->Caption = STR_OPEN;
-  Form1->Button2->Caption = STR_OPEN;
-  Form1->Button3->Caption = STR_OPEN;
-  Form1->Button4->Caption = STR_START;
-  Form1->Button5->Caption = STR_KEYGEN;
-
-  Form1->RadioButton1->Caption = STR_EN;
-  Form1->RadioButton2->Caption = STR_DE;
-
-  Form1->CheckBox1->Caption    = STR_ERASED;
-
-/* this is code work with data from configurate file */
-
-  Form1->Shape1->Pen->Color    = settings.top_color;
-  Form1->Shape2->Brush->Color  = settings.top_color;
-  Form1->Shape2->Pen->Color    = settings.top_color;
-  
-  Form1->Label5->Color         = settings.top_text_b_color;
-  Form1->Label6->Color         = settings.top_text_b_color;
-  Form1->Label7->Color         = settings.top_text_b_color;
-
-  Form1->Label5->Font->Color   = settings.top_text_color;
-  Form1->Label6->Font->Color   = settings.top_text_color;
-  Form1->Label7->Font->Color   = settings.top_text_color;
-
-  Form1->Edit3->Text           = IntToStr(settings.pass_gen_size);
-  Form1->ComboBox1->Text       = AnsiString(ALGORITM_NAME[settings.cipher]);
-
-  Form1->CheckBox1->Checked    = settings.erased;
-
-  if (settings.cipher == BLOWFISH) {
-    Label4->Visible = False;
-    Form1->ComboBox2->Visible = False;
-  }
-  else { /* other ciphers */
-    Label4->Visible = True;
-    Form1->ComboBox2->Visible = True;
-    Form1->ComboBox2->Text = IntToStr(settings.key_size);
-  }
-
-  switch(settings.operation) {
-    case ENCRYPT:  Form1->RadioButton1->Checked = true;
-                   break;
-    case DECRYPT:  Form1->RadioButton2->Checked = true;
-                   break;
-	  
-  }
-
-  Form1->ComboBox1->Style = csDropDown;
-  Form1->ComboBox2->Style = csDropDown;
-
-/* this is code work with data from configurate file */
-
-  Form1->ProgressBar1->Min = 0;
-  Form1->ProgressBar1->Max = 100;
-}
-
-void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
-  int i, result;
-
-  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, 5);
-
-  if (result == -1) {
-    return;
-  }
-  
-  ComboBox2->Items->Clear();
-
-  if (result != BLOWFISH) {
-    if (result == THREEFISH) {
-      for (i = 0; i < 3; i++) {
-        ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
-      }
-      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
-    }
-    else {
-      for (i = 0; i < 3; i++) {
-        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
-      }
-      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
-    }
-
-    Label4->Visible = True;
-    ComboBox2->Visible = True;
-  }
-  else {
-    Label4->Visible = False;
-    ComboBox2->Visible = False;
-  }
 }
 
 static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
@@ -1503,6 +1303,63 @@ void FormActivate(const bool active) {
   Application->ProcessMessages();
 }
 
+bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
+  int result;
+
+  if (ctx->cipher_number == THREEFISH) {
+    result = str_list_search(key_size, CHAR_KEY_LENGTH_THREEFISH, CHAR_KEY_LENGTH_THREEFISH_COUNT);
+		  
+    if (result == -1) {
+      return false;
+    }
+		
+    switch (result) {
+      case 0: ctx->real_key_length =  256;
+              break;
+      case 1: ctx->real_key_length =  512;
+              break;
+      case 2: ctx->real_key_length = 1024;
+              break;
+    }
+  }
+  else
+  if (ctx->cipher_number == BLOWFISH) {
+    ctx->real_key_length = 448;
+  }
+  else { /*  AES || SERPENT || TWOFISH  */
+    result = str_list_search(key_size, CHAR_KEY_LENGTH_AES, CHAR_KEY_LENGTH_AES_COUNT);
+		  
+    if (result == -1) {
+      return false;
+    }
+	
+    if (ctx->cipher_number == AES) {
+      switch (result) {
+        case 0: *aes = 10;
+                 break;
+        case 1: *aes = 12;
+                 break;
+        case 2: *aes = 14;
+                 break;
+      }
+    }
+	
+    switch (result) {
+      case 0: ctx->real_key_length = 128;
+              break;
+      case 1: ctx->real_key_length = 192;
+              break;
+      case 2: ctx->real_key_length = 256;
+              break;
+    }
+  }
+  
+  return true;
+}
+
+__fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
+}
+
 void __fastcall TForm1::Button4Click(TObject *Sender) {
 /* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
    из €зыка C++, потому что в €зыке C формировать такую чушь сложно */
@@ -1617,60 +1474,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 /*****************************************************************************/
   memory->real_key_length = 0;
 
-  if (memory->cipher_number == AES || memory->cipher_number == SERPENT ||
-      memory->cipher_number == TWOFISH) {
-		  
-    if (AnsiString(ComboBox2->Text) == AnsiString("128")) {
-      if (memory->cipher_number == AES) {
-        AES_Rounds = 10;
-      }
-      memory->real_key_length = 128;
-    }
-    else
-    if (AnsiString(ComboBox2->Text) == AnsiString("192")) {
-      if (memory->cipher_number == AES) {
-        AES_Rounds = 12;
-      }
-      memory->real_key_length = 192;
-    }
-    else
-    if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
-      if (memory->cipher_number == AES) {
-        AES_Rounds = 14;
-      }
-      memory->real_key_length = 256;
-    }
-    else {
-      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
-                     STR_KEY_SIZE_NOT_ENTER);
-      return;
-    }
+  if (!CIPHER_SET(memory, ComboBox2->Text.c_str(), &AES_Rounds)) {
+    free_global_memory(memory, sizeof(GLOBAL_MEMORY));
+    MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                   STR_KEY_SIZE_NOT_ENTER);
+    return;
   }
-  else
-  if (memory->cipher_number == BLOWFISH) {
-    memory->real_key_length = 448;
-  }
-  else
-  if (memory->cipher_number == THREEFISH) {
-    if (AnsiString(ComboBox2->Text) == AnsiString("256")) {
-      memory->real_key_length = 256;
-    }
-    else
-    if (AnsiString(ComboBox2->Text) == AnsiString("512")) {
-      memory->real_key_length = 512;
-    }
-    else
-    if (AnsiString(ComboBox2->Text) == AnsiString("1024")) {
-      memory->real_key_length = 1024;
-    }
-    else {
-      free_global_memory(memory, sizeof(GLOBAL_MEMORY));
-      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
-                     STR_KEY_SIZE_NOT_ENTER);
-      return;
-    }
-  }
+
 /*****************************************************************************/
   memory->real_key_length = (memory->real_key_length / 8);
 
@@ -2020,6 +1830,205 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   Application->ProcessMessages();
 }
 
+void PathToStrings(const AnsiString &FileName, AnsiString &path, AnsiString &name, AnsiString &ext) {
+  path = ExtractFilePath(FileName);
+  name = ExtractFileName(FileName);
+  ext  = ExtractFileExt(FileName);
+}
+
+/* INPUT FILE */
+void __fastcall TForm1::Button1Click(TObject *Sender) {
+  OpenDialog1->Title = STR_INPUT_FILENAME;
+
+  AnsiString path;
+  AnsiString name;
+  AnsiString ext;
+
+  if (OpenDialog1->Execute()) {
+    PathToStrings(OpenDialog1->FileName, path, name, ext);
+
+    Form1->Edit1->Clear();
+    Form1->Edit1->Text = OpenDialog1->FileName;
+
+    Form1->Edit2->Clear();
+
+    if (ext.LowerCase() == EXT_CRYCON) {
+      if (name.Length() < 8) {
+        Form1->Edit2->Text = path + EMPTY_FILENAME;
+      }
+      else {
+        Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+      }
+    }
+    else {
+      Form1->Edit2->Text = OpenDialog1->FileName + EXT_CRYCON;
+    }
+  }
+}
+
+/* OUTPUT FILE */
+void __fastcall TForm1::Button2Click(TObject *Sender) {
+  SaveDialog1->Title = STR_OUTPUT_FILENAME;
+
+  AnsiString path;
+  AnsiString name;
+  AnsiString ext;
+
+  if (SaveDialog1->Execute()) {
+    PathToStrings(SaveDialog1->FileName, path, name, ext);
+
+    Form1->Edit2->Clear();
+
+    if (Form1->Edit1->Text == SaveDialog1->FileName) {
+      if (ext.LowerCase() == EXT_CRYCON) {
+        if (name.Length() < 8) {
+          Form1->Edit2->Text = path + EMPTY_FILENAME;
+        }
+        else {
+          Form1->Edit2->Text = path + name.SetLength(name.Length() - 7);
+        }
+      }
+      else {
+        Form1->Edit2->Text = SaveDialog1->FileName + EXT_CRYCON;
+      }
+    }
+    else {
+      Form1->Edit2->Text = SaveDialog1->FileName;
+    }
+  }
+}
+
+void __fastcall TForm1::Button3Click(TObject *Sender) {
+  OpenDialog1->Title = STR_KEY_FILENAME;
+
+  if (OpenDialog1->Execute()) {
+    Form1->Memo1->Clear();
+    Form1->Memo1->Lines->Text = OpenDialog1->FileName;
+  }
+}
+
+void __fastcall TForm1::FormCreate(TObject *Sender) {
+  SETTINGS settings;
+
+  InitializeCriticalSection(&CrSec);
+  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
+
+  settings.top_color        = FORM_HEAD_COLOR;
+  settings.top_text_color   = FORM_HEAD_TEXT_COLOR;
+  settings.top_text_b_color = FORM_HEAD_TEXT_B_COLOR;
+  settings.cipher           = AES;
+  settings.key_size         = 128;
+  settings.pass_gen_size    =  64;
+  settings.operation        = ENCRYPT;
+  settings.erased           = false;
+
+  init_settings(SETTINGS_FILENAME, &settings); /* in settings.h */
+
+  for (int i = 0; i < 5; i++) {
+    ComboBox1->Items->Add(ALGORITM_NAME[i]);
+  }
+
+  Form1->Caption         = STR_PROGRAMM_NAME;
+  Form1->Label6->Caption = STR_PROGRAMM_NAME;
+
+  Form1->Label1->Caption = STR_CRYPT_ALG;
+  Form1->Label2->Caption = STR_INPUT_FILENAME;
+  Form1->Label3->Caption = STR_OUTPUT_FILENAME;
+  Form1->Label4->Caption = STR_KEY_LENGTH;
+  Form1->Label8->Caption = STR_KEY_OR_KEY_FILENAME;
+  Form1->Label9->Caption = STR_STATUS;
+
+  Form1->Button1->Caption = STR_OPEN;
+  Form1->Button2->Caption = STR_OPEN;
+  Form1->Button3->Caption = STR_OPEN;
+  Form1->Button4->Caption = STR_START;
+  Form1->Button5->Caption = STR_KEYGEN;
+
+  Form1->RadioButton1->Caption = STR_EN;
+  Form1->RadioButton2->Caption = STR_DE;
+
+  Form1->CheckBox1->Caption    = STR_ERASED;
+
+/* this is code work with data from configurate file */
+
+  Form1->Shape1->Pen->Color    = settings.top_color;
+  Form1->Shape2->Brush->Color  = settings.top_color;
+  Form1->Shape2->Pen->Color    = settings.top_color;
+
+  Form1->Label5->Color         = settings.top_text_b_color;
+  Form1->Label6->Color         = settings.top_text_b_color;
+  Form1->Label7->Color         = settings.top_text_b_color;
+
+  Form1->Label5->Font->Color   = settings.top_text_color;
+  Form1->Label6->Font->Color   = settings.top_text_color;
+  Form1->Label7->Font->Color   = settings.top_text_color;
+
+  Form1->Edit3->Text           = IntToStr(settings.pass_gen_size);
+  Form1->ComboBox1->Text       = AnsiString(ALGORITM_NAME[settings.cipher]);
+
+  Form1->CheckBox1->Checked    = settings.erased;
+
+  if (settings.cipher == BLOWFISH) {
+    Label4->Visible = False;
+    Form1->ComboBox2->Visible = False;
+  }
+  else { /* other ciphers */
+    Label4->Visible = True;
+    Form1->ComboBox2->Visible = True;
+    Form1->ComboBox2->Text = IntToStr(settings.key_size);
+  }
+
+  switch(settings.operation) {
+    case ENCRYPT:  Form1->RadioButton1->Checked = true;
+                   break;
+    case DECRYPT:  Form1->RadioButton2->Checked = true;
+                   break;
+
+  }
+
+  Form1->ComboBox1->Style = csDropDown;
+  Form1->ComboBox2->Style = csDropDown;
+
+/* this is code work with data from configurate file */
+
+  Form1->ProgressBar1->Min = 0;
+  Form1->ProgressBar1->Max = 100;
+}
+
+void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
+  int i, result;
+
+  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, 5);
+
+  if (result == -1) {
+    return;
+  }
+
+  ComboBox2->Items->Clear();
+
+  if (result != BLOWFISH) {
+    if (result != THREEFISH) {
+      for (i = 0; i < 3; i++) {
+        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
+      }
+      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
+    }
+    else {
+      for (i = 0; i < 3; i++) {
+        ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
+      }
+      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
+    }
+
+    Label4->Visible = True;
+    ComboBox2->Visible = True;
+  }
+  else {
+    Label4->Visible = False;
+    ComboBox2->Visible = False;
+  }
+}
+
 void __fastcall TForm1::Label5Click(TObject *Sender) {
   DeleteCriticalSection(&CrSec);
 
@@ -2040,16 +2049,19 @@ void __fastcall TForm1::Label5Click(TObject *Sender) {
 void __fastcall TForm1::Label7Click(TObject *Sender) {
   Form2->Label4->Caption = STR_PROGRAMM_NAME;
 
-  Form2->Shape1->Brush->Color = FORM_HEAD_COLOR;
-  Form2->Shape1->Pen->Color   = FORM_HEAD_COLOR;
+  Form2->Shape1->Brush->Color = Form1->Shape2->Brush->Color;
+  Form2->Shape1->Pen->Color   = Form1->Shape2->Pen->Color;
 
-  Form2->Shape2->Pen->Color   = FORM_HEAD_COLOR;
+  Form2->Shape2->Pen->Color   = Form1->Shape1->Pen->Color;
 
-  Form2->Label4->Color = FORM_HEAD_COLOR;
-  Form2->Label5->Color = FORM_HEAD_COLOR;
+  Form2->Label4->Color        = Form1->Label6->Color;
+  Form2->Label4->Font->Color  = Form1->Label6->Font->Color;
+  
+  Form2->Label5->Color        = Form1->Label5->Color;
+  Form2->Label5->Font->Color  = Form1->Label5->Font->Color;
 
-  Form2->Label2->Caption = PTCL_LICENSE_INFORMATION;
-  Form2->Label3->Caption = PTCL_AUTHORS_INFORMATION;
+  Form2->Label2->Caption      = PTCL_LICENSE_INFORMATION;
+  Form2->Label3->Caption      = PTCL_AUTHORS_INFORMATION;
 
   Form2->Show();
 }
@@ -2103,38 +2115,28 @@ void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
   ReleaseCapture();
   Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);
 }
-void __fastcall TForm1::Label5MouseEnter(TObject *Sender)
-{
-  Label5->Font->Color = -Label5->Font->Color;
+
+void __fastcall TForm1::Label5MouseEnter(TObject *Sender) {
+  Label5->Font->Color = TColor((~(uint32_t)Label5->Font->Color) & 0x00FFFFFF); 
 }
 //---------------------------------------------------------------------------
-
-void __fastcall TForm1::Label5MouseLeave(TObject *Sender)
-{
-  Label5->Font->Color = -Label5->Font->Color;
+void __fastcall TForm1::Label5MouseLeave(TObject *Sender) {
+  Label5->Font->Color = TColor((~(uint32_t)Label5->Font->Color) & 0x00FFFFFF); 
 }
 //---------------------------------------------------------------------------
-
-void __fastcall TForm1::Label7MouseLeave(TObject *Sender)
-{
-  Label7->Font->Color = -Label7->Font->Color;
+void __fastcall TForm1::Label7MouseEnter(TObject *Sender) {
+  Label7->Font->Color = TColor((~(uint32_t)Label7->Font->Color) & 0x00FFFFFF); 
 }
 //---------------------------------------------------------------------------
-
-void __fastcall TForm1::Label7MouseEnter(TObject *Sender)
-{
-  Label7->Font->Color = -Label7->Font->Color;
+void __fastcall TForm1::Label7MouseLeave(TObject *Sender) {
+  Label7->Font->Color = TColor((~(uint32_t)Label7->Font->Color) & 0x00FFFFFF); 
 }
 //---------------------------------------------------------------------------
-
-void __fastcall TForm1::FormClose(TObject *Sender, TCloseAction &Action)
-{
+void __fastcall TForm1::FormClose(TObject *Sender, TCloseAction &Action) {
   DeleteCriticalSection(&CrSec);
 }
 //---------------------------------------------------------------------------
-
-void __fastcall TForm1::FormDestroy(TObject *Sender)
-{
+void __fastcall TForm1::FormDestroy(TObject *Sender) {
   DeleteCriticalSection(&CrSec);        
 }
 //---------------------------------------------------------------------------
