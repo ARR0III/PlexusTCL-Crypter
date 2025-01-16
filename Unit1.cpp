@@ -26,7 +26,7 @@
 
 /****************************************************************************/
 /* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
-#define PTCL_RUSSIAN_LANGUAGE                                            
+/* #define PTCL_RUSSIAN_LANGUAGE                                            */
 #include "LANGUAGE_STRINGS.h"
 /****************************************************************************/
 
@@ -187,22 +187,13 @@ static const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
   "TOP_TEXT_COLOR"
 };
 
-#define CONFIG_PARAM_COUNT 5
-static const char * CONFIG_PARAM[CONFIG_PARAM_COUNT] = {
+#define ALGORITM_NAME_COUNT 5
+static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
   "AES",
   "BLOWFISH",
   "SERPENT",
   "THREEFISH",
   "TWOFISH"
-};
-
-#define ALGORITM_NAME_COUNT 5
-static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
-  "AES-CFB",
-  "BLOWFISH-CFB",
-  "SERPENT-CFB",
-  "THREEFISH-CFB",
-  "TWOFISH-CFB",
 };
 
 static const char * CHAR_SIZE_DATA[] = {
@@ -330,7 +321,7 @@ void pars_str(const char * key, const char * data, SETTINGS * settings) {
 	  
     switch (key_found) {
       case CIPHER:
-        data_found = str_list_search(data, CONFIG_PARAM, CONFIG_PARAM_COUNT);
+        data_found = str_list_search(data, ALGORITM_NAME, ALGORITM_NAME_COUNT);
         if (data_found != -1) {
           settings->cipher = (cipher_t)data_found;
         }
@@ -1309,15 +1300,15 @@ bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
   if (ctx->cipher_number == THREEFISH) {
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[0]) == 0) {
       ctx->real_key_length =  256;
-    }
-    else
+	}
+	else
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[1]) == 0) {
       ctx->real_key_length =  512;
-    }
-    else
+	}
+	else
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[2]) == 0) {
       ctx->real_key_length = 1024;
-    }
+	}
   }
   else
   if (ctx->cipher_number == BLOWFISH) {
