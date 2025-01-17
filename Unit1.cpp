@@ -1301,15 +1301,15 @@ bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
   if (ctx->cipher_number == THREEFISH) {
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[0]) == 0) {
       ctx->real_key_length =  256;
-	}
-	else
+    }
+    else
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[1]) == 0) {
       ctx->real_key_length =  512;
-	}
-	else
+    }
+    else
     if (strcmp(key_size, CHAR_KEY_LENGTH_THREEFISH[2]) == 0) {
       ctx->real_key_length = 1024;
-	}
+    }
   }
   else
   if (ctx->cipher_number == BLOWFISH) {
