@@ -38,6 +38,7 @@
 #define SETTINGS_FILENAME  "settings.cry"
 #define EMPTY_FILENAME     "output.dat"
 #define EXT_CRYCON         ".crycon"
+#define CIPHER_MODE        "-CFB"
 
 #define KiB                          1
 #define MiB                          2
@@ -1679,13 +1680,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 #ifdef PTCL_RUSSIAN_LANGUAGE
     "Приступить к выбранной вами операции?\n\n"
     "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
+    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
     "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() + " бит" +
                        CharA_Or_CharOV(memory->real_key_length);
 #else
     "Proceed with the operation you selected?\n\n"
     "Operation:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "Algorithm:\t" + String(ALGORITM_NAME[memory->cipher_number]) + "\n"
+    "Algorithm:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
     "Key length:\t" + IntToStr(memory->real_key_length * 8).c_str() + " bit";
 #endif
 
@@ -1852,6 +1853,8 @@ void __fastcall TForm1::Button1Click(TObject *Sender) {
       Form1->Edit2->Text = OpenDialog1->FileName + EXT_CRYCON;
     }
   }
+
+  OpenDialog1->FileName = "";
 }
 
 /* OUTPUT FILE */
@@ -1884,6 +1887,8 @@ void __fastcall TForm1::Button2Click(TObject *Sender) {
       Form1->Edit2->Text = SaveDialog1->FileName;
     }
   }
+  
+  SaveDialog1->FileName = "";
 }
 
 void __fastcall TForm1::Button3Click(TObject *Sender) {

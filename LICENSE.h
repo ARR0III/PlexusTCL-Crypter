@@ -1,6 +1,8 @@
 #ifndef PTCL_LICENSE
 #define PTCL_LICENSE
 
+#define PTCL_GITHUB_REP_ADDR "ARR0III <https://github.com/ARR0III>"
+
 char * PTCL_LICENSE_INFORMATION =
 #ifdef PTCL_RUSSIAN_LANGUAGE
   "Настоящее программное обеспечение создано для\n"
@@ -17,9 +19,9 @@ char * PTCL_LICENSE_INFORMATION =
 
 char * PTCL_AUTHORS_INFORMATION =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Разработка и дизайн: ARR0III <https://github.com/ARR0III>";
+  "Разработка и дизайн: "    PTCL_GITHUB_REP_ADDR;
 #else
-  "Development and design: ARR0III <https://github.com/ARR0III>";
+  "Development and design: " PTCL_GITHUB_REP_ADDR;
 #endif
 
 #endif PTCL_LICENSE
