@@ -50,14 +50,14 @@
 #define OK                           0
 #define READ_FILE_NOT_OPEN           1
 #define WRITE_FILE_NOT_OPEN          2
-#define SIZE_FILE_ERROR              3
+#define READ_FILE_ERROR              3
 #define WRITE_FILE_ERROR             4
-#define READ_FILE_ERROR              5
-#define STREAM_INPUT_CLOSE_ERROR     6
-#define STREAM_OUTPUT_CLOSE_ERROR    7
-#define ERROR_ALLOCATE_MEMORY        8
+#define STREAM_INPUT_CLOSE_ERROR     5
+#define STREAM_OUTPUT_CLOSE_ERROR    6
+#define SIZE_FILE_EMPTY              7
+#define SIZE_FILE_VERY_BIG           8
 #define SIZE_DECRYPT_FILE_INCORRECT  9
-#define STOP                        10
+#define OPERATION_BREAK             10
 
 #define STATUS_BUFFER_SIZE         128
 
@@ -65,6 +65,7 @@
 #define BLOCK_SIZE_FOR_ERASED      512
 
 #define LENGTH_DATA_FOR_CHECK     1024
+#define MAX_SIZE_EDIT_STR         2048
 
 #define ENCRYPT                   0x00
 #define DECRYPT                   0xDE
@@ -95,7 +96,7 @@
       if (false == PROCESSING) {                            \
         LeaveCriticalSection(&Form1->CrSec);                \
         meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));  \
-        return close_in_out_files(fi, fo, 0xDE);            \
+        return close_in_out_files(fi, fo, OPERATION_BREAK); \
       }                                                     \
                                                             \
       LeaveCriticalSection(&Form1->CrSec);                  \
@@ -120,23 +121,25 @@ typedef enum cipher_number_enum {
   TWOFISH   = 4,
 } cipher_t;
 
-/* Only rows sorted in ascending order */
 typedef enum config_enum {
   CIPHER           = 0,
   ERASED           = 1,
   KEY_SIZE         = 2,
   OPERATION        = 3,
   PASS_GEN_SIZE    = 4,
-  TOP_COLOR        = 5,
-  TOP_TEXT_B_COLOR = 6,
-  TOP_TEXT_COLOR   = 7
+  PROG_BAR_COLOR   = 5,
+  TOP_COLOR        = 6,
+  TOP_TEXT_B_COLOR = 7,
+  TOP_TEXT_COLOR   = 8
 } config_key;
 
 typedef struct {
+  cipher_t cipher;	
+	
   TColor   top_color;
   TColor   top_text_color;
   TColor   top_text_b_color;
-  cipher_t cipher;
+  TColor   prog_bar_color;
 
   int  key_size;
   int  pass_gen_size;
@@ -176,13 +179,15 @@ typedef struct {
   uint8_t      output [DATA_SIZE]; /* memory for write */
 } GLOBAL_MEMORY;
 
-#define CONFIG_KEYS_COUNT 8
+/* Only sorted strings for bin search function */
+#define CONFIG_KEYS_COUNT 9
 static const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
   "CIPHER",
   "ERASED",
   "KEY_SIZE",
   "OPERATION",
   "PASS_GEN_SIZE",
+  "PROG_BAR_COLOR",
   "TOP_COLOR",
   "TOP_TEXT_B_COLOR",
   "TOP_TEXT_COLOR"
@@ -204,7 +209,6 @@ static const char * CHAR_SIZE_DATA[] = {
   "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
 #endif
 };
-
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
@@ -278,7 +282,7 @@ int operation_variant(const int operation) {
   return (operation ? 1 : 0);
 }
 
-int str_list_search(const char * str, const char * list[], int length) {
+int str_list_search(const char * str, const char * list[], const int length) {
   int found;
   int pos, left, right, result;
 
@@ -366,6 +370,10 @@ void pars_str(const char * key, const char * data, SETTINGS * settings) {
         if (result > 7 && result < 257) {
           settings->pass_gen_size = result;
         }
+        break;
+
+      case PROG_BAR_COLOR:
+        settings->prog_bar_color = (TColor)HexToInt32(data);
         break;
 
       case TOP_COLOR:
@@ -681,7 +689,6 @@ int erasedfile(const char * filename) {
   fsize = SizeOfFile(filename);
 
   if (fsize <= 0LL) {
-    fclose(f);
     return -1;
   }
 
@@ -721,7 +728,7 @@ int erasedfile(const char * filename) {
         meminit(data, 0x00, DATA_SIZE);
         free(data);
         fclose(f);
-        return 0xDE;
+        return OPERATION_BREAK;
       }
 
       LeaveCriticalSection(&Form1->CrSec);
@@ -740,7 +747,7 @@ int erasedfile(const char * filename) {
         meminit(data, 0x00, DATA_SIZE);
         free(data);
         fclose(f);
-        return 0xDE;
+        return OPERATION_BREAK;
       }
 
       LeaveCriticalSection(&Form1->CrSec);
@@ -945,13 +952,13 @@ static int size_correct(const GLOBAL_MEMORY * ctx, fsize_t fsize) {
   }
 
   if (0LL == fsize) {
-    return SIZE_FILE_ERROR;
+    return SIZE_FILE_EMPTY;
   }
 
   if (ENCRYPT == ctx->operation) {
 /* if post encrypt size of file >= 4 EiB then this operation BAD ->> don't for decrypting */
-    if ((fsize_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((fsize_t)1 << 63)) {
-      return SIZE_FILE_ERROR;
+    if ((fsize_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((fsize_t)1 << 62)) {
+      return SIZE_FILE_VERY_BIG;
     }
   }
   else {
@@ -980,16 +987,14 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   FILE * fi, *fo;
 
+  /* Don't change STATUS_BUFFER_SIZE const! */
   char status_buffer[STATUS_BUFFER_SIZE] = {0};
 
   fsize        = SizeOfFile(Form1->Edit1->Text.c_str());
   fsize_check  = size_correct(ctx, fsize);
 
   if (fsize_check) {      /* IF NOT OK */
-    if (fclose(fi) == -1)
-      return STREAM_INPUT_CLOSE_ERROR;
-    else
-      return fsize_check;
+    return fsize_check;
   }
 
   fi = fopen(Form1->Edit1->Text.c_str(), PARAM_READ_BYTE);
@@ -1022,10 +1027,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     OPERATION_NAME[ctx->operation ? 1 : 0],
     ALGORITM_NAME[ctx->cipher_number]);
 
-  while (position < fsize) {  
-
-    CHECK_BREAK_STREAM;
-
+  while (position < fsize) {
     if (0LL == position) {
       if (ENCRYPT == ctx->operation) {
         switch (ctx->cipher_number) {
@@ -1065,7 +1067,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     }
 
     CHECK_BREAK_STREAM;
-
+    
     realread = fread(ctx->input, 1, DATA_SIZE, fi);
 
     for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
@@ -1323,6 +1325,7 @@ bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
     }
 	
     if (ctx->cipher_number == AES) {
+      /* 0 == 128, 1 == 192, 2 = 256 bits */
       switch (result) {
         case 0: *aes = 10;
                  break;
@@ -1347,6 +1350,55 @@ bool CIPHER_SET(GLOBAL_MEMORY * ctx, const char * key_size, int * aes) {
 }
 
 __fastcall TForm1::TForm1(TComponent* Owner): TForm(Owner) {
+}
+
+void ShowOperationStatus(const int status) {
+  switch (status) {
+    case OK:
+      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                     STR_OK);
+      break;
+    case READ_FILE_NOT_OPEN:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_READ_FILE_NOT_OPEN);
+      break;
+    case WRITE_FILE_NOT_OPEN:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_WRITE_FILE_NOT_OPEN);
+      break;
+    case READ_FILE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_READ_FILE_ERROR);
+      break;
+    case WRITE_FILE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_WRITE_FILE_ERROR);
+      break;
+    case STREAM_INPUT_CLOSE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_STREAM_IN_CLOSE_ERROR);
+      break;
+    case STREAM_OUTPUT_CLOSE_ERROR:
+      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
+                     STR_STREAM_OUT_CLOSE_ERROR);
+      break;
+    case SIZE_FILE_EMPTY:
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                    STR_SIZE_FILE_EMPTY);
+      break;
+    case SIZE_FILE_VERY_BIG:
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                     STR_SIZE_FILE_VERY_BIG);
+      break;
+    case SIZE_DECRYPT_FILE_INCORRECT:
+      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+                     STR_SIZE_DECRYPT_FILE_INCORRECT);
+      break;
+    case OPERATION_BREAK:
+      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
+                     STR_OPERATION_BREAK);
+      break;
+  }
 }
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
@@ -1385,19 +1437,19 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   size_t cipher_length;
 
 /*****************************************************************************/
-  if (x_strnlen(Edit1->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Edit1->Text.c_str(), MAX_SIZE_EDIT_STR) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
                    STR_INPUT_FILENAME_EMPTY);
     return;
   }
 
-  if (x_strnlen(Edit2->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Edit2->Text.c_str(), MAX_SIZE_EDIT_STR) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
                    STR_OUTPUT_FILENAME_EMPTY);
     return;
   }
 
-  if (x_strnlen(Memo1->Text.c_str(), 2048) == 0) {
+  if (x_strnlen(Memo1->Text.c_str(), MAX_SIZE_EDIT_STR) == 0) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
                    STR_PASS_OR_KEYFILE_EMPTY);
     return;
@@ -1674,8 +1726,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     return;
   }
 
-  result = 0xDE;
-
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
     "Приступить к выбранной вами операции?\n\n"
@@ -1689,6 +1739,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     "Algorithm:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
     "Key length:\t" + IntToStr(memory->real_key_length * 8).c_str() + " bit";
 #endif
+
+  result = OPERATION_BREAK;
 
   if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
     Button4->Caption = STR_STOP;
@@ -1706,49 +1758,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     FormActivate(true);
   }
 
-  UnicodeMsg = "";
+  ShowOperationStatus(result);
 
-  switch (result) {
-    case 0xDE:
-      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
-                     STR_OPERATION_STOPPED);
-      break;
-    case OK:
-      MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
-                     STR_OK);
-      break;
-    case READ_FILE_NOT_OPEN:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_READ_FILE_NOT_OPEN);
-      break;
-    case WRITE_FILE_NOT_OPEN:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_WRITE_FILE_NOT_OPEN);
-      break;
-    case SIZE_FILE_ERROR:
-      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
-                    STR_SIZE_FILE_ERROR);
-      break;
-    case WRITE_FILE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_WRITE_FILE_ERROR);
-      break;
-    case READ_FILE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_READ_FILE_ERROR);
-      break;
-    case STREAM_INPUT_CLOSE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_STREAM_IN_CLOSE_ERROR);
-      break;
-    case STREAM_OUTPUT_CLOSE_ERROR:
-      MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
-                     STR_STREAM_OUT_CLOSE_ERROR);
-      break;
-    case SIZE_DECRYPT_FILE_INCORRECT:
-      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
-                     STR_SIZE_DECRYPT_FILE_INCORRECT);
-  }
 /*****************************************************************************/
   if (result == OK && CheckBox1->Checked == True) {
     UnicodeMsg = STR_ERASED_FILE_QUES;
@@ -1765,11 +1776,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
 /*****************************************************************************/
       SET_START_STREAM;
-        result = erasedfile(Edit1->Text.c_str());
+      result = erasedfile(Edit1->Text.c_str());
       SET_STOP_STREAM;
 /*****************************************************************************/
 
-      if (result == 0) {
+      if (result == OK) {
         if (DeleteFile(Edit1->Text) != False) {
           MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
                         STR_ERASED_FILE_OK);
@@ -1781,22 +1792,22 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
           UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
             "Ошибка удаления файла!\n\n"
-             "Файл: " + Form1->Edit1->Text + "\n\n"
-             "был перезаписан но не был удален с диска!\n\n"
-             "Код ошибки: " + IntToStr(error_delete);
+            "Файл: " + Form1->Edit1->Text + "\n\n"
+            "был перезаписан но не был удален с диска!\n\n"
+            "Код ошибки: " + IntToStr(error_delete);
 #else
-             "Error delete file!\n\n"
-             "Filename: " + Form1->Edit1->Text + "\n\n"
-             "was overwritten but not deleted from the disk!\n\n"
-             "Error code: " + IntToStr(error_delete);
+            "Error delete file!\n\n"
+            "Filename: " + Form1->Edit1->Text + "\n\n"
+            "was overwritten but not deleted from the disk!\n\n"
+            "Error code: " + IntToStr(error_delete);
 #endif
           MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, UnicodeMsg.c_str());
         }
       }
       else
-      if (result == 0xDE) {
+      if (result == OPERATION_BREAK) {
         MessageForUser(MB_ICONINFORMATION + MB_OK, STR_PROGRAMM_NAME,
-                       STR_OPERATION_STOPPED);
+                       STR_OPERATION_BREAK);
       }
       else {
         MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG,
@@ -1904,19 +1915,20 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   SETTINGS settings;
 
   InitializeCriticalSection(&CrSec);
-  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, clGreen);
 
   settings.top_color        = FORM_HEAD_COLOR;
   settings.top_text_color   = FORM_HEAD_TEXT_COLOR;
   settings.top_text_b_color = FORM_HEAD_TEXT_B_COLOR;
+  settings.prog_bar_color   = clGreen;
   settings.cipher           = AES;
   settings.key_size         = 128;
   settings.pass_gen_size    =  64;
   settings.operation        = ENCRYPT;
   settings.erased           = false;
 
-  init_settings(SETTINGS_FILENAME, &settings); /* in settings.h */
-
+  init_settings(SETTINGS_FILENAME, &settings);
+  SendMessage(ProgressBar1->Handle, PBM_SETBARCOLOR, 0, settings.prog_bar_color);
+  
   for (int i = 0; i < 5; i++) {
     ComboBox1->Items->Add(ALGORITM_NAME[i]);
   }
@@ -1991,7 +2003,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
   int i, result;
 
-  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, 5);
+  result = str_list_search(ComboBox1->Text.c_str(), ALGORITM_NAME, ALGORITM_NAME_COUNT);
 
   if (result == -1) {
     return;
@@ -1999,26 +2011,26 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
 
   ComboBox2->Items->Clear();
 
-  if (result != BLOWFISH) {
-    if (result != THREEFISH) {
-      for (i = 0; i < 3; i++) {
-        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
-      }
-      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
-    }
-    else {
+  if (result == BLOWFISH) {
+    Label4->Visible = False;
+    ComboBox2->Visible = False;
+  }
+  else {
+    if (result == THREEFISH) {
       for (i = 0; i < 3; i++) {
         ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
       }
       ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
     }
+    else {
+      for (i = 0; i < 3; i++) {
+        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
+      }
+      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
+    }
 
     Label4->Visible = True;
     ComboBox2->Visible = True;
-  }
-  else {
-    Label4->Visible = False;
-    ComboBox2->Visible = False;
   }
 }
 
@@ -2109,20 +2121,24 @@ void __fastcall TForm1::Shape2MouseDown(TObject *Sender,
   Form1->Perform(WM_SYSCOMMAND, 0xF012, 0);
 }
 
+TColor InverseColor(const TColor color) {
+  return TColor((~(uint32_t)color) & 0x00FFFFFF); 
+}
+
 void __fastcall TForm1::Label5MouseEnter(TObject *Sender) {
-  Label5->Font->Color = TColor((~(uint32_t)Label5->Font->Color) & 0x00FFFFFF); 
+  Label5->Font->Color = InverseColor(Label5->Font->Color);
 }
 //---------------------------------------------------------------------------
 void __fastcall TForm1::Label5MouseLeave(TObject *Sender) {
-  Label5->Font->Color = TColor((~(uint32_t)Label5->Font->Color) & 0x00FFFFFF); 
+  Label5->Font->Color = InverseColor(Label5->Font->Color);
 }
 //---------------------------------------------------------------------------
 void __fastcall TForm1::Label7MouseEnter(TObject *Sender) {
-  Label7->Font->Color = TColor((~(uint32_t)Label7->Font->Color) & 0x00FFFFFF); 
+  Label7->Font->Color = InverseColor(Label7->Font->Color);
 }
 //---------------------------------------------------------------------------
 void __fastcall TForm1::Label7MouseLeave(TObject *Sender) {
-  Label7->Font->Color = TColor((~(uint32_t)Label7->Font->Color) & 0x00FFFFFF); 
+  Label7->Font->Color = InverseColor(Label7->Font->Color);
 }
 //---------------------------------------------------------------------------
 void __fastcall TForm1::FormClose(TObject *Sender, TCloseAction &Action) {

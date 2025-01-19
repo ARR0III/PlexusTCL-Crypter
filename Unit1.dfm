@@ -146,7 +146,7 @@ object Form1: TForm1
     Height = 21
     Ctl3D = False
     ItemHeight = 13
-    MaxLength = 20
+    MaxLength = 10
     ParentCtl3D = False
     TabOrder = 3
     TabStop = False
@@ -159,7 +159,7 @@ object Form1: TForm1
     Height = 21
     Ctl3D = False
     ItemHeight = 13
-    MaxLength = 20
+    MaxLength = 10
     ParentCtl3D = False
     TabOrder = 0
     TabStop = False
