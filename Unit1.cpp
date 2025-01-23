@@ -1911,6 +1911,25 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
   }
 }
 
+void AddListKeys(const cipher_t cipher) {
+  int i;
+
+  Form1->ComboBox2->Items->Clear();
+
+  if (cipher == THREEFISH) {
+    for (i = 0; i < 3; i++) {
+      Form1->ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
+    }
+    Form1->ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
+  }
+  else {
+    for (i = 0; i < 3; i++) {
+      Form1->ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
+    }
+    Form1->ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
+  }
+}
+
 void __fastcall TForm1::FormCreate(TObject *Sender) {
   SETTINGS settings;
 
@@ -1978,8 +1997,11 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
     Form1->ComboBox2->Visible = False;
   }
   else { /* other ciphers */
+    AddListKeys(settings.cipher);
+	
     Label4->Visible = True;
     Form1->ComboBox2->Visible = True;
+	
     Form1->ComboBox2->Text = IntToStr(settings.key_size);
   }
 
@@ -2009,25 +2031,12 @@ void __fastcall TForm1::ComboBox1Change(TObject *Sender) {
     return;
   }
 
-  ComboBox2->Items->Clear();
-
   if (result == BLOWFISH) {
     Label4->Visible = False;
     ComboBox2->Visible = False;
   }
   else {
-    if (result == THREEFISH) {
-      for (i = 0; i < 3; i++) {
-        ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
-      }
-      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
-    }
-    else {
-      for (i = 0; i < 3; i++) {
-        ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
-      }
-      ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
-    }
+    AddListKeys((cipher_t)result);
 
     Label4->Visible = True;
     ComboBox2->Visible = True;
