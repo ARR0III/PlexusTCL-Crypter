@@ -524,6 +524,15 @@ _exit:
   }
 /*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
 
+  if (length < sizeof(size_t)) {
+    while (length) {
+      *temp = (uint8_t)u_dword;
+      temp++;
+      length--;
+    }
+    return;
+  }
+
   while (length >= (sizeof(size_t) * 8)) {
     *((size_t *)temp + 0) = u_dword;
     *((size_t *)temp + 1) = u_dword;
@@ -556,10 +565,9 @@ _exit:
     length -= sizeof(size_t);
   }
 
-  while (length) {
-    *temp = (uint8_t)number;
-     temp++;
-     length--;
+  if ((temp > (uint8_t *)data) && length) { /* min 1 block be copy */
+    temp -= (sizeof(size_t) - length);
+    *((size_t *)temp) = u_dword;
   }
 #endif
 }
