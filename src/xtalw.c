@@ -12,99 +12,6 @@
 
 #include "xtalw.h"
 
-enum {false = 0, true = 1};
-
-int readstr(char * str, const int len, FILE * f) {
-  int chr, count;
-  int comment = false;
-	
-  if (NULL == str || NULL == f) {
-    return -1;
-  }
-  
-  count = 0;
-
-  while (count < len) {
-    chr = fgetc(f);
-	
-    if (EOF == chr) {
-      break;
-    }
-
-    if ('#' == chr) {
-      comment = true;
-      continue;
-    }
-
-    if (comment && ';' == chr) {
-      comment = false;
-      continue;
-    }
-
-    if ('\n' == chr || ';' == chr) {
-      str[count] = '\0';
-      count++;
-      break;
-    }
-
-    if (comment) {
-      continue;
-    }
-
-    if ((chr >= 'A' && chr <= 'Z') ||
-        (chr >= '0' && chr <= '9') || '=' == chr || '_' == chr) {
-
-      str[count] = (char)chr;
-      count++;
-    }
-  }
-
-  if (count >= len) {
-    count = len-1;
-  }
-  
-  str[count] = '\0';
-
-  return count;
-}
-
-uint32_t HexToInt32(const char * hex) {
-  uint32_t result;
-  int chr, count, base;
-
-  if (!hex) return 0;
-
-  count  = 0;
-  result = 0;
-  base   = sizeof(int) * 8 - 4; /*  4*8-4=24  */
-
-  while ((chr = hex[count]) != '\0' && count < 8) {
-    if (chr >= 'A' && chr <= 'F') {
-      chr = chr - 'A' + 10;
-    }
-    else
-    if (chr >= 'a' && chr <= 'f') {
-      chr = chr - 'a' + 10;
-    }
-    else
-    if (chr >= '0' && chr <= '9') {
-      chr = chr - '0';
-    }
-    else {
-      break;
-    }
-
-    if (0 > base) break;
-
-    result |= chr << base;
-    base -= 4;
-    count++;
-  }
-
-  return (count == 8 && base < 0) ? result : 0;
-}
-
-
 void memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
@@ -384,59 +291,6 @@ _exit:
 /* "meminit32" optimization and always executable standart function memset */
 void meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
-
-/****** OLD * CODE ******
-__asm {
-  mov ecx, length
-  mov ebx, number
-  mov edi, data
-
-  cmp ebx, 0xFF
-  ja _memset
-
-  mov bh, bl
-  mov edx, ebx
-  shl edx, 16
-  or ebx, edx
-
-_memset:
-  mov edx, ecx
-  and edx, 0x03
-  
-  shr ecx, 2
-  jz _lp_byte
-
-_lp_block:
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  mov dword[edi], ebx
-  add edi, 4
-  dec ecx
-  jz _lp_byte
-  jmp _lp_block
-
-_lp_byte:
-  test edx, edx
-  jz _exit
-  mov byte[edi], bl
-  inc edi
-  dec edx
-  jmp _lp_byte
-
-_exit:
-}
-****** OLD * CODE ******/
-
 __asm {
   mov ecx, length
   mov edx, number
@@ -517,18 +371,18 @@ _exit:
     return;
   }
 
-/*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
   if (u_dword < 0x100) {
     u_dword |= u_dword <<  8;
     u_dword |= u_dword << 16;
+#if __x86_64__
+    u_dword |= u_dword << 32;
+#endif
   }
-/*** CHANGE THIS CODE IF YOUR MACHINE 64 BITS ***/
 
   if (length < sizeof(size_t)) {
-    while (length) {
+    while (length--) {
       *temp = (uint8_t)u_dword;
       temp++;
-      length--;
     }
     return;
   }
@@ -565,7 +419,7 @@ _exit:
     length -= sizeof(size_t);
   }
 
-  if ((temp > (uint8_t *)data) && length) { /* min 1 block be copy */
+  if ((temp > (uint8_t *)data) && length) {
     temp -= (sizeof(size_t) - length);
     *((size_t *)temp) = u_dword;
   }
@@ -611,10 +465,6 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
 
   if (!data || 0 == length) {
     return;
-  }
-
-  if (stream != stdin && stream != stdout && stream != stderr) {
-    stream = stdout;
   }
 
   for (j = 0; j < length; j++) {
@@ -663,7 +513,7 @@ void strdec(uint8_t * data, size_t len) {
 int genrand(const unsigned int min, const unsigned int max) {
   int x = min + RAND_MAX;
   
-  if (0 == x) {    /* if (+-0) */
+  if (0 == x) {
     x = RAND_MAX;
   }
   
@@ -700,14 +550,6 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
     return;
   }
 
-  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
-    tumbler = HEX_TABLE;
-  }
-
-  if (stream != stdin && stream != stdout && stream != stderr) {
-    stream = stdout;
-  }
-
   for (i = 0; i < length; ++i) {
     left  = (int)data[i] >> 0x04; /* 11000011 >> 0x04 = 00001100 */
     right = (int)data[i]  & 0x0F; /* 11000011  & 0x0F = 00000011 */
@@ -729,10 +571,6 @@ size_t printhex(int tumbler, const void * data, size_t length) {
 
   if (!data || 0 == length) {
     return i;
-  }
-
-  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
-    tumbler = HEX_STRING;
   }
 
   if (HEX_TABLE == tumbler) {
