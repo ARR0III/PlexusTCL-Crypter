@@ -12,6 +12,101 @@
 
 #include "xtalw.h"
 
+enum {false = 0, true = 1};
+
+int readstr(char * str, const int len, FILE * f) {
+  int chr, count;
+  int comment = false;
+	
+  if (NULL == str || NULL == f) {
+    return -1;
+  }
+  
+  count = 0;
+
+  while (count < len) {
+    chr = fgetc(f);
+	
+    if (EOF == chr) {
+      break;
+    }
+
+    if ('#' == chr) {
+      comment = true;
+      continue;
+    }
+
+    if (comment && ';' == chr) {
+      comment = false;
+      continue;
+    }
+
+    if ('\n' == chr || ';' == chr) {
+      str[count] = '\0';
+      count++;
+      break;
+    }
+
+    if (comment) {
+      continue;
+    }
+
+    if ((chr >= 'A' && chr <= 'Z') ||
+        (chr >= '0' && chr <= '9') || '=' == chr || '_' == chr) {
+
+      str[count] = (char)chr;
+      count++;
+    }
+    else {
+      continue;
+    }
+  }
+
+  if (count >= len) {
+    count = len-1;
+  }
+  
+  str[count] = '\0';
+
+  return count;
+}
+
+uint32_t HexToInt32(const char * hex) {
+  uint32_t result;
+  int chr, count, base;
+
+  if (!hex) return 0;
+
+  count  = 0;
+  result = 0;
+  base   = sizeof(int) * 8 - 4; /*  4*8-4=24  */
+
+  while ((chr = hex[count]) != '\0' && count < 8) {
+    if (chr >= 'A' && chr <= 'F') {
+      chr = chr - 'A' + 10;
+    }
+    else
+    if (chr >= 'a' && chr <= 'f') {
+      chr = chr - 'a' + 10;
+    }
+    else
+    if (chr >= '0' && chr <= '9') {
+      chr = chr - '0';
+    }
+    else {
+      break;
+    }
+
+    if (0 > base) break;
+
+    result |= chr << base;
+    base -= 4;
+    count++;
+  }
+
+  return (count == 8 && base < 0) ? result : 0;
+}
+
 void memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
