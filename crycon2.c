@@ -250,9 +250,9 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
                       const uint8_t * password, const size_t password_len,
                             uint8_t * key,      const size_t key_len) {
 
-  size_t count;
-  size_t i, j, k;
-  size_t pmem_size;
+  uint32_t count;
+  size_t   i, j, k;
+  size_t   pmem_size;
 
   uint8_t * pmem;
 
@@ -284,7 +284,7 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   sha256_final(ctx->sha256sum);
 
   count  = *(uint32_t *)(ctx->sha256sum->hash);
-  count &= (size_t)0x0000FFFF;
+  count &= 0x0000FFFF;
   count |= ((uint32_t)1 << 19); /* set 20 bit */
   count *= CLOMUL_CONST;
 
