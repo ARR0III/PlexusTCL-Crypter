@@ -250,22 +250,15 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
                       const uint8_t * password, const size_t password_len,
                             uint8_t * key,      const size_t key_len) {
 
-  uint32_t  i, j;
-  uint32_t  count;
-  size_t    pmem_size;
-  
+  size_t count;
+  size_t i, j, k;
+  size_t pmem_size;
+
   uint8_t * pmem;
-  
+
   pmem_size = (key_len + password_len + CLOMUL_CONST) << 5;
   pmem_size =  pmem_size * 1024 * CLOMUL_CONST;
 
-  if (pmem_size > UINT_MAX) {
-#if CRYCON_DEBUG
-  printf("[DEBUG] WARNING: owerflow size of memory for allocation!\n");
-#endif
-    pmem_size = (key_len + password_len + CLOMUL_CONST) << 5;
-  }
-  
   pmem = (uint8_t *)malloc(pmem_size);
 
   if (!pmem) {
@@ -276,7 +269,7 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
 #if CRYCON_DEBUG
   printf("[DEBUG] pointer of key matrix memory: %p\n", pmem);
-  printf("[DEBUG] size of key matrix memory: %u byte / %4.2f %s\n",
+  printf("[DEBUG] size of key matrix memory: %zu byte / %4.2f %s\n",
     pmem_size,
     sizetodoubleprint(size_check(pmem_size), (double)pmem_size),
     CHAR_SIZE_DATA[size_check(pmem_size)]);
@@ -289,15 +282,15 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, password, password_len);
   sha256_final(ctx->sha256sum);
-    
+
   count  = *(uint32_t *)(ctx->sha256sum->hash);
-  count &= 0x0000FFFF;
-  count |= ((uint32_t)1 << 15);           /* !!! */
+  count &= (size_t)0x0000FFFF;
+  count |= ((uint32_t)1 << 19); /* set 20 bit */
   count *= CLOMUL_CONST;
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] counter from sha-2-256 password: %u\n", count);
-  printf("[DEBUG] make crypt key count iteration:  %u\n",
+  printf("[DEBUG] counter from sha-2-256 password: %zu\n", count);
+  printf("[DEBUG] make crypt key count iteration:  %zu\n",
          count + (pmem_size >> 5) + (key_len >> 5));
 #endif
 
@@ -313,8 +306,21 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     sha256_final(ctx->sha256sum);
     memcpy(pmem + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
   }
-  
-  for (i = 0; i < key_len; i += SHA256_BLOCK_SIZE) {
+
+#if CRYCON_DEBUG
+  printf("[DEBUG] HEX table for compire hash of password:\n");
+  printf("[DEBUG] position   0:\n");
+  phex(HEX_TABLE, pmem, SHA256_BLOCK_SIZE, stdout);
+  printf("[DEBUG] position  64:\n");
+  phex(HEX_TABLE, pmem + (SHA256_BLOCK_SIZE << 2), SHA256_BLOCK_SIZE, stdout);
+  printf("[DEBUG] position 256:\n");
+  phex(HEX_TABLE, pmem + (SHA256_BLOCK_SIZE << 4), SHA256_BLOCK_SIZE, stdout);
+#endif
+
+  k = 0;
+  i = 0;
+
+  while (i < key_len) {
     sha256_update(ctx->sha256sum, pmem, pmem_size);
     sha256_final(ctx->sha256sum);
 
@@ -324,8 +330,15 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
       j = SHA256_BLOCK_SIZE;
     }
 
-    memxormove(pmem + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
-    memcpy(key + i, ctx->sha256sum->hash, j);
+    if (k >= pmem_size) {
+      k = 0;
+    }
+
+    memcpy(pmem + k, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+    memcpy(key  + i, ctx->sha256sum->hash, j);
+
+    k += SHA256_BLOCK_SIZE;
+    i += SHA256_BLOCK_SIZE;
   }
 /****************************************************************/
 #if CRYCON_DEBUG
@@ -337,57 +350,6 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   free(pmem);
   pmem = NULL;
 }
-
-/*
-static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
-                     const uint8_t  * password, const size_t password_len,
-                           uint8_t  * key,      const size_t key_len) {
-
-  uint32_t i, j, k;
-  uint32_t count = 0;
-
-#if CRYCON_DEBUG
-  srand(time(0));
-  clock_t min = clock();
-#endif
-
-  for (i = 1; i <= password_len; ++i) {
-    count ^= (uint32_t)(CRC32(password, i) + CLOMUL_CONST);
-    count -= (password_len + key_len + CLOMUL_CONST + i);
-  }
-
-  count  &= CRC32(password, password_len);
-  count >>= 18;
-  count  |= ((uint32_t)1 << 14);
-  count  *= CLOMUL_CONST;
-
-#if CRYCON_DEBUG
-  printf("[DEBUG] make crypt key count iteration: %u\n", count);
-#endif
-
-  sha256_init(ctx->sha256sum);
-
-  for (i = k = 0; i < key_len; ++i, ++k) {
-    for (j = 0; j < count; ++j) {
-      sha256_update(ctx->sha256sum, password, password_len);
-    }
-
-    sha256_final(ctx->sha256sum);
-
-    if (k >= SHA256_BLOCK_SIZE) {
-      k = 0;
-    }
-
-    key[i] = ctx->sha256sum->hash[k];
-  }
-
-#if CRYCON_DEBUG
-  printf("[DEBUG] make crypt key time: %4.4f seconds\n", ((double)(clock() - min) / (double)CLOCKS_PER_SEC));
-#endif
-
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
-}
-*/
 
 /* return encrypt, decrypt or stream */
 static int operation_variant(const int operation) {
@@ -657,7 +619,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     if (0ULL == position) { /* if first block */
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] vector memory allocated: %u byte\n", ctx->vector_length);
+  printf("[DEBUG] vector memory allocated: %zu byte\n", ctx->vector_length);
   printf("[DEBUG] vector memory pointer: %p\n", ctx->vector);
 #endif
 
@@ -1140,11 +1102,11 @@ int main(int argc, char * argv[]) {
 
 #if CRYCON_DEBUG
   printf("[DEBUG] compile date and time:   %s, %s\n", __DATE__, __TIME__);
-  printf("[DEBUG] global memory allocated: %u byte\n", ctx_length);
+  printf("[DEBUG] global memory allocated: %zu byte\n", ctx_length);
   printf("[DEBUG] global memory pointer:   %p\n", ctx);
-  printf("[DEBUG] size struct for sha256sum function: %u byte\n", ctx->sha256sum_length);
+  printf("[DEBUG] size struct for sha256sum function: %zu byte\n", ctx->sha256sum_length);
   printf("[DEBUG] sha256sum struct create in pointer: %p\n", ctx->sha256sum);
-  printf("[DEBUG] maximal length password or name keyfile: %u byte\n", ctx->password_length);
+  printf("[DEBUG] maximal length password or name keyfile: %zu byte\n", ctx->password_length);
   printf("[DEBUG] pointer of memory for password or name keyfile: %p\n", ctx->password);
 #endif
 
@@ -1272,7 +1234,7 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] keyfile or password: %s\n", ctx->password);
   printf("[DEBUG] cipher: %s\n", ALGORITM_NAME[ctx->cipher_number]);
   printf("[DEBUG] block cipher mode of operation: CFB\n");
-  printf("[DEBUG] key length: %u bist\n", ctx->real_key_length);
+  printf("[DEBUG] key length: %zu bist\n", ctx->real_key_length);
   printf("[DEBUG] operation: %s\n", OPERATION_NAME[ctx->operation ? 1 : 0]);
 #endif
 
@@ -1308,7 +1270,7 @@ int main(int argc, char * argv[]) {
   meminit(ctx->new_key, 0x00, ctx->new_key_length);
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] temp memory allocated: %u byte\n", ctx->real_key_length);
+  printf("[DEBUG] temp memory allocated: %zu byte\n", ctx->real_key_length);
   printf("[DEBUG] temp memory pointer: %p\n", ctx->real_key);
 #endif
 /*****************************************************************************/
@@ -1413,7 +1375,7 @@ int main(int argc, char * argv[]) {
   printf("[#] Algoritm %s initialized.\n", ALGORITM_NAME[(ctx->cipher_number)]);
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] allocate byte for cipher struct: %u\n", cipher_ctx_len);
+  printf("[DEBUG] allocate byte for cipher struct: %zu\n", cipher_ctx_len);
   printf("[DEBUG] real data cipher struct:\n");
   printhex(HEX_TABLE, cipher_pointer, cipher_ctx_len);
 #endif
