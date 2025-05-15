@@ -3,7 +3,7 @@
  * Console Encryption Software v5.14;
  *
  * Developer:         ARR0III;
- * Modification date: 13 MAY 2025;
+ * Modification date: 15 MAY 2025;
  * Modification:      Release;
  * Language:          English;
  */
@@ -80,7 +80,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.14 13MAY25 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.14 15MAY25 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -250,14 +250,12 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
                       const uint8_t * password, const size_t password_len,
                             uint8_t * key,      const size_t key_len) {
 
-  uint32_t count;
-  size_t   i, j, k;
-  size_t   pmem_size;
-
+  uint32_t  count;
+  size_t    i, j, k;
+  size_t    pmem_size;
   uint8_t * pmem;
 
-  pmem_size = (key_len + password_len + CLOMUL_CONST) << 5;
-  pmem_size =  pmem_size * 1024 * CLOMUL_CONST;
+  pmem_size = (key_len + password_len + CLOMUL_CONST) * SHA256_BLOCK_SIZE * 1024 * CLOMUL_CONST;
 
   pmem = (uint8_t *)malloc(pmem_size);
 
@@ -284,12 +282,12 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   sha256_final(ctx->sha256sum);
 
   count  = *(uint32_t *)(ctx->sha256sum->hash);
-  count &= 0x0000FFFF;
+  count &= 0x000FFFFF;
   count |= ((uint32_t)1 << 19); /* set 20 bit */
   count *= CLOMUL_CONST;
 
 #if CRYCON_DEBUG
-  printf("[DEBUG] counter from sha-2-256 password: %zu\n", count);
+  printf("[DEBUG] counter from sha-2-256 password: %u\n", count);
   printf("[DEBUG] make crypt key count iteration:  %zu\n",
          count + (pmem_size >> 5) + (key_len >> 5));
 #endif
@@ -338,7 +336,7 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
     memcpy(key  + i, ctx->sha256sum->hash, j);
 
     k += SHA256_BLOCK_SIZE;
-    i += SHA256_BLOCK_SIZE;
+    i += j;
   }
 /****************************************************************/
 #if CRYCON_DEBUG
