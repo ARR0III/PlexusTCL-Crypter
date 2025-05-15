@@ -638,7 +638,6 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
 
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   size_t i;
-  int left, right;
   const char digits[] = "0123456789ABCDEF";
 
   if (!data || 0 == length) {
@@ -646,14 +645,11 @@ void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   }
 
   for (i = 0; i < length; ++i) {
-    left  = (int)data[i] >> 0x04; /* 11000011 >> 0x04 = 00001100 */
-    right = (int)data[i]  & 0x0F; /* 11000011  & 0x0F = 00000011 */
-
-    putc(digits[left],  stream);
-    putc(digits[right], stream);
+    putc(digits[(int)data[i] >> 0x04],  stream);
+    putc(digits[(int)data[i]  & 0x0F], stream);
 
     if (HEX_TABLE == tumbler) {
-      putc(((i + 1) % 16) ? ' ' : '\n', stream);
+     putc(((i+1) & 0x000F) ? ' ' : '\n', stream);
     }
   }
 
