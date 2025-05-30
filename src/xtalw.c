@@ -606,13 +606,7 @@ void strdec(uint8_t * data, size_t len) {
 }
 
 int genrand(const unsigned int min, const unsigned int max) {
-  int x = min + RAND_MAX;
-  
-  if (0 == x) {
-    x = RAND_MAX;
-  }
-  
-  return min + (int)((double)rand() * (double)max / (double)x);
+  return min + (rand() % (max - min));
 }
 
 int readfromfile(const char * filename, void * buffer, const size_t length) {
