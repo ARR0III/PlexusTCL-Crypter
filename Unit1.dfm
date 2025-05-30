@@ -1,6 +1,6 @@
 object Form1: TForm1
   Left = 226
-  Top = 313
+  Top = 318
   BorderStyle = bsNone
   ClientHeight = 276
   ClientWidth = 506
@@ -146,7 +146,7 @@ object Form1: TForm1
     Height = 21
     Ctl3D = False
     ItemHeight = 13
-    MaxLength = 10
+    MaxLength = 20
     ParentCtl3D = False
     TabOrder = 3
     TabStop = False
@@ -159,7 +159,7 @@ object Form1: TForm1
     Height = 21
     Ctl3D = False
     ItemHeight = 13
-    MaxLength = 10
+    MaxLength = 20
     ParentCtl3D = False
     TabOrder = 0
     TabStop = False

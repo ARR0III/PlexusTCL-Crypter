@@ -1,5 +1,5 @@
 #ifdef PTCL_RUSSIAN_LANGUAGE
-const char * STR_PROGRAMM_NAME          = "PlexusTCL Crypter 5.12 24JAN25 [RU]";
+const char * STR_PROGRAMM_NAME          = "PlexusTCL Crypter 5.14 31MAY25 [RU]";
 
 const char * STR_ERASED_FILE_OK         = "Файл назначения был уничтожен!";
 const char * STR_ENTER_8_TO_256         = "Введите число от 8 до 256!";
@@ -44,16 +44,16 @@ const char * STR_CIPHER_NOT_ENTER       = "Алгоритм шифрования не был выбран!";
 const char * STR_KEY_SIZE_NOT_ENTER     = "Длина ключа шифрования не была выбрана!";
 const char * STR_OPERATION_NOT_ENTER    = "Операция не была выбрана!";
 
-const char * STR_OK                     = "Файл успешно обработан!";
-const char * STR_READ_FILE_NOT_OPEN     = "Файл для обработки не был открыт!";
-const char * STR_WRITE_FILE_NOT_OPEN    = "Файл назначения не был открыт!";
-const char * STR_READ_FILE_ERROR        = "Ошибка чтения из файла!";
-const char * STR_WRITE_FILE_ERROR       = "Ошибка записи в файл!";
-const char * STR_STREAM_IN_CLOSE_ERROR  = "Поток ввода не был закрыт!";
-const char * STR_STREAM_OUT_CLOSE_ERROR = "Поток вывода не был закрыт!";
-const char * STR_SIZE_FILE_EMPTY        = "Файл для обработки пуст!";
-const char * STR_SIZE_FILE_VERY_BIG     = "Размер файла для обработки превышает 4 ЭиБ!";
-const char * STR_OPERATION_BREAK        = "Операция была отменена!";
+const char * STR_OK                          = "Файл успешно обработан!";
+const char * STR_READ_FILE_NOT_OPEN          = "Файл для обработки не был открыт!";
+const char * STR_WRITE_FILE_NOT_OPEN         = "Файл назначения не был открыт!";
+const char * STR_READ_FILE_ERROR             = "Ошибка чтения из файла!";
+const char * STR_WRITE_FILE_ERROR            = "Ошибка записи в файл!";
+const char * STR_STREAM_IN_CLOSE_ERROR       = "Поток ввода не был закрыт!";
+const char * STR_STREAM_OUT_CLOSE_ERROR      = "Поток вывода не был закрыт!";
+const char * STR_SIZE_FILE_EMPTY             = "Файл для обработки пуст!";
+const char * STR_SIZE_FILE_VERY_BIG          = "Размер файла для обработки превышает 4 ЭиБ!";
+const char * STR_OPERATION_BREAK             = "Операция была отменена!";
 
 const char * STR_SIZE_DECRYPT_FILE_INCORRECT =
   "Размер файла для расшифровки некорректен!\n"
@@ -71,7 +71,7 @@ const char * STR_CONTROL_SUM_FILE_ERROR =
   "Контрольная сумма файла НЕ совпадает с ожидаемой!\n"
   "Возможно файл поврежден или был использован неправильный ключ!";
 #else
-const char * STR_PROGRAMM_NAME = "PlexusTCL Crypter 5.12 24JAN25 [RU]";
+const char * STR_PROGRAMM_NAME = "PlexusTCL Crypter 5.14 31MAY25 [RU]";
 
 const char * STR_ERASED_FILE_OK = "The destination file was destroyed!";
 const char * STR_ENTER_8_TO_256 = "Enter a number between 8 and 256!";
