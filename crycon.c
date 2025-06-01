@@ -3,7 +3,7 @@
  * Console Encryption Software v5.14;
  *
  * Developer:         ARR0III;
- * Modification date: 15 MAY 2025;
+ * Modification date: 01 JUNE 2025;
  * Modification:      Release;
  * Language:          English;
  */
