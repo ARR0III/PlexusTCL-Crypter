@@ -246,7 +246,7 @@ static double sizetodoubleprint(const int status, const double size) {
 /* 
   CLOMUL_CONST - security level. Now = 1
 */
-static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
+static int KDFCLOMUL(GLOBAL_MEMORY * ctx,
                       const uint8_t * password, const size_t password_len,
                             uint8_t * key,      const size_t key_len) {
 
@@ -260,16 +260,15 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   pmem = (uint8_t *)malloc(pmem_size);
 
   if (!pmem) {
-    free_global_memory(ctx, sizeof(GLOBAL_MEMORY));
-    MEMORY_ERROR;
-    exit(1);
+    return 0;
   }
 
 #if CRYCON_DEBUG
   printf("[DEBUG] pointer of key matrix memory: %p\n", pmem);
   printf("[DEBUG] size of key matrix memory: %zu byte / %4.2f %s\n",
     pmem_size,
-    sizetodoubleprint(size_check(pmem_size), (double)pmem_size),
+    sizetodoubleprint(size_check(pmem_size),
+    (double)pmem_size),
     CHAR_SIZE_DATA[size_check(pmem_size)]);
 
   srand(time(0));
@@ -347,6 +346,8 @@ static void KDFCLOMUL(GLOBAL_MEMORY * ctx,
   meminit(pmem, 0x00, pmem_size);
   free(pmem);
   pmem = NULL;
+  
+  return 1;
 }
 
 /* return encrypt, decrypt or stream */
@@ -720,22 +721,20 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     fflush(fo);
 
     if (real_percent > past_percent) {
-      /* if ((real_percent % 4) == 0) { */
-        meminit(ctx->progress_bar, '#', real_percent >> 2);
+      meminit(ctx->progress_bar, '#', real_percent >> 2);
 
-        real_check = size_check(position);
+      real_check = size_check(position);
 
-        printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%  ",
-          OPERATION_NAME[operation_variant(ctx->operation)],
-          ctx->progress_bar,
-          sizetodoubleprint(real_check, (double)position),
-          CHAR_SIZE_DATA[real_check],
-          fsize_double,
-          CHAR_SIZE_DATA[fsize_check],
-          real_percent);
+      printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%  ",
+        OPERATION_NAME[operation_variant(ctx->operation)],
+        ctx->progress_bar,
+        sizetodoubleprint(real_check, (double)position),
+        CHAR_SIZE_DATA[real_check],
+        fsize_double,
+        CHAR_SIZE_DATA[fsize_check],
+        real_percent);
 
-        fflush(stdout);
-      /* } */
+      fflush(stdout);
       past_percent = real_percent;
     }
 
@@ -792,8 +791,8 @@ static void random_vector_init(uint8_t * data, size_t size) {
   size_t arc4_size   = sizeof(ARC4_CTX);
   size_t vector_size = size;
 	
-  uint8_t * vector_memory = NULL;
-  ARC4_CTX * arc4_memory  = NULL;
+  uint8_t  * vector_memory = NULL;
+  ARC4_CTX * arc4_memory   = NULL;
 
   vector_memory = (uint8_t *)malloc(vector_size);
   arc4_memory   = (ARC4_CTX *)malloc(arc4_size);
@@ -856,7 +855,6 @@ void vector_init(uint8_t * data, size_t size) {
 }
 
 static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
-
   void * cipher_ptr = (void *)calloc(cipher_len, 1);
 
   if (!cipher_ptr) {
@@ -1023,8 +1021,8 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
 
 int main(int argc, char * argv[]) {
 /*****************************************************************************/
-  unsigned int trash;         /* not initialized == all control */
   extern int AES_Rounds;      /* in rijndael.c source code file */
+  unsigned int trash;         /* not initialized == all control */
   int i, real_read, result;
   size_t ctx_length, cipher_ctx_len = 0;
 
@@ -1124,7 +1122,6 @@ int main(int argc, char * argv[]) {
     ctx->cipher_number = TWOFISH;
   else {
     free_global_memory(ctx, ctx_length);
-
     fprintf(stderr, "[!] Name cipher \"%s\" incorrect.\n", argv[1]);
     return 1;
   }
@@ -1138,7 +1135,6 @@ int main(int argc, char * argv[]) {
   }
   else {
     free_global_memory(ctx, ctx_length);
-
     fprintf(stderr, "[!] Operation \"%s\" incorrect.\n", argv[2]);
     return 1;
   }
@@ -1169,7 +1165,6 @@ int main(int argc, char * argv[]) {
     }
     else {
       free_global_memory(ctx, ctx_length);
-
       fprintf(stderr, "[!] Key length \"%s\" incorrect.\n", argv[3]);
       return 1;
     }
@@ -1193,7 +1188,6 @@ int main(int argc, char * argv[]) {
     }
     else {
       free_global_memory(ctx, ctx_length);
-
       fprintf(stderr, "[!] Key length \"%s\" incorrect.\n", argv[3]);
       return 1;
     }
@@ -1207,21 +1201,18 @@ int main(int argc, char * argv[]) {
 
   if (strcmp(ctx->finput, ctx->foutput) == 0) {
     free_global_memory(ctx, ctx_length);
-
     fprintf(stderr, "[!] Names input and output files equal.\n");
     return 1;
   }
   else
   if (strcmp(ctx->foutput, ctx->password) == 0) {
     free_global_memory(ctx, ctx_length);
-
     fprintf(stderr, "[!] Names keyfile and output files equal.\n");
     return 1;
   }
   else
   if (strcmp(ctx->finput, ctx->password) == 0) {
     free_global_memory(ctx, ctx_length);
-
     fprintf(stderr, "[!] Names keyfile and input files equal.\n");
     return 1;
   }
@@ -1250,7 +1241,6 @@ int main(int argc, char * argv[]) {
 
   if (!ctx->real_key) {
     free_global_memory(ctx, ctx_length);
-
     MEMORY_ERROR;
     return 1;
   }
@@ -1260,7 +1250,6 @@ int main(int argc, char * argv[]) {
 
   if (!ctx->new_key) {
     free_global_memory(ctx, ctx_length);
-
     MEMORY_ERROR;
     return 1;
   }
@@ -1291,18 +1280,20 @@ int main(int argc, char * argv[]) {
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       /* password --> crypt key; Pseudo PBKDF2 */
-      KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
-                ctx->real_key,
-                ctx->real_key_length);
+      if (!KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
+                           ctx->real_key, ctx->real_key_length)) {
+                           
+        free_global_memory(ctx, ctx_length);
+        MEMORY_ERROR;
+        return 1;
+      }
 
       meminit(ctx->password, 0x00, ctx->password_length);
       ctx->password_length = 0;
-
       printf("[#] Crypt key read from command line.\n");
     }
     else {
       free_global_memory(ctx, ctx_length);
-
       fprintf(stderr, "[!] Data in string key %d byte; necessary 8..256 byte.\n", real_read);
       return 1;
     }
@@ -1346,7 +1337,6 @@ int main(int argc, char * argv[]) {
 
   if (!ctx->vector) {
     free_global_memory(ctx, ctx_length);
-
     MEMORY_ERROR;
     return 1;
   }
@@ -1357,7 +1347,7 @@ int main(int argc, char * argv[]) {
 #endif
     /* random data from stack xor initialized vector */
     (*(uint32_t *)ctx->vector) ^= trash + (uint32_t)genrand(0x00000000, 0xFFFFFFFF);
-
+    
     vector_init(ctx->vector, ctx->vector_length);
   }
 
@@ -1365,7 +1355,6 @@ int main(int argc, char * argv[]) {
 
   if (!cipher_pointer) {
     free_global_memory(ctx, ctx_length);
-
     MEMORY_ERROR;
     return 1;
   }
