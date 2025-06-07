@@ -6,7 +6,7 @@
 
 [ENGLISH LANGUAGE]
 
-PlexusTCL Crypter is software intended for cryptographic information protection by encrypting files up to 8 EiB inclusive. The file can be encrypted using one of the five-selected encryption algorithms. Algorithms are used: Rijndael-128, Serpent, Blowfish, Twofish, Threefish. All implementations of cryptographic algorithms are tested using test vectors published by their developers.
+PlexusTCL Crypter is software intended for cryptographic information protection by encrypting files up to 4 EiB inclusive. The file can be encrypted using one of the five-selected encryption algorithms. Algorithms are used: Rijndael-128, Serpent, Blowfish, Twofish, Threefish. All implementations of cryptographic algorithms are tested using test vectors published by their developers.
 
 All ciphers implemented in the program work in CFB mode, as the author of the program is lazy to implement the addition of the last incomplete unit when using the CBC mode.
 
@@ -18,7 +18,7 @@ Good luck and straight road, Anonymous!
 
 [РУССКИЙ ЯЗЫК]
 
-PlexusTCL Crypter - это программное обеспечение, предназначенное для криптографической защиты информации путем шифрования файлов размером до 8 Эксбибайт включительно. Файл можно зашифровать с помощью одного из пяти выбираемых пользователем алгоритмов шифрования. Используются алгоритмы: Rijndael-128, Serpent, Blowfish, Twofish, Threefish. Все реализации криптографических алгоритмов проверены с использованием тестовых векторов, опубликованных их разработчиками.
+PlexusTCL Crypter - это программное обеспечение, предназначенное для криптографической защиты информации путем шифрования файлов размером до 4 Эксбибайт включительно. Файл можно зашифровать с помощью одного из пяти выбираемых пользователем алгоритмов шифрования. Используются алгоритмы: Rijndael-128, Serpent, Blowfish, Twofish, Threefish. Все реализации криптографических алгоритмов проверены с использованием тестовых векторов, опубликованных их разработчиками.
 
 Все шифры, реализованные в программе, работают в режиме CFB, так как автору программы лень реализовывать дополнение последнего неполного блока при использовании режима CBC.
 
