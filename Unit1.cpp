@@ -204,7 +204,7 @@ static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
 
 static const char * CHAR_SIZE_DATA[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Бт" , "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЭиБ"
+  "Р‘С‚" , "РљРёР‘", "РњРёР‘", "Р“РёР‘", "РўРёР‘", "РџРёР‘", "Р­РёР‘"
 #else
   "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
 #endif
@@ -212,7 +212,7 @@ static const char * CHAR_SIZE_DATA[] = {
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Шифрование", "Расшифровка",
+  "РЁРёС„СЂРѕРІР°РЅРёРµ", "Р Р°СЃС€РёС„СЂРѕРІРєР°",
 #else
   "Encrypting", "Decrypting",
 #endif
@@ -264,6 +264,7 @@ void ShowBuffer(void * buffer, size_t buffer_size) {
 
   if (!debug_buffer) return;
 
+  memset(debug_buffer, 0x00, debug_buffer_size);
   strtohex(debug_buffer, debug_buffer_size, (char *)buffer, buffer_size);
   ShowMessage(debug_buffer);
 
@@ -559,9 +560,9 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
       Form1->Label9->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Генерация "
-        + IntToStr(key_len * 8)  + "-битного ключа из "
-        + IntToStr(password_len) + "-символьного пароля: "
+        "Р“РµРЅРµСЂР°С†РёСЏ "
+        + IntToStr(key_len * 8)  + "-Р±РёС‚РЅРѕРіРѕ РєР»СЋС‡Р° РёР· "
+        + IntToStr(password_len) + "-СЃРёРјРІРѕР»СЊРЅРѕРіРѕ РїР°СЂРѕР»СЏ: "
         + IntToStr(real) + " %";
 #else
         "Generating "
@@ -1276,7 +1277,7 @@ bool vector_init(uint8_t * data, size_t size) {
 }
 
 char * CharA_Or_CharOV(size_t length) {
-  return (24 == length || 128 == length) ? "а" : "ов";
+  return (24 == length || 128 == length) ? "Р°" : "РѕРІ";
 }
 
 int GeneratingCryptKey(const char * message) {
@@ -1453,8 +1454,8 @@ void ShowOperationStatus(const int status) {
 }
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
-/* не смог придумать ничего умнее, чем формировать строку простой конкатенацией
-   из языка C++, потому что в языке C формировать такую чушь сложно */
+/* РЅРµ СЃРјРѕРі РїСЂРёРґСѓРјР°С‚СЊ РЅРёС‡РµРіРѕ СѓРјРЅРµРµ, С‡РµРј С„РѕСЂРјРёСЂРѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РїСЂРѕСЃС‚РѕР№ РєРѕРЅРєР°С‚РµРЅР°С†РёРµР№
+   РёР· СЏР·С‹РєР° C++, РїРѕС‚РѕРјСѓ С‡С‚Рѕ РІ СЏР·С‹РєРµ C С„РѕСЂРјРёСЂРѕРІР°С‚СЊ С‚Р°РєСѓСЋ С‡СѓС€СЊ СЃР»РѕР¶РЅРѕ */
 
   extern int AES_Rounds; /* in rijndael.c source code file */
 
@@ -1465,7 +1466,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
     if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
-      /* во время простоя в вызове MessageForUser значение может измениться */
+      /* РІРѕ РІСЂРµРјСЏ РїСЂРѕСЃС‚РѕСЏ РІ РІС‹Р·РѕРІРµ MessageForUser Р·РЅР°С‡РµРЅРёРµ РјРѕР¶РµС‚ РёР·РјРµРЅРёС‚СЊСЃСЏ */
       PROCESSING = false;
 
       FormActivate(true);
@@ -1623,7 +1624,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (real_read == (int)(memory->real_key_length)) {
       UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n";
+      "РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ " + IntToStr(memory->real_key_length * 8) + "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· С„Р°Р№Р»Р°?\n";
 #else
       "Use " + IntToStr(memory->real_key_length * 8) + "-bit encryption key from file?\n";
 #endif
@@ -1645,9 +1646,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "Недостаточно данных в ключевом файле!\n\n"
-      "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-      "Необходимо:\t" + IntToStr(memory->real_key_length) + " Бт";
+      "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РґР°РЅРЅС‹С… РІ РєР»СЋС‡РµРІРѕРј С„Р°Р№Р»Рµ!\n\n"
+      "Р‘С‹Р»Рѕ СЃС‡РёС‚Р°РЅРѕ:\t" + IntToStr(real_read) + " Р‘С‚\n"
+      "РќРµРѕР±С…РѕРґРёРјРѕ:\t" + IntToStr(memory->real_key_length) + " Р‘С‚";
 #else
       "Not enough data in the key file!\n\n"
       "Read:\t" + IntToStr(real_read) + " Bt\n"
@@ -1665,8 +1666,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if ((real_read > 7) && (real_read < 257)) {
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Сгенерировать " + IntToStr(memory->real_key_length * 8) +
-        "-битный ключ шифрования из пароля?\n";
+        "РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ " + IntToStr(memory->real_key_length * 8) +
+        "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· РїР°СЂРѕР»СЏ?\n";
 #else
         "Generate " + IntToStr(memory->real_key_length * 8) +
         "-bit encryption key from password?\n";
@@ -1699,9 +1700,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Длина строкового ключа некорректна!\n\n"
-        "Было считано:\t" + IntToStr(real_read) + " Бт\n"
-        "Необходимо:\tот 8 до 256 Бт";
+        "Р”Р»РёРЅР° СЃС‚СЂРѕРєРѕРІРѕРіРѕ РєР»СЋС‡Р° РЅРµРєРѕСЂСЂРµРєС‚РЅР°!\n\n"
+        "Р‘С‹Р»Рѕ СЃС‡РёС‚Р°РЅРѕ:\t" + IntToStr(real_read) + " Р‘С‚\n"
+        "РќРµРѕР±С…РѕРґРёРјРѕ:\tРѕС‚ 8 РґРѕ 256 Р‘С‚";
 #else
         "The string key length is incorrect!\n\n"
         "Read:\t" + IntToStr(real_read) + " Bt\n"
@@ -1772,10 +1773,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Приступить к выбранной вами операции?\n\n"
-    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
-    "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() + " бит" +
+    "РџСЂРёСЃС‚СѓРїРёС‚СЊ Рє РІС‹Р±СЂР°РЅРЅРѕР№ РІР°РјРё РѕРїРµСЂР°С†РёРё?\n\n"
+    "РћРїРµСЂР°С†РёСЏ:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "РђР»РіРѕСЂРёС‚Рј:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
+    "Р”Р»РёРЅР° РєР»СЋС‡Р°:\t" + IntToStr(memory->real_key_length * 8).c_str() + " Р±РёС‚" +
                        CharA_Or_CharOV(memory->real_key_length);
 #else
     "Proceed with the operation you selected?\n\n"
@@ -1835,10 +1836,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
           UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-            "Ошибка удаления файла!\n\n"
-            "Файл: " + Form1->Edit1->Text + "\n\n"
-            "был перезаписан но не был удален с диска!\n\n"
-            "Код ошибки: " + IntToStr(error_delete);
+            "РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ С„Р°Р№Р»Р°!\n\n"
+            "Р¤Р°Р№Р»: " + Form1->Edit1->Text + "\n\n"
+            "Р±С‹Р» РїРµСЂРµР·Р°РїРёСЃР°РЅ РЅРѕ РЅРµ Р±С‹Р» СѓРґР°Р»РµРЅ СЃ РґРёСЃРєР°!\n\n"
+            "РљРѕРґ РѕС€РёР±РєРё: " + IntToStr(error_delete);
 #else
             "Error delete file!\n\n"
             "Filename: " + Form1->Edit1->Text + "\n\n"
@@ -1981,7 +1982,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Криптопровайдер Microsoft Windows недоступен!");
+    "РљСЂРёРїС‚РѕРїСЂРѕРІР°Р№РґРµСЂ Microsoft Windows РЅРµРґРѕСЃС‚СѓРїРµРЅ!");
 #else
     "Microsoft Windows cryptographic provider is unavailable!");
 #endif
