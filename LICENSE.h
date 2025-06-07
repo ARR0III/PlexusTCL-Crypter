@@ -6,15 +6,13 @@
 char * PTCL_LICENSE_INFORMATION =
 #ifdef PTCL_RUSSIAN_LANGUAGE
   "Настоящее программное обеспечение создано для\n"
-  "криптографической защиты информации путем шифрования\n"
-  "файлов, и распространяется свободно и бесплатно под\n"
-  "лицензией GNU GPL версии 3 от 29 июня 2007 года,\n"
-  "без каких-либо гарантий.";
+  "шифрования файлов размером до 4 ЭиБ, и распространяется\n"
+  "свободно и бесплатно под лицензией GNU GPL версии 3\n"
+  "от 29 июня 2007 года, без каких-либо гарантий.";
 #else
-  "This software is written for cryptographic protection of information\n"
-  "by encrypting files, and is distributed freely and without charge\n"
-  "under the GNU GPL version 3 license June 29, 2007, without any\n"
-  "warranty.";
+  "This software is designed to encrypt files up to 4 EiB in size and is\n"
+  "distributed freely and without charge under the GNU GPL version 3\n"
+  "license of June 29, 2007, without any warranties.";
 #endif
 
 char * PTCL_AUTHORS_INFORMATION =

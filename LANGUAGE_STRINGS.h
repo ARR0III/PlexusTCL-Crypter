@@ -1,5 +1,5 @@
 #ifdef PTCL_RUSSIAN_LANGUAGE
-const char * STR_PROGRAMM_NAME          = "PlexusTCL Crypter 5.14 31MAY25 [RU]";
+const char * STR_PROGRAMM_NAME          = "PlexusTCL Crypter 5.14 07JUN25 [RU]";
 
 const char * STR_ERASED_FILE_OK         = "Файл назначения был уничтожен!";
 const char * STR_ENTER_8_TO_256         = "Введите число от 8 до 256!";
@@ -71,7 +71,7 @@ const char * STR_CONTROL_SUM_FILE_ERROR =
   "Контрольная сумма файла НЕ совпадает с ожидаемой!\n"
   "Возможно файл поврежден или был использован неправильный ключ!";
 #else
-const char * STR_PROGRAMM_NAME = "PlexusTCL Crypter 5.14 31MAY25 [RU]";
+const char * STR_PROGRAMM_NAME = "PlexusTCL Crypter 5.14 07JUN25 [EN]";
 
 const char * STR_ERASED_FILE_OK = "The destination file was destroyed!";
 const char * STR_ENTER_8_TO_256 = "Enter a number between 8 and 256!";

@@ -1,4 +1,4 @@
-# EN
+﻿# EN
 # This configuration file is intended for the PlexusTCL Crypter program
 # version 5.12 and higher.
 #
@@ -31,7 +31,7 @@ TOP_TEXT_COLOR   = 00FFFFFF
 
 # BEHAVIOR
 CIPHER           = AES
-KEY_SIZE         = 128
+KEY_SIZE         = 256
 OPERATION        = ENCRYPT
 PASS_GEN_SIZE    = 32
 ERASED           = FALSE

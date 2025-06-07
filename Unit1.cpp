@@ -27,7 +27,7 @@
 
 /****************************************************************************/
 /* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
-#define PTCL_RUSSIAN_LANGUAGE                                           
+/* #define PTCL_RUSSIAN_LANGUAGE                                            */
 #include "LANGUAGE_STRINGS.h"
 /****************************************************************************/
 
@@ -257,6 +257,18 @@ static SERPENT_CTX   * serpent_ctx   = NULL;
 static TWOFISH_CTX   * twofish_ctx   = NULL;
 static BLOWFISH_CTX  * blowfish_ctx  = NULL;
 static THREEFISH_CTX * threefish_ctx = NULL;
+
+void ShowBuffer(void * buffer, size_t buffer_size) {
+  size_t debug_buffer_size = buffer_size * 2 + 1;
+  char * debug_buffer = (char *)malloc(debug_buffer_size);
+
+  if (!debug_buffer) return;
+
+  strtohex(debug_buffer, debug_buffer_size, (char *)buffer, buffer_size);
+  ShowMessage(debug_buffer);
+
+  free(debug_buffer);
+}
 
 uint32_t MessageForUser(const int tumbler,
                         const char * head,
@@ -512,7 +524,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   ctx->hash_matrix = (uint8_t *)malloc(ctx->hash_matrix_length);
 
-  if (!ctx->hash_matrix) {
+  if (!(ctx->hash_matrix)) {
     return false;
   }
 
@@ -873,13 +885,13 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
   }
 
   /* simbol 'U', decimal  85, bits 01010101 */
-  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
-    *(((uint32_t *)hmac_ctx->KEY_0) + i) ^= 0x55555555;
+  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+    hmac_ctx->KEY_0[i] ^= 0x55;
   }
 
   /* simbol 'f', decimal 102, bits 10101010 */
-  for (i = 0; i < SHA256_BLOCK_SIZE / 4; i++) {
-    *(((uint32_t *)hmac_ctx->KEY_1) + i) ^= 0x66666666;
+  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+    hmac_ctx->KEY_1[i] ^= 0x66;
   }
 
   /* clear sha256sum struct */
@@ -1022,7 +1034,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   short past_percent = 0;
 
   FILE * fi, *fo;
-
+  
   char status_buffer[STATUS_BUFFER_SIZE] = {0};
 
   fsize        = SizeOfFile(Form1->Edit1->Text.c_str());
@@ -1943,7 +1955,27 @@ void __fastcall TForm1::Button3Click(TObject *Sender) {
   }
 }
 
+void AddListKeys(const cipher_t cipher) {
+  int i;
+
+  Form1->ComboBox2->Items->Clear();
+
+  if (cipher == THREEFISH) {
+	for (i = 0; i < 3; i++) {
+	  Form1->ComboBox2->Items->Add(CHAR_KEY_LENGTH_THREEFISH[i]);
+	}
+	Form1->ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_THREEFISH[0]);
+  }
+  else {
+	for (i = 0; i < 3; i++) {
+	  Form1->ComboBox2->Items->Add(CHAR_KEY_LENGTH_AES[i]);
+	}
+	Form1->ComboBox2->Text = AnsiString(CHAR_KEY_LENGTH_AES[0]);
+  }
+}
+
 void __fastcall TForm1::FormCreate(TObject *Sender) {
+  int i;
   SETTINGS settings;
 
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
@@ -2020,6 +2052,9 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   else { /* other ciphers */
     Label4->Visible = True;
     Form1->ComboBox2->Visible = True;
+
+    AddListKeys(settings.cipher);
+
     Form1->ComboBox2->Text = IntToStr(settings.key_size);
   }
 
