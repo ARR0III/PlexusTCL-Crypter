@@ -107,6 +107,7 @@ uint32_t HexToInt32(const char * hex) {
   return (count == 8 && base < 0) ? result : 0;
 }
 
+
 void memxor(void * output, const void * input, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
 __asm {
@@ -386,6 +387,59 @@ _exit:
 /* "meminit32" optimization and always executable standart function memset */
 void meminit(void * data, const size_t number, size_t length) { /* DEBUG = OK */
 #if __ASM_32_X86_CPP_BUILDER__
+
+/****** OLD * CODE ******
+__asm {
+  mov ecx, length
+  mov ebx, number
+  mov edi, data
+
+  cmp ebx, 0xFF
+  ja _memset
+
+  mov bh, bl
+  mov edx, ebx
+  shl edx, 16
+  or ebx, edx
+
+_memset:
+  mov edx, ecx
+  and edx, 0x03
+  
+  shr ecx, 2
+  jz _lp_byte
+
+_lp_block:
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  mov dword[edi], ebx
+  add edi, 4
+  dec ecx
+  jz _lp_byte
+  jmp _lp_block
+
+_lp_byte:
+  test edx, edx
+  jz _exit
+  mov byte[edi], bl
+  inc edi
+  dec edx
+  jmp _lp_byte
+
+_exit:
+}
+****** OLD * CODE ******/
+
 __asm {
   mov ecx, length
   mov edx, number
@@ -475,9 +529,10 @@ _exit:
   }
 
   if (length < sizeof(size_t)) {
-    while (length--) {
+    while (length) {
       *temp = (uint8_t)u_dword;
       temp++;
+      length--;
     }
     return;
   }
@@ -514,7 +569,7 @@ _exit:
     length -= sizeof(size_t);
   }
 
-  if ((temp > (uint8_t *)data) && length) {
+  if ((temp > (uint8_t *)data) && length) { /* min 1 block be copy */
     temp -= (sizeof(size_t) - length);
     *((size_t *)temp) = u_dword;
   }
@@ -562,6 +617,10 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream) {
     return;
   }
 
+  if (stream != stdin && stream != stdout && stream != stderr) {
+    stream = stdout;
+  }
+
   for (j = 0; j < length; j++) {
     for(k = 7; k >= 0; --k) {
       putc(('0' + (((uint8_t)data[j] >> k) & 0x01)), stream);
@@ -605,7 +664,8 @@ void strdec(uint8_t * data, size_t len) {
   }
 }
 
-int genrand(const unsigned int min, const unsigned int max) {
+unsigned int genrand(const unsigned int min, const unsigned int max) {
+  /*return (max - min) * ((double)rand() / (double)RAND_MAX) + min;*/
   return min + (rand() % (max - min));
 }
 
@@ -630,20 +690,50 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   return result;
 }
 
+void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, size_t data_len) {
+  size_t i, j;
+  const char digits[] = "0123456789ABCDEF";
+
+  i = j = 0;
+
+  while(1) {
+	if (i >= data_len || j >= buffer_len)
+      break;
+	
+    buffer[j+0] = digits[(int)data[i] >> 0x04];
+    buffer[j+1] = digits[(int)data[i]  & 0x0F];
+	
+	i++;
+	j += 2;
+  }
+}
+
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream) {
   size_t i;
+  int left, right;
   const char digits[] = "0123456789ABCDEF";
 
   if (!data || 0 == length) {
     return;
   }
 
+  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
+    tumbler = HEX_TABLE;
+  }
+
+  if (stream != stdin && stream != stdout && stream != stderr) {
+    stream = stdout;
+  }
+
   for (i = 0; i < length; ++i) {
-    putc(digits[(int)data[i] >> 0x04],  stream);
-    putc(digits[(int)data[i]  & 0x0F], stream);
+    left  = (int)data[i] >> 0x04; /* 11000011 >> 0x04 = 00001100 */
+    right = (int)data[i]  & 0x0F; /* 11000011  & 0x0F = 00000011 */
+
+    putc(digits[left],  stream);
+    putc(digits[right], stream);
 
     if (HEX_TABLE == tumbler) {
-     putc(((i+1) & 0x000F) ? ' ' : '\n', stream);
+      putc(((i + 1) % 16) ? ' ' : '\n', stream);
     }
   }
 
@@ -656,6 +746,10 @@ size_t printhex(int tumbler, const void * data, size_t length) {
 
   if (!data || 0 == length) {
     return i;
+  }
+
+  if (tumbler != HEX_STRING && tumbler != HEX_TABLE) {
+    tumbler = HEX_STRING;
   }
 
   if (HEX_TABLE == tumbler) {

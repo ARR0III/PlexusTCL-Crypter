@@ -41,7 +41,7 @@
 #define HEX_STRING 0
 
 #ifndef __ASM_32_X86_CPP_BUILDER__
-#define __ASM_32_X86_CPP_BUILDER__ ON
+#define __ASM_32_X86_CPP_BUILDER__ OFF
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,9 +61,10 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream);
 void strinc(uint8_t * data, size_t len);
 void strdec(uint8_t * data, size_t len);
 
+void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, size_t data_len);
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 
-int  genrand(const unsigned int min, const unsigned int max);
+unsigned int  genrand(const unsigned int min, const unsigned int max);
 int  readfromfile(const char * filename, void * buffer, const size_t length);
 
 size_t x_strnlen(const char * s, size_t b);
