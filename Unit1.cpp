@@ -258,7 +258,7 @@ static TWOFISH_CTX   * twofish_ctx   = NULL;
 static BLOWFISH_CTX  * blowfish_ctx  = NULL;
 static THREEFISH_CTX * threefish_ctx = NULL;
 
-void ShowBuffer(void * buffer, size_t buffer_size) {
+void ShowBuffer(void * buffer, const size_t buffer_size) {
   size_t debug_buffer_size = buffer_size * 2 + 1;
   char * debug_buffer = (char *)malloc(debug_buffer_size);
 
@@ -539,7 +539,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
   count |= ((uint32_t)1 << 19); /* set 20 bit */
   count *= CLOMUL_CONST;
 
-  div = (size_t)((long double)(count) * 0.1L); /* 1/10 */
+  div = (size_t)((double)count * 0.1L); /* 1/10 */
 
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
@@ -549,7 +549,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
     if (!(i & div)) continue; /* if i != 1/10 */
 
-    real = (size_t)((long double)i / ((long double)div * 0.1L) + 0.1);
+    real = (size_t)((double)i / ((double)div * 0.1L) + 0.1);
 
     if (real > 100) {
       real = 100;
