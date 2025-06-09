@@ -601,7 +601,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
       return WRITE_FILE_NOT_OPEN;
   }
   
-  div          = (long double)fsize * 0.01L;
+  div          = (double)fsize * 0.01L;
   //div          = (double)((double)fsize / 100.0);
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
