@@ -690,21 +690,21 @@ int readfromfile(const char * filename, void * buffer, const size_t length) {
   return result;
 }
 
-void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, size_t data_len) {
+void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, const size_t data_len) {
   size_t i, j;
   const char digits[] = "0123456789ABCDEF";
 
   i = j = 0;
 
   while(1) {
-	if (i >= data_len || j >= buffer_len)
+    if (i >= data_len || j >= buffer_len)
       break;
 	
     buffer[j+0] = digits[(int)data[i] >> 0x04];
     buffer[j+1] = digits[(int)data[i]  & 0x0F];
 	
-	i++;
-	j += 2;
+    i++;
+    j += 2;
   }
 }
 
