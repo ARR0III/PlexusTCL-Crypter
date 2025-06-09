@@ -61,7 +61,7 @@ void arraytobits(const uint8_t * data, const size_t length, FILE * stream);
 void strinc(uint8_t * data, size_t len);
 void strdec(uint8_t * data, size_t len);
 
-void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, size_t data_len);
+void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, const size_t data_len);
 void phex(int tumbler, const uint8_t * data, size_t length, FILE * stream);
 
 unsigned int  genrand(const unsigned int min, const unsigned int max);
