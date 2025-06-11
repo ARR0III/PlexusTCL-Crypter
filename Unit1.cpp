@@ -60,7 +60,7 @@
 #define SIZE_DECRYPT_FILE_INCORRECT  9
 #define OPERATION_BREAK             10
 
-#define STATUS_BUFFER_SIZE         128
+#define STATUS_BUFFER_SIZE         256
 
 #define SIZE_PASSWORD_GENERATE     512
 #define BLOCK_SIZE_FOR_ERASED      512
@@ -202,9 +202,9 @@ static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
   "TWOFISH"
 };
 
-static const char * CHAR_SIZE_DATA[] = {
+static const char *CHAR_SIZE_DATA[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Р‘С‚" , "РљРёР‘", "РњРёР‘", "Р“РёР‘", "РўРёР‘", "РџРёР‘", "Р­РёР‘"
+  "бт", "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЭиБ"
 #else
   "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
 #endif
@@ -212,7 +212,7 @@ static const char * CHAR_SIZE_DATA[] = {
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "РЁРёС„СЂРѕРІР°РЅРёРµ", "Р Р°СЃС€РёС„СЂРѕРІРєР°",
+  "Шифрование", "Расшифровка",
 #else
   "Encrypting", "Decrypting",
 #endif
@@ -266,6 +266,8 @@ void ShowBuffer(void * buffer, const size_t buffer_size) {
 
   memset(debug_buffer, 0x00, debug_buffer_size);
   strtohex(debug_buffer, debug_buffer_size, (char *)buffer, buffer_size);
+  debug_buffer[debug_buffer_size-1] = (char)0;
+  
   ShowMessage(debug_buffer);
 
   free(debug_buffer);
@@ -516,7 +518,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
                       const uint8_t * password, const size_t password_len,
                             uint8_t * key,      const size_t key_len) {
 
-  short    real, past = 0;
+  int      real, past = 0;
   uint32_t count;
   size_t   i, j, k, div;
 
@@ -560,9 +562,9 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
       Form1->Label9->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Р“РµРЅРµСЂР°С†РёСЏ "
-        + IntToStr(key_len * 8)  + "-Р±РёС‚РЅРѕРіРѕ РєР»СЋС‡Р° РёР· "
-        + IntToStr(password_len) + "-СЃРёРјРІРѕР»СЊРЅРѕРіРѕ РїР°СЂРѕР»СЏ: "
+        "Генерация "
+        + IntToStr(key_len * 8)  + "-битного ключа из "
+        + IntToStr(password_len) + "-символьного пароля: "
         + IntToStr(real) + " %";
 #else
         "Generating "
@@ -725,12 +727,12 @@ int erased_head_of_file(const char * filename) {
 static int erasedfile(const char * filename) {
   FILE * f;
   fsize_t size_for_erased, fsize, position = 0;
-  
+
+  int     real_percent, past_percent = 0;
   int     check, fsize_check;
   size_t  realread;
   
   double  fsize_double, div;
-  short   real_percent, past_percent = 0;
 
   int status_buffer_pos;
   char status_buffer[STATUS_BUFFER_SIZE] = {0};
@@ -755,7 +757,7 @@ static int erasedfile(const char * filename) {
     return -1;
   }
 
-  div = (double)fsize * 0.01L;
+  div = (double)fsize * 0.01;
 
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
@@ -786,7 +788,7 @@ static int erasedfile(const char * filename) {
 
     realread = fread(data, 1, size_for_erased, f);
     meminit(data, 0x00, realread);
-    
+
     fseek(f, position, SEEK_SET);
     
 /*****************************************************************************/
@@ -814,10 +816,15 @@ static int erasedfile(const char * filename) {
 
     position += (fsize_t)realread;
 
-    real_percent = (short)((double)position / div + 0.1);
+    real_percent = (int)((double)position / div + 0.1);
 
     if (real_percent > 100) {
       real_percent = 100;
+    }
+
+    if (position >= 0x80000000) {  /* Else overflow! Sorry bro... */
+      real_percent = 100;
+      position = fsize;
     }
 
     if (real_percent > past_percent) {
@@ -826,7 +833,7 @@ static int erasedfile(const char * filename) {
       snprintf(status_buffer + status_buffer_pos,
                STATUS_BUFFER_SIZE - status_buffer_pos,
                STR_PROGRESS_BAR_MKS,
-               check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
+               check ? (double)position / (double)INT_SIZE_DATA[check-1] : (double)position,
                CHAR_SIZE_DATA[check],
                fsize_double,
                CHAR_SIZE_DATA[fsize_check],
@@ -842,12 +849,8 @@ static int erasedfile(const char * filename) {
 
   free(data);
 
-  check = chsize(fileno(f), 0);
+  chsize(fileno(f), 0);
   fclose(f);
-
-  if (check != 0) {
-    return -1;
-  }
 
   return erased_head_of_file(filename);
 }
@@ -1031,8 +1034,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
   size_t realread;
   size_t re_keying = 0;
 
-  short real_percent;
-  short past_percent = 0;
+  int real_percent, past_percent = 0;
 
   FILE * fi, *fo;
   
@@ -1063,7 +1065,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       return WRITE_FILE_NOT_OPEN;
   }
 
-  div = (double)fsize / 100.0;
+  div = (double)fsize * 0.01L;
   
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
@@ -1173,7 +1175,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
       snprintf(status_buffer + status_buffer_pos,
                STATUS_BUFFER_SIZE - status_buffer_pos,
                STR_PROGRESS_BAR_MKS,
-               check ? (double)position / (double)INT_SIZE_DATA[check-1] : position,
+               check ? (double)position / (double)INT_SIZE_DATA[check-1] : (double)position,
                CHAR_SIZE_DATA[check],
                fsize_double,
                CHAR_SIZE_DATA[fsize_check],
@@ -1277,7 +1279,7 @@ bool vector_init(uint8_t * data, size_t size) {
 }
 
 char * CharA_Or_CharOV(size_t length) {
-  return (24 == length || 128 == length) ? "Р°" : "РѕРІ";
+  return (24 == length || 128 == length) ? " бита" : " бит";
 }
 
 int GeneratingCryptKey(const char * message) {
@@ -1454,9 +1456,6 @@ void ShowOperationStatus(const int status) {
 }
 
 void __fastcall TForm1::Button4Click(TObject *Sender) {
-/* РЅРµ СЃРјРѕРі РїСЂРёРґСѓРјР°С‚СЊ РЅРёС‡РµРіРѕ СѓРјРЅРµРµ, С‡РµРј С„РѕСЂРјРёСЂРѕРІР°С‚СЊ СЃС‚СЂРѕРєСѓ РїСЂРѕСЃС‚РѕР№ РєРѕРЅРєР°С‚РµРЅР°С†РёРµР№
-   РёР· СЏР·С‹РєР° C++, РїРѕС‚РѕРјСѓ С‡С‚Рѕ РІ СЏР·С‹РєРµ C С„РѕСЂРјРёСЂРѕРІР°С‚СЊ С‚Р°РєСѓСЋ С‡СѓС€СЊ СЃР»РѕР¶РЅРѕ */
-
   extern int AES_Rounds; /* in rijndael.c source code file */
 
   String UnicodeMsg = STR_STOP_PROCESS;
@@ -1466,7 +1465,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
     if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
-      /* РІРѕ РІСЂРµРјСЏ РїСЂРѕСЃС‚РѕСЏ РІ РІС‹Р·РѕРІРµ MessageForUser Р·РЅР°С‡РµРЅРёРµ РјРѕР¶РµС‚ РёР·РјРµРЅРёС‚СЊСЃСЏ */
       PROCESSING = false;
 
       FormActivate(true);
@@ -1624,7 +1622,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (real_read == (int)(memory->real_key_length)) {
       UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ " + IntToStr(memory->real_key_length * 8) + "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· С„Р°Р№Р»Р°?\n";
+      "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n";
 #else
       "Use " + IntToStr(memory->real_key_length * 8) + "-bit encryption key from file?\n";
 #endif
@@ -1646,13 +1644,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РґР°РЅРЅС‹С… РІ РєР»СЋС‡РµРІРѕРј С„Р°Р№Р»Рµ!\n\n"
-      "Р‘С‹Р»Рѕ СЃС‡РёС‚Р°РЅРѕ:\t" + IntToStr(real_read) + " Р‘С‚\n"
-      "РќРµРѕР±С…РѕРґРёРјРѕ:\t" + IntToStr(memory->real_key_length) + " Р‘С‚";
+      "Недостаточно данных в ключевом файле!\n\n"
+      "Прочитано:\t" + IntToStr(real_read) + " байт\n"
+      "Требуется:\t" + IntToStr(memory->real_key_length) + " байт";
 #else
       "Not enough data in the key file!\n\n"
-      "Read:\t" + IntToStr(real_read) + " Bt\n"
-      "Required:\t" + IntToStr(memory->real_key_length) + " Bt";
+      "Read:\t" + IntToStr(real_read) + " bt\n"
+      "Required:\t" + IntToStr(memory->real_key_length) + " bt";
 #endif
 
     Application->MessageBox(UnicodeMsg.c_str(), STR_WARNING_MSG, MB_ICONWARNING + MB_OK);
@@ -1666,8 +1664,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if ((real_read > 7) && (real_read < 257)) {
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ " + IntToStr(memory->real_key_length * 8) +
-        "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· РїР°СЂРѕР»СЏ?\n";
+        "Сгенерировать " + IntToStr(memory->real_key_length * 8) +
+        "-битный ключ шифрования из пароля?\n";
 #else
         "Generate " + IntToStr(memory->real_key_length * 8) +
         "-bit encryption key from password?\n";
@@ -1700,13 +1698,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Р”Р»РёРЅР° СЃС‚СЂРѕРєРѕРІРѕРіРѕ РєР»СЋС‡Р° РЅРµРєРѕСЂСЂРµРєС‚РЅР°!\n\n"
-        "Р‘С‹Р»Рѕ СЃС‡РёС‚Р°РЅРѕ:\t" + IntToStr(real_read) + " Р‘С‚\n"
-        "РќРµРѕР±С…РѕРґРёРјРѕ:\tРѕС‚ 8 РґРѕ 256 Р‘С‚";
+        "Длина символьного ключа некорректна!\n\n"
+        "Прочитано:\t" + IntToStr(real_read) + " байт\n"
+        "Требуется:\tот 8 до 256 байт";
 #else
         "The string key length is incorrect!\n\n"
-        "Read:\t" + IntToStr(real_read) + " Bt\n"
-        "Required:\tfrom 8 to 256 Bt";
+        "Read:\t" + IntToStr(real_read) + " bt\n"
+        "Required:\tfrom 8 to 256 bt";
 #endif
 
       MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG, UnicodeMsg.c_str());
@@ -1773,11 +1771,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "РџСЂРёСЃС‚СѓРїРёС‚СЊ Рє РІС‹Р±СЂР°РЅРЅРѕР№ РІР°РјРё РѕРїРµСЂР°С†РёРё?\n\n"
-    "РћРїРµСЂР°С†РёСЏ:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "РђР»РіРѕСЂРёС‚Рј:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
-    "Р”Р»РёРЅР° РєР»СЋС‡Р°:\t" + IntToStr(memory->real_key_length * 8).c_str() + " Р±РёС‚" +
-                       CharA_Or_CharOV(memory->real_key_length);
+    "Приступить к выполнению выбранной операции?\n\n"
+    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
+    "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() +
+                      CharA_Or_CharOV(memory->real_key_length);
 #else
     "Proceed with the operation you selected?\n\n"
     "Operation:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
@@ -1804,7 +1802,6 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 
   ShowOperationStatus(result);
-
 /*****************************************************************************/
   if (result == OK && CheckBox1->Checked == True) {
     UnicodeMsg = STR_ERASED_FILE_QUES;
@@ -1836,10 +1833,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
           UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-            "РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ С„Р°Р№Р»Р°!\n\n"
-            "Р¤Р°Р№Р»: " + Form1->Edit1->Text + "\n\n"
-            "Р±С‹Р» РїРµСЂРµР·Р°РїРёСЃР°РЅ РЅРѕ РЅРµ Р±С‹Р» СѓРґР°Р»РµРЅ СЃ РґРёСЃРєР°!\n\n"
-            "РљРѕРґ РѕС€РёР±РєРё: " + IntToStr(error_delete);
+            "Ошибка удаления файла!\n\n"
+            "Файл: " + Form1->Edit1->Text + "\n\n"
+            "был перезаписан, но не был удалён с диска!\n\n"
+            "Код ошибки: " + IntToStr(error_delete);
 #else
             "Error delete file!\n\n"
             "Filename: " + Form1->Edit1->Text + "\n\n"
@@ -1982,7 +1979,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "РљСЂРёРїС‚РѕРїСЂРѕРІР°Р№РґРµСЂ Microsoft Windows РЅРµРґРѕСЃС‚СѓРїРµРЅ!");
+    "Криптопровайдер Microsoft Windows недоступен!");
 #else
     "Microsoft Windows cryptographic provider is unavailable!");
 #endif
