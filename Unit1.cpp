@@ -204,7 +204,7 @@ static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
 
 static const char *CHAR_SIZE_DATA[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "бт", "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЭиБ"
+  "РђР ", "Р№РҐР°", "Р»РҐР°", "С†РҐР°", "СЂРҐР°", "РѕРҐР°", "С‰РҐР°"
 #else
   "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
 #endif
@@ -212,7 +212,7 @@ static const char *CHAR_SIZE_DATA[] = {
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Шифрование", "Расшифровка",
+  "СЊРҐРўРџРќР‘Р®РњРҐР•", "РїР®РЇР¬РҐРўРџРќР‘Р™Р®",
 #else
   "Encrypting", "Decrypting",
 #endif
@@ -562,9 +562,9 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
       Form1->Label9->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Генерация "
-        + IntToStr(key_len * 8)  + "-битного ключа из "
-        + IntToStr(password_len) + "-символьного пароля: "
+        "С†Р•РњР•РџР®Р–РҐРЄ "
+        + IntToStr(key_len * 8)  + "-РђРҐР РњРќР¦Рќ Р™РљР§Р’Р® РҐР“ "
+        + IntToStr(password_len) + "-РЇРҐР›Р‘РќРљР­РњРќР¦Рќ РћР®РџРќРљРЄ: "
         + IntToStr(real) + " %";
 #else
         "Generating "
@@ -789,7 +789,7 @@ static int erasedfile(const char * filename) {
     realread = fread(data, 1, size_for_erased, f);
     meminit(data, 0x00, realread);
 
-    fseek(f, position, SEEK_SET);
+    fseek(f, (long)position, SEEK_SET);
     
 /*****************************************************************************/
     if (TryEnterCriticalSection(&Form1->CrSec)) {
@@ -1279,7 +1279,7 @@ bool vector_init(uint8_t * data, size_t size) {
 }
 
 char * CharA_Or_CharOV(size_t length) {
-  return (24 == length || 128 == length) ? " бита" : " бит";
+  return (24 == length || 128 == length) ? " РђРҐР Р®" : " РђРҐР ";
 }
 
 int GeneratingCryptKey(const char * message) {
@@ -1622,7 +1622,7 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   if (real_read == (int)(memory->real_key_length)) {
       UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n";
+      "С…РЇРћРќРљР­Р“РќР‘Р®Р Р­ " + IntToStr(memory->real_key_length * 8) + "-РђРҐР РњРЁР Р™РљР§Р’ Р¬РҐРўРџРќР‘Р®РњРҐРЄ РҐР“ РўР®РРљР®?\n";
 #else
       "Use " + IntToStr(memory->real_key_length * 8) + "-bit encryption key from file?\n";
 #endif
@@ -1644,9 +1644,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "Недостаточно данных в ключевом файле!\n\n"
-      "Прочитано:\t" + IntToStr(real_read) + " байт\n"
-      "Требуется:\t" + IntToStr(memory->real_key_length) + " байт";
+      "РјР•Р”РќРЇР Р®Р РќР’РњРќ Р”Р®РњРњРЁРЈ Р‘ Р™РљР§Р’Р•Р‘РќР› РўР®РРљР•!\n\n"
+      "РѕРџРќР’РҐР Р®РњРќ:\t" + IntToStr(real_read) + " РђР®РР \n"
+      "СЂРџР•РђРЎР•Р РЇРЄ:\t" + IntToStr(memory->real_key_length) + " РђР®РР ";
 #else
       "Not enough data in the key file!\n\n"
       "Read:\t" + IntToStr(real_read) + " bt\n"
@@ -1664,8 +1664,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if ((real_read > 7) && (real_read < 257)) {
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Сгенерировать " + IntToStr(memory->real_key_length * 8) +
-        "-битный ключ шифрования из пароля?\n";
+        "СЏР¦Р•РњР•РџРҐРџРќР‘Р®Р Р­ " + IntToStr(memory->real_key_length * 8) +
+        "-РђРҐР РњРЁР Р™РљР§Р’ Р¬РҐРўРџРќР‘Р®РњРҐРЄ РҐР“ РћР®РџРќРљРЄ?\n";
 #else
         "Generate " + IntToStr(memory->real_key_length * 8) +
         "-bit encryption key from password?\n";
@@ -1698,9 +1698,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Длина символьного ключа некорректна!\n\n"
-        "Прочитано:\t" + IntToStr(real_read) + " байт\n"
-        "Требуется:\tот 8 до 256 байт";
+        "РґРљРҐРњР® РЇРҐР›Р‘РќРљР­РњРќР¦Рќ Р™РљР§Р’Р® РњР•Р™РќРџРџР•Р™Р РњР®!\n\n"
+        "РѕРџРќР’РҐР Р®РњРќ:\t" + IntToStr(real_read) + " РђР®РР \n"
+        "СЂРџР•РђРЎР•Р РЇРЄ:\tРќР  8 Р”Рќ 256 РђР®РР ";
 #else
         "The string key length is incorrect!\n\n"
         "Read:\t" + IntToStr(real_read) + " bt\n"
@@ -1771,10 +1771,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Приступить к выполнению выбранной операции?\n\n"
-    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
-    "Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() +
+    "РѕРџРҐРЇР РЎРћРҐР Р­ Р™ Р‘РЁРћРќРљРњР•РњРҐР§ Р‘РЁРђРџР®РњРњРќР РќРћР•РџР®Р–РҐРҐ?\n\n"
+    "РЅРћР•РџР®Р–РҐРЄ:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "СЋРљР¦РќРџРҐР Р›:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
+    "РґРљРҐРњР® Р™РљР§Р’Р®:\t" + IntToStr(memory->real_key_length * 8).c_str() +
                       CharA_Or_CharOV(memory->real_key_length);
 #else
     "Proceed with the operation you selected?\n\n"
@@ -1833,10 +1833,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
           UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-            "Ошибка удаления файла!\n\n"
-            "Файл: " + Form1->Edit1->Text + "\n\n"
-            "был перезаписан, но не был удалён с диска!\n\n"
-            "Код ошибки: " + IntToStr(error_delete);
+            "РЅР¬РҐРђР™Р® РЎР”Р®РљР•РњРҐРЄ РўР®РРљР®!\n\n"
+            "С‚Р®РРљ: " + Form1->Edit1->Text + "\n\n"
+            "РђРЁРљ РћР•РџР•Р“Р®РћРҐРЇР®Рњ, РњРќ РњР• РђРЁРљ РЎР”Р®Рљв•¦Рњ РЇ Р”РҐРЇР™Р®!\n\n"
+            "Р№РќР” РќР¬РҐРђР™РҐ: " + IntToStr(error_delete);
 #else
             "Error delete file!\n\n"
             "Filename: " + Form1->Edit1->Text + "\n\n"
@@ -1979,7 +1979,7 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Криптопровайдер Microsoft Windows недоступен!");
+    "Р№РџРҐРћР РќРћРџРќР‘Р®РР”Р•Рџ Microsoft Windows РњР•Р”РќРЇР РЎРћР•Рњ!");
 #else
     "Microsoft Windows cryptographic provider is unavailable!");
 #endif
