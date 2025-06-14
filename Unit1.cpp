@@ -789,7 +789,7 @@ static int erasedfile(const char * filename) {
     realread = fread(data, 1, size_for_erased, f);
     meminit(data, 0x00, realread);
 
-    fseek(f, (long)position, SEEK_SET);
+    fseek(f, (long int)position, SEEK_SET);
     
 /*****************************************************************************/
     if (TryEnterCriticalSection(&Form1->CrSec)) {
@@ -927,17 +927,15 @@ void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
 void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
   size_t       i = 0;
   size_t remnant = count;
+  /* if operation == ENCRYPT then calculate hash sum of ciphertext */
+  uint8_t * data = ctx->operation ? ctx->input : ctx->output;
 
   while (i < count) {
     if (remnant < LENGTH_DATA_FOR_CHECK) {
-      sha256_update(ctx->sha256sum,
-                    (ctx->operation ? ctx->output : ctx->input) + i,
-                    remnant);
+      sha256_update(ctx->sha256sum, data + i, remnant);
     }
     else { /* if remnant >= LENGTH_DATA_FOR_CHECK */
-      sha256_update(ctx->sha256sum,
-                    (ctx->operation ? ctx->output : ctx->input) + i,
-                    LENGTH_DATA_FOR_CHECK);
+      sha256_update(ctx->sha256sum, data + i, LENGTH_DATA_FOR_CHECK);
     }
 
           i += LENGTH_DATA_FOR_CHECK;
@@ -1211,7 +1209,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
     fflush(fo);
   }
   else {
-    if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
+    if (_memcmp_s(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
       MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG, STR_CONTROL_SUM_FILE_ERROR);
     }
   }
