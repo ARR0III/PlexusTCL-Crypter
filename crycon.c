@@ -3,7 +3,7 @@
  * Console Encryption Software v5.14;
  *
  * Developer:         ARR0III;
- * Modification date: 01 JUNE 2025;
+ * Modification date: 14 JUNE 2025;
  * Modification:      Release;
  * Language:          English;
  */
@@ -68,6 +68,7 @@
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
 /*****************************************************************************/
+#define HMAC_BUFFER_SIZE            64
 #define LENGTH_DATA_FOR_CHECK     1024
 /*****************************************************************************/
 #define ENCRYPT                   0x00
@@ -80,7 +81,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.14 15MAY25 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.14 14JUN25 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -129,10 +130,10 @@ static const char * ALGORITM_NAME[]  = {
 };
 
 typedef struct {
-  uint8_t hash[SHA256_BLOCK_SIZE];
-  uint8_t KEY_0[SHA256_BLOCK_SIZE];
-  uint8_t KEY_1[SHA256_BLOCK_SIZE];
-} HMAC;
+  uint8_t temp[SHA256_BLOCK_SIZE];
+  uint8_t ipad[HMAC_BUFFER_SIZE];
+  uint8_t opad[HMAC_BUFFER_SIZE];
+} HMAC_CTX;
 
 /* Global struct for data */
 typedef struct {
@@ -151,9 +152,6 @@ typedef struct {
 
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
   size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
-
-  HMAC       * hmac;                /* memory for hmac struct */
-  size_t       hmac_length;         /* size struct hmac */
 
   uint8_t    * vector;              /* initialized vector for crypt data */
   size_t       vector_length;       /* block size cipher execution */
@@ -188,10 +186,6 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
     meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   }
 
-  if (ctx->hmac && ctx->hmac_length > 0) {
-    meminit(ctx->hmac, 0x00, ctx->hmac_length);
-  }
-
   if (ctx->vector && ctx->vector_length > 0) {
     meminit(ctx->vector, 0x00, ctx->vector_length);
   }
@@ -200,7 +194,6 @@ static void free_global_memory(GLOBAL_MEMORY * ctx, const size_t ctx_length) {
   free(ctx->new_key);
   free(ctx->password);
   free(ctx->sha256sum);
-  free(ctx->hmac);
   free(ctx->vector);
 	
   /* clear all memory and all pointers */
@@ -380,80 +373,71 @@ static void cipher_free(void * ctx, size_t ctx_length) {
   free(ctx);
 }
 
-static void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
-  size_t i;
-  size_t size_copy_data;
+/* RFC-4868
+  hmac = h(opad xor 0x5C || h(ipad xor 0x36 || m)); */
+void prf_hmac_sha_256(GLOBAL_MEMORY * ctx) {
+  HMAC_CTX hmac;
+  int i;
 
-  size_copy_data = MINIMAL(ctx->real_key_length, SHA256_BLOCK_SIZE);
-
-  /* copy hash sum file in local buffer "hash" */
-  memcpy((void *)ctx->hmac->hash, (void *)(ctx->sha256sum->hash), SHA256_BLOCK_SIZE);
-
+  /* hash sum of file now in filehash buffer */
+  memcpy(hmac.temp, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
   /* generate two secret const for hash update */
-  memcpy(ctx->hmac->KEY_0, ctx->real_key, size_copy_data);
-  memcpy(ctx->hmac->KEY_1, ctx->real_key, size_copy_data);
 
-  /* if length real_key >= SHA256_BLOCK_SIZE then cycle NOT executable */
-  for (i = size_copy_data; i < SHA256_BLOCK_SIZE; i++) {
-    ctx->hmac->KEY_0[i] = 0x00;
-    ctx->hmac->KEY_1[i] = 0x00;
+  meminit(hmac.ipad, 0x00, HMAC_BUFFER_SIZE);
+  meminit(hmac.opad, 0x00, HMAC_BUFFER_SIZE);
+
+  if (ctx->real_key_length > HMAC_BUFFER_SIZE) {
+    meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
+
+    sha256_init(ctx->sha256sum);
+    sha256_update(ctx->sha256sum, ctx->real_key, ctx->real_key_length);
+    sha256_final(ctx->sha256sum);
+
+    /* rewrite keys hash sum of key */
+    memcpy(hmac.ipad, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+    memcpy(hmac.opad, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  }
+  else {
+    memcpy(hmac.ipad, ctx->real_key, ctx->real_key_length);
+    memcpy(hmac.opad, ctx->real_key, ctx->real_key_length);
   }
 
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    ctx->hmac->KEY_0[i] ^= 0x55;
+  for (i = 0; i < HMAC_BUFFER_SIZE; i++) {
+    hmac.ipad[i] ^= 0x36;
+    hmac.opad[i] ^= 0x5C;
   }
 
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    ctx->hmac->KEY_1[i] ^= 0x66;
-  }
-
-#if CRYCON_DEBUG
-  printf("[DEBUG] authentification key \'U\':\n");
-  printhex(HEX_TABLE, ctx->hmac->KEY_0, SHA256_BLOCK_SIZE);
-
-  printf("[DEBUG] authentification key \'f\':\n");
-  printhex(HEX_TABLE, ctx->hmac->KEY_1, SHA256_BLOCK_SIZE);
-#endif
-
-  /* clear sha256sum struct */
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
-
-  /* calculate hash for (key xor 0x55) and hash file */
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, ctx->hmac->KEY_0, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, ctx->hmac->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac.ipad, HMAC_BUFFER_SIZE);
+  sha256_update(ctx->sha256sum, hmac.temp, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy(ctx->hmac->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  memcpy(hmac.temp, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
-  /* clear sha256sum struct */
-  meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
-
-  /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
+  meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, ctx->hmac->KEY_1, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, ctx->hmac->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac.opad, HMAC_BUFFER_SIZE);
+  sha256_update(ctx->sha256sum, hmac.temp, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  /* clear memory for security */
+  /* clear  buffers for security */
+  meminit(&hmac, 0x00, sizeof(HMAC_CTX));
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
-  meminit(ctx->hmac, 0x00, ctx->hmac_length);
 }
 
 static void control_sum_buffer(GLOBAL_MEMORY * ctx, const size_t count) {
-  size_t i = 0;
+  size_t       i = 0;
   size_t remnant = count;
+  /* if operation == ENCRYPT then calculate hash sum of ciphertext */
+  uint8_t * data = ctx->operation ? ctx->input : ctx->output;
 
   while (i < count) {
     if (remnant < LENGTH_DATA_FOR_CHECK) {
-      sha256_update(ctx->sha256sum,
-                    (ctx->operation ? ctx->output : ctx->input) + i,
-                    remnant);
+      sha256_update(ctx->sha256sum, data + i, remnant);
     }
-    else {
-      sha256_update(ctx->sha256sum,
-                    (ctx->operation ? ctx->output : ctx->input) + i,
-                    LENGTH_DATA_FOR_CHECK);
+    else { /* if remnant >= LENGTH_DATA_FOR_CHECK */
+      sha256_update(ctx->sha256sum, data + i, LENGTH_DATA_FOR_CHECK);
     }
 
           i += LENGTH_DATA_FOR_CHECK;
@@ -760,7 +744,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 #endif
 
   /* generate HMAC for hash file and key */
-  hmac_sha256_uf(ctx);
+  prf_hmac_sha_256(ctx);
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite((void *)ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
@@ -982,7 +966,6 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->new_key            = NULL;
   (*ctx)->password           = NULL;
   (*ctx)->sha256sum          = NULL;
-  (*ctx)->hmac               = NULL;
 
   (*ctx)->operation          = ENCRYPT;
   (*ctx)->cipher_number      = AES;
@@ -992,7 +975,6 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   (*ctx)->real_key_length    = 0;
   (*ctx)->password_length    = STRING_MAX_LENGTH;
   (*ctx)->sha256sum_length   = sizeof(SHA256_CTX);
-  (*ctx)->hmac_length        = sizeof(HMAC);
 
   (*ctx)->password = (char *)malloc((*ctx)->password_length);
 
@@ -1005,16 +987,9 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   if (NULL == (*ctx)->sha256sum) {
     return 3;
   }
-	
-  (*ctx)->hmac = (HMAC *)malloc(sizeof(HMAC));
-
-  if (NULL == (*ctx)->hmac) {
-    return 4;
-  }
 
   meminit((*ctx)->password,  0x00, (*ctx)->password_length);
   meminit((*ctx)->sha256sum, 0x00, (*ctx)->sha256sum_length);
-  meminit((*ctx)->hmac,      0x00, (*ctx)->hmac_length);
 
   return OK;
 }
