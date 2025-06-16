@@ -60,6 +60,8 @@
 #define SIZE_DECRYPT_FILE_INCORRECT  9
 #define OPERATION_BREAK             10
 
+#define HMAC_DATA_BUFFER            64
+
 #define STATUS_BUFFER_SIZE         256
 
 #define SIZE_PASSWORD_GENERATE     512
@@ -147,9 +149,9 @@ typedef struct {
 } SETTINGS;
 
 typedef struct {
-  uint8_t hash[SHA256_BLOCK_SIZE];
-  uint8_t KEY_0[SHA256_BLOCK_SIZE];
-  uint8_t KEY_1[SHA256_BLOCK_SIZE];
+  uint8_t ipad[HMAC_DATA_BUFFER];
+  uint8_t opad[HMAC_DATA_BUFFER];
+  uint8_t temp[SHA256_BLOCK_SIZE];
 } HMAC_CTX;
 
 typedef struct {
@@ -204,15 +206,15 @@ static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
 
 static const char *CHAR_SIZE_DATA[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "РђР ", "Р№РҐР°", "Р»РҐР°", "С†РҐР°", "СЂРҐР°", "РѕРҐР°", "С‰РҐР°"
+  "бт", "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЭиБ"
 #else
-  "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"	
+  "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
 #endif
 };
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "СЊРҐРўРџРќР‘Р®РњРҐР•", "РїР®РЇР¬РҐРўРџРќР‘Р™Р®",
+  "Шифрование", "Расшифровка",
 #else
   "Encrypting", "Decrypting",
 #endif
@@ -562,15 +564,15 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
       Form1->Label9->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "С†Р•РњР•РџР®Р–РҐРЄ "
-        + IntToStr(key_len * 8)  + "-РђРҐР РњРќР¦Рќ Р™РљР§Р’Р® РҐР“ "
-        + IntToStr(password_len) + "-РЇРҐР›Р‘РќРљР­РњРќР¦Рќ РћР®РџРќРљРЄ: "
+        "Генерация "
+		+ IntToStr(key_len * 8)  + "-битного ключа из "
+		+ IntToStr(password_len) + "-символьного пароля: "
         + IntToStr(real) + " %";
 #else
         "Generating "
-        + IntToStr(key_len * 8) + "-bit key from "
-        + IntToStr(password_len) + "-character password: "
-        + IntToStr(real) + " %";
+		+ IntToStr(key_len * 8) + "-bit key from "
+		+ IntToStr(password_len) + "-character password: "
+		+ IntToStr(real) + " %";
 #endif
       Application->ProcessMessages();
       past = real;
@@ -861,66 +863,56 @@ void cipher_free(void * ctx, const size_t ctx_length) {
   free(ctx);
 }
 
-void hmac_sha256_uf(GLOBAL_MEMORY * ctx) {
-  HMAC_CTX * hmac_ctx;
+/* RFC-4868
+  hmac = h(opad xor 0x5C || h(ipad xor 0x36 || m)); */
+void prf_hmac_sha_256(GLOBAL_MEMORY * ctx) {
+  HMAC_CTX hmac;
   int i;
-  size_t size_copy_data;
-  
-  hmac_ctx = (HMAC_CTX *)malloc(sizeof(HMAC_CTX));
 
-  if (!hmac_ctx) {
-    MessageForUser(MB_ICONERROR + MB_OK, STR_ERROR_MSG, STR_MEMORY_BLOCKED);
-    return;
-  }
-
-  size_copy_data = MINIMAL(ctx->real_key_length, SHA256_BLOCK_SIZE);
-
-  /* copy hash sum file in local buffer "hash" */
-  memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
-
+  /* hash sum of file now in filehash buffer */
+  memcpy(hmac.temp, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
   /* generate two secret const for hash update */
-  memcpy(hmac_ctx->KEY_0, ctx->real_key, size_copy_data);
-  memcpy(hmac_ctx->KEY_1, ctx->real_key, size_copy_data);
 
-  /* if length real_key equal or more SHA256_BLOCK_SIZE then cycle NOT executable */
-  for (i = ctx->real_key_length; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_0[i] = 0x00;
-    hmac_ctx->KEY_1[i] = 0x00;
+  meminit(hmac.ipad, 0x00, HMAC_DATA_BUFFER);
+  meminit(hmac.opad, 0x00, HMAC_DATA_BUFFER);
+
+  if (ctx->real_key_length > HMAC_DATA_BUFFER) {
+    meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
+
+    sha256_init(ctx->sha256sum);
+    sha256_update(ctx->sha256sum, ctx->real_key, ctx->real_key_length);
+    sha256_final(ctx->sha256sum);
+
+    /* rewrite keys hash sum of key */
+    memcpy(hmac.ipad, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+    memcpy(hmac.opad, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  }
+  else {
+    memcpy(hmac.ipad, ctx->real_key, ctx->real_key_length);
+    memcpy(hmac.opad, ctx->real_key, ctx->real_key_length);
   }
 
-  /* simbol 'U', decimal  85, bits 01010101 */
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_0[i] ^= 0x55;
+  for (i = 0; i < HMAC_DATA_BUFFER; i++) {
+    hmac.ipad[i] ^= 0x36;
+    hmac.opad[i] ^= 0x5C;
   }
 
-  /* simbol 'f', decimal 102, bits 10101010 */
-  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
-    hmac_ctx->KEY_1[i] ^= 0x66;
-  }
-
-  /* clear sha256sum struct */
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
-
-  /* calculate hash for (key xor 0x55) and hash file */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, hmac_ctx->KEY_0, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac.ipad, HMAC_DATA_BUFFER);
+  sha256_update(ctx->sha256sum, hmac.temp, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
-  memcpy(hmac_ctx->hash, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
+  memcpy(hmac.temp, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
 
-  /* clear sha256sum struct */
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
-
-  /* calculate hash for (key xor 0x66) and hash for ((key xor 0x55) and hash file) */
   sha256_init(ctx->sha256sum);
-  sha256_update(ctx->sha256sum, hmac_ctx->KEY_1, SHA256_BLOCK_SIZE);
-  sha256_update(ctx->sha256sum, hmac_ctx->hash, SHA256_BLOCK_SIZE);
+  sha256_update(ctx->sha256sum, hmac.opad, HMAC_DATA_BUFFER);
+  sha256_update(ctx->sha256sum, hmac.temp, SHA256_BLOCK_SIZE);
   sha256_final(ctx->sha256sum);
 
   /* clear  buffers for security */
-  meminit(hmac_ctx, 0x00, sizeof(HMAC_CTX));
-  free(hmac_ctx);
+  meminit(&hmac, 0x00, sizeof(HMAC_CTX));
   /* now control sum crypt key and file in buffer ctx->sha256sum->hash */
 }
 
@@ -1199,7 +1191,7 @@ int filecrypt(GLOBAL_MEMORY * ctx) {
 
   sha256_final(ctx->sha256sum);
 
-  hmac_sha256_uf(ctx);
+  prf_hmac_sha_256(ctx);
 
   if (ENCRYPT == ctx->operation) {
     if (fwrite(ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, fo) != SHA256_BLOCK_SIZE) {
@@ -1614,13 +1606,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
   }
 /*****************************************************************************/
   meminit(memory->new_key, 0x00, memory->new_key_length);
-  
+
   real_read = readfromfile(Memo1->Text.c_str(), memory->real_key, memory->real_key_length);
 
   if (real_read == (int)(memory->real_key_length)) {
       UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "С…РЇРћРќРљР­Р“РќР‘Р®Р Р­ " + IntToStr(memory->real_key_length * 8) + "-РђРҐР РњРЁР Р™РљР§Р’ Р¬РҐРўРџРќР‘Р®РњРҐРЄ РҐР“ РўР®РРљР®?\n";
+      "Использовать " + IntToStr(memory->real_key_length * 8) + "-битный ключ шифрования из файла?\n";
 #else
       "Use " + IntToStr(memory->real_key_length * 8) + "-bit encryption key from file?\n";
 #endif
@@ -1642,13 +1634,13 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
     UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "РјР•Р”РќРЇР Р®Р РќР’РњРќ Р”Р®РњРњРЁРЈ Р‘ Р™РљР§Р’Р•Р‘РќР› РўР®РРљР•!\n\n"
-      "РѕРџРќР’РҐР Р®РњРќ:\t" + IntToStr(real_read) + " РђР®РР \n"
-      "СЂРџР•РђРЎР•Р РЇРЄ:\t" + IntToStr(memory->real_key_length) + " РђР®РР ";
+      "Недостаточно данных в ключевом файле!\n\n"
+	  "Прочитано:\t" + IntToStr(real_read) + " байт\n"
+	  "Требуется:\t" + IntToStr(memory->real_key_length) + " байт";
 #else
-      "Not enough data in the key file!\n\n"
-      "Read:\t" + IntToStr(real_read) + " bt\n"
-      "Required:\t" + IntToStr(memory->real_key_length) + " bt";
+	  "Not enough data in the key file!\n\n"
+	  "Read:\t" + IntToStr(real_read) + " bt\n"
+	  "Required:\t" + IntToStr(memory->real_key_length) + " bt";
 #endif
 
     Application->MessageBox(UnicodeMsg.c_str(), STR_WARNING_MSG, MB_ICONWARNING + MB_OK);
@@ -1662,8 +1654,8 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
     if ((real_read > 7) && (real_read < 257)) {
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "СЏР¦Р•РњР•РџРҐРџРќР‘Р®Р Р­ " + IntToStr(memory->real_key_length * 8) +
-        "-РђРҐР РњРЁР Р™РљР§Р’ Р¬РҐРўРџРќР‘Р®РњРҐРЄ РҐР“ РћР®РџРќРљРЄ?\n";
+		"Сгенерировать " + IntToStr(memory->real_key_length * 8) +
+        "-битный ключ шифрования из пароля?\n";
 #else
         "Generate " + IntToStr(memory->real_key_length * 8) +
         "-bit encryption key from password?\n";
@@ -1696,9 +1688,9 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
       UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "РґРљРҐРњР® РЇРҐР›Р‘РќРљР­РњРќР¦Рќ Р™РљР§Р’Р® РњР•Р™РќРџРџР•Р™Р РњР®!\n\n"
-        "РѕРџРќР’РҐР Р®РњРќ:\t" + IntToStr(real_read) + " РђР®РР \n"
-        "СЂРџР•РђРЎР•Р РЇРЄ:\tРќР  8 Р”Рќ 256 РђР®РР ";
+        "Длина символьного ключа некорректна!\n\n"
+        "Прочитано:\t" + IntToStr(real_read) + " байт\n"
+        "Требуется:\tот 8 до 256 байт";
 #else
         "The string key length is incorrect!\n\n"
         "Read:\t" + IntToStr(real_read) + " bt\n"
@@ -1769,11 +1761,11 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "РѕРџРҐРЇР РЎРћРҐР Р­ Р™ Р‘РЁРћРќРљРњР•РњРҐР§ Р‘РЁРђРџР®РњРњРќР РќРћР•РџР®Р–РҐРҐ?\n\n"
-    "РЅРћР•РџР®Р–РҐРЄ:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
-    "СЋРљР¦РќРџРҐР Р›:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
-    "РґРљРҐРњР® Р™РљР§Р’Р®:\t" + IntToStr(memory->real_key_length * 8).c_str() +
-                      CharA_Or_CharOV(memory->real_key_length);
+    "Приступить к выполнению выбранной операции?\n\n"
+    "Операция:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
+    "Алгоритм:\t" + String(ALGORITM_NAME[memory->cipher_number]) + CIPHER_MODE + "\n"
+	"Длина ключа:\t" + IntToStr(memory->real_key_length * 8).c_str() +
+	CharA_Or_CharOV(memory->real_key_length);
 #else
     "Proceed with the operation you selected?\n\n"
     "Operation:\t" + String(OPERATION_NAME[memory->operation ? 1 : 0]) + "\n"
@@ -1831,10 +1823,10 @@ void __fastcall TForm1::Button4Click(TObject *Sender) {
 
           UnicodeMsg = 
 #ifdef PTCL_RUSSIAN_LANGUAGE
-            "РЅР¬РҐРђР™Р® РЎР”Р®РљР•РњРҐРЄ РўР®РРљР®!\n\n"
-            "С‚Р®РРљ: " + Form1->Edit1->Text + "\n\n"
-            "РђРЁРљ РћР•РџР•Р“Р®РћРҐРЇР®Рњ, РњРќ РњР• РђРЁРљ РЎР”Р®Рљв•¦Рњ РЇ Р”РҐРЇР™Р®!\n\n"
-            "Р№РќР” РќР¬РҐРђР™РҐ: " + IntToStr(error_delete);
+            "Ошибка удаления файла!\n\n"
+            "Файл: " + Form1->Edit1->Text + "\n\n"
+            "был перезаписан, но не был удалён с диска!\n\n"
+            "Код ошибки: " + IntToStr(error_delete);
 #else
             "Error delete file!\n\n"
             "Filename: " + Form1->Edit1->Text + "\n\n"
@@ -1977,10 +1969,11 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Р№РџРҐРћР РќРћРџРќР‘Р®РР”Р•Рџ Microsoft Windows РњР•Р”РќРЇР РЎРћР•Рњ!");
+      "Криптопровайдер Microsoft Windows недоступен!"
 #else
-    "Microsoft Windows cryptographic provider is unavailable!");
+      "Microsoft Windows cryptographic provider is unavailable!"
 #endif
+      );
   }
 
   InitializeCriticalSection(&CrSec);
