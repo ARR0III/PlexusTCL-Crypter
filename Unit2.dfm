@@ -1,6 +1,6 @@
 object Form2: TForm2
-  Left = 262
-  Top = 375
+  Left = 228
+  Top = 154
   BorderStyle = bsNone
   Caption = #1057#1055#1056#1040#1042#1050#1040
   ClientHeight = 154
@@ -46,10 +46,11 @@ object Form2: TForm2
     OnMouseLeave = Label5MouseLeave
   end
   object Label4: TLabel
-    Left = 5
+    Left = 8
     Top = 5
-    Width = 3
+    Width = 88
     Height = 13
+    Cursor = crSizeAll
     Color = clNavy
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWhite
@@ -58,6 +59,7 @@ object Form2: TForm2
     Font.Style = []
     ParentColor = False
     ParentFont = False
+    OnMouseDown = Label4MouseDown
   end
   object Shape2: TShape
     Left = 1
@@ -70,7 +72,7 @@ object Form2: TForm2
   object Label3: TLabel
     Left = 8
     Top = 133
-    Width = 325
+    Width = 3
     Height = 13
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText

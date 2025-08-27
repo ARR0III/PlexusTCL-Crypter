@@ -38,3 +38,11 @@ void __fastcall TForm2::Label5MouseLeave(TObject *Sender) {
 //---------------------------------------------------------------------------
 
 
+void __fastcall TForm2::Label4MouseDown(TObject *Sender,
+      TMouseButton Button, TShiftState Shift, int X, int Y)
+{
+  ReleaseCapture();
+  Form2->Perform(WM_SYSCOMMAND, 0xF012, 0);          
+}
+//---------------------------------------------------------------------------
+

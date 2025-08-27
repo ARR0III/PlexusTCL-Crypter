@@ -25,6 +25,8 @@ __published:	// IDE-managed Components
           TMouseButton Button, TShiftState Shift, int X, int Y);
         void __fastcall Label5MouseEnter(TObject *Sender);
         void __fastcall Label5MouseLeave(TObject *Sender);
+        void __fastcall Label4MouseDown(TObject *Sender,
+          TMouseButton Button, TShiftState Shift, int X, int Y);
 private:	// User declarations
 public:		// User declarations
         __fastcall TForm2(TComponent* Owner);
