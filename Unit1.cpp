@@ -718,6 +718,8 @@ void __fastcall Crycon::Clear() {
     meminit(ctx->new_key, 0x00, ctx->new_key_length);
   }
 
+  meminit(entrp, 0x00, SHA256_BLOCK_SIZE);
+
   free(ctx->hash_matrix);
   free(ctx->vector);
   free(ctx->real_key);
