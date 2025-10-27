@@ -131,6 +131,8 @@ static HCRYPTPROV  hcrypt    = NULL;
 /* Global section for syncronize thread and GUI */
 static bool       PROCESSING = false;
 
+uint8_t entrp[SHA256_BLOCK_SIZE]; /* NOT initialized == ALL OK */
+
 /* Only sorted strings for bin search function */
 #define CONFIG_KEYS_COUNT 7
 static const char * CONFIG_KEYS[CONFIG_KEYS_COUNT] = {
@@ -348,9 +350,43 @@ void cursorpos(uint8_t * data) {
   position.x = position.y = 0;
 }
 
+void LastHopeEntropy(uint8_t * trash, size_t size) {
+  size_t i, j;
+  SHA256_CTX ctx;
+
+  memxormove(entrp, &ctx, SHA256_BLOCK_SIZE);
+
+  *(uint32_t*)(&entrp[0])  += GetCurrentProcessId();
+  *(uint32_t*)(&entrp[4])  += GetCurrentThreadId();
+  *(uint32_t*)(&entrp[8])  += GetTickCount();
+  *(uint32_t*)(&entrp[12]) += (uint32_t)(&ctx);
+  *(uint32_t*)(&entrp[16]) += (uint32_t)(&LastHopeEntropy);
+  *(uint32_t*)(&entrp[20]) += (uint32_t)(&entrp) ^ (uint32_t)(&LastHopeEntropy);
+
+  sha256_init(ctx);
+
+  i = 0;
+  j = size;
+
+  while (i < size) {
+    sha256_update(ctx, entrp, SHA256_BLOCK_SIZE);
+    sha256_final(ctx);
+
+    if (j > SHA256_BLOCK_SIZE)
+      j = SHA256_BLOCK_SIZE;
+
+    memxormove(entrp, ctx->hash, SHA256_BLOCK_SIZE);
+    memxormove(trash + i, ctx->hash, j);
+
+    i += SHA256_BLOCK_SIZE;
+    j -= SHA256_BLOCK_SIZE;
+  }
+
+  meminit(ctx, 0x00, sizeof(SHA256_CTX));
+}
+
 void vector_init(uint8_t * data, size_t size) {
   size_t i;
-  size_t stack_trash[2]; /* NOT initialized == ALL OK */
                              
   CryptGenRandom(hcrypt, size, data);
 
@@ -358,14 +394,11 @@ void vector_init(uint8_t * data, size_t size) {
     data[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
-  /* random data from stack xor initialized vector */
-  (*(uint32_t *)data) ^= (uint32_t)stack_trash[0] +
-                         (uint32_t)genrand(0x00000000, 0xFFFFFFFF) ^
-                         (uint32_t)stack_trash[1];
-
   cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
-  stack_trash[0] = stack_trash[1] = 0;
+/* if in your Windows OS not install crypto-provider or your system-boy are idiot
+   i'am try save you, BUT i'am not God! */
+  LastHopeEntropy(data, size);
 }
 
 int operation_variant(const int operation) {
