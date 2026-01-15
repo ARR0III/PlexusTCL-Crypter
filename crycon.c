@@ -68,6 +68,7 @@
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
 /*****************************************************************************/
+#define PASS_SALT_SIZE              16 /* Yes, i'am know... */
 #define HMAC_BUFFER_SIZE            64
 #define LENGTH_DATA_FOR_CHECK     1024
 /*****************************************************************************/
@@ -81,6 +82,7 @@
 /*****************************************************************************/
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
+static const char * PARAM_APPND_BYTE = "ab";
 static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 5.14 14JUN25 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
@@ -149,6 +151,8 @@ typedef struct {
 
   char       * password;            /* path keyfile or string key */
   size_t       password_length;
+
+  char         pass_salt[PASS_SALT_SIZE];
 
   SHA256_CTX * sha256sum;           /* memory for sha256 hash function */
   size_t       sha256sum_length;    /* size struct to pointer ctx->sha256sum */
@@ -240,8 +244,8 @@ static double sizetodoubleprint(const int status, const double size) {
   CLOMUL_CONST - security level. Now = 1
 */
 static int KDFCLOMUL(GLOBAL_MEMORY * ctx,
-                      const uint8_t * password, const size_t password_len,
-                            uint8_t * key,      const size_t key_len) {
+                     const uint8_t * password, const size_t password_len,
+                           uint8_t * key,      const size_t key_len) {
 
   uint32_t  count;
   size_t    i, j, k;
@@ -271,6 +275,7 @@ static int KDFCLOMUL(GLOBAL_MEMORY * ctx,
   meminit(ctx->sha256sum, 0x00, ctx->sha256sum_length);
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, password, password_len);
+  sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
   sha256_final(ctx->sha256sum);
 
   count  = *(uint32_t *)(ctx->sha256sum->hash);
@@ -289,10 +294,12 @@ static int KDFCLOMUL(GLOBAL_MEMORY * ctx,
   sha256_init(ctx->sha256sum);
   for (i = 0; i < count; i++) {
     sha256_update(ctx->sha256sum, password, password_len);
+    sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
   }
 
   for (i = 0; i < pmem_size; i += SHA256_BLOCK_SIZE) {
     sha256_update(ctx->sha256sum, password, password_len);
+    sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
     sha256_final(ctx->sha256sum);
     memcpy(pmem + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
   }
@@ -471,13 +478,13 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
 
   if (ENCRYPT == ctx->operation) {
 /* if post encrypt size of file >= 8 EiB then this operation BAD ->> don't for decrypting */
-    if ((off_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((off_t)1 << 62)) {
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length) & ((off_t)1 << 62)) {
       return SIZE_FILE_ERROR;
     }
   }
   else {
 /* if fsize < minimal size, this file don't for decrypt */
-    if (fsize < (off_t)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+    if (fsize < (off_t)(SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length + 1)) {
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
@@ -525,18 +532,13 @@ static void internal_re_keying(GLOBAL_MEMORY * ctx) {
     case AES:       rijndael_key_encrypt_init(rijndael_ctx,
                                               ctx->real_key,
                                               ctx->real_key_length * 8);
-
                     break;
-
     case TWOFISH:   twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
-
     case SERPENT:   serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
                     break;
-
     case BLOWFISH:  blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
-
     case THREEFISH: threefish_init(threefish_ctx,
                                   (threefishkeysize_t)(ctx->real_key_length * 8),
                                   (uint64_t*)ctx->real_key,
@@ -576,7 +578,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
   fsize_check = 0;
 
-  fo = fopen(ctx->foutput, PARAM_WRITE_BYTE);
+  fo = fopen(ctx->foutput, ctx->operation ? PARAM_WRITE_BYTE : PARAM_APPND_BYTE);
 
   if (!fo) {
     if (fclose(fi) == -1)
@@ -597,6 +599,11 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   meminit(ctx->progress_bar, '.', PROGRESS_BAR_LENGTH - 1);
 
   sha256_init(ctx->sha256sum);
+
+  fseeko(ctx->operation ? fi : fo, PASS_SALT_SIZE, SEEK_SET);
+
+  if (ctx->operation)
+    fsize -= PASS_SALT_SIZE;
 
   while (position < fsize) {
     if (0ULL == position) { /* if first block */
@@ -832,10 +839,51 @@ void vector_init(uint8_t * data, size_t size) {
   }
 
   for (i = 0; i < size; i++) {
-    data[i] ^= (uint8_t)i ^ (uint8_t)genrand(0x00, 0xFF);
+    data[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
   random_vector_init(data, size);
+}
+
+static int writeinfile(const char * filename, const void * data, size_t size) {
+  FILE * f = fopen(filename, PARAM_WRITE_BYTE);
+
+  if (NULL == f)
+    return WRITE_FILE_NOT_OPEN;
+
+  if (fwrite(data, 1, size, f) != size) {
+    fclose(f);
+    return WRITE_FILE_ERROR;
+  }
+
+  if (fclose(f) == -1)
+    return STREAM_OUTPUT_CLOSE_ERROR;
+
+  return OK;
+}
+
+/* if not OK then BAD */
+static int pass_salt_init(GLOBAL_MEMORY * ctx) {
+  int result = OK;
+
+  switch(ctx->operation) {
+    case ENCRYPT:
+      vector_init((uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
+      result = writeinfile(ctx->foutput, (void *)ctx->pass_salt, PASS_SALT_SIZE);
+      break;
+    case DECRYPT:
+      result = readfromfile(ctx->finput, (void *)ctx->pass_salt, PASS_SALT_SIZE) - PASS_SALT_SIZE;
+      break;
+    default:
+      result = ~OK;
+  }
+
+#if CRYCON_DEBUG
+  printf("[DEBUG] salt of password real data:\n");
+  printhex(HEX_TABLE, ctx->pass_salt, PASS_SALT_SIZE);
+#endif
+
+  return result;
 }
 
 static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
@@ -851,19 +899,15 @@ static void * cipher_init_memory(GLOBAL_MEMORY * ctx, size_t cipher_len) {
                                               ctx->real_key,
                                               ctx->real_key_length * 8);
                     break;
-
     case TWOFISH:   twofish_ctx = (TWOFISH_CTX *)cipher_ptr;
                     twofish_init(twofish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
-
     case SERPENT:   serpent_ctx = (SERPENT_CTX *)cipher_ptr;
                     serpent_init(serpent_ctx, ctx->real_key_length * 8, ctx->real_key);
                     break;
-
     case BLOWFISH:  blowfish_ctx = (BLOWFISH_CTX *)cipher_ptr;
                     blowfish_init(blowfish_ctx, ctx->real_key, ctx->real_key_length);
                     break;
-
     case THREEFISH: threefish_ctx = (THREEFISH_CTX *)cipher_ptr;
                     threefish_init(threefish_ctx,
                                   (threefishkeysize_t)(ctx->real_key_length * 8),
@@ -893,10 +937,10 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
       fprintf(stderr, "[!] Size of input file \"%s\" 0 or more 4 EiB.\n", ctx->finput);
       break;
     case WRITE_FILE_ERROR:
-      fprintf(stderr, "[!] Error write in file \"%s\" .\n", ctx->foutput);
+      fprintf(stderr, "\n[!] Error write in file \"%s\" .\n", ctx->foutput);
       break;
     case READ_FILE_ERROR:
-      fprintf(stderr, "[!] Error read form file \"%s\" .\n", ctx->finput);
+      fprintf(stderr, "\n[!] Error read form file \"%s\" .\n", ctx->finput);
       break;
     case STREAM_INPUT_CLOSE_ERROR:
       fprintf(stderr, "[!] Error close input stream.\n");
@@ -1255,6 +1299,13 @@ int main(int argc, char * argv[]) {
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       /* password --> crypt key; Pseudo PBKDF2 */
+      result = pass_salt_init(ctx);
+      if (result != OK) {
+        free_global_memory(ctx, ctx_length);
+        fprintf(stderr, "[X] Generating salt of password error.\n");
+        return 1;
+      }  
+
       if (!KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
                            ctx->real_key, ctx->real_key_length)) {
                            
