@@ -1301,6 +1301,7 @@ int main(int argc, char * argv[]) {
       /* password --> crypt key; Pseudo PBKDF2 */
       result = pass_salt_init(ctx);
       if (result != OK) {
+        PRINT_OPERATION_STATUS(ctx, result);
         free_global_memory(ctx, ctx_length);
         fprintf(stderr, "[X] Generating salt of password error.\n");
         return 1;
