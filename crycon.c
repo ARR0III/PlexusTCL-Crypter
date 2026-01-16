@@ -68,7 +68,7 @@
 #define STREAM_OUTPUT_CLOSE_ERROR    7
 #define SIZE_DECRYPT_FILE_INCORRECT  8
 /*****************************************************************************/
-#define PASS_SALT_SIZE              16 /* Yes, i'am know... */
+#define PASS_SALT_SIZE              16 /* Yes, i know... */
 #define HMAC_BUFFER_SIZE            64
 #define LENGTH_DATA_FOR_CHECK     1024
 /*****************************************************************************/
