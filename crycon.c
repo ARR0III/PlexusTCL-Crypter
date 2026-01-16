@@ -761,7 +761,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     fflush(fo);
   }
   else {
-    if (memcmp(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
+    if (_memcmp_s(ctx->input + realread, ctx->sha256sum->hash, SHA256_BLOCK_SIZE) != 0) {
       printf("[!] WARNING: Control sum file \"%s\" not correct!\n", ctx->finput);
     }
     else {
@@ -822,11 +822,14 @@ static void random_vector_init(uint8_t * data, size_t size) {
 
 void vector_init(uint8_t * data, size_t size) {
   size_t i;
-  
+
   FILE * furand = fopen("/dev/urandom", "rb");
 
   if (furand) {
-    fread(data, 1, size, furand);
+    i = 0;
+    while (i < size) {
+      i += fread(data + i, 1, size - i, furand);
+    }
     fclose(furand);
 
 #if CRYCON_DEBUG
