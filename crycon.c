@@ -876,6 +876,7 @@ static int pass_salt_init(GLOBAL_MEMORY * ctx) {
       break;
     default:
       result = ~OK;
+      break;
   }
 
 #if CRYCON_DEBUG
@@ -1280,13 +1281,30 @@ int main(int argc, char * argv[]) {
   printf("[DEBUG] temp memory pointer: %p\n", ctx->real_key);
 #endif
 /*****************************************************************************/
+  result = pass_salt_init(ctx);
+  if (result != OK) {
+    PRINT_OPERATION_STATUS(ctx, result);
+    free_global_memory(ctx, ctx_length);
+    fprintf(stderr, "[X] Generating salt of password error.\n");
+    return 1;
+  }
+/*****************************************************************************/
   real_read = readfromfile(ctx->password, ctx->real_key, ctx->real_key_length);
 
-  if (real_read == (int)ctx->real_key_length)
+  if (real_read == (int)ctx->real_key_length) {
     printf("[#] Crypt key read from file \"%s\".\n", ctx->password);
+    if (!KDFCLOMUL(ctx, (uint8_t *)(ctx->real_key), ctx->real_key_length,
+                         ctx->new_key, ctx->new_key_length)) {
+                
+      free_global_memory(ctx, ctx_length);
+      MEMORY_ERROR;
+      return 1;
+    }
+    memcpy(ctx->real_key, ctx->new_key, ctx->new_key_length);
+    meminit(ctx->new_key, 0x00, ctx->new_key_length);
+  }
   else
   if ((real_read > 0) && (real_read < (int)ctx->real_key_length)) {
-
     printf("[!] Data in key file %d byte; necessary %d byte.\n",
             real_read, (int32_t)ctx->real_key_length);
 
@@ -1299,17 +1317,9 @@ int main(int argc, char * argv[]) {
 
     if ((real_read > 7) && (real_read < 257)) { /* Max password length = 256 byte; min = 8  */
       /* password --> crypt key; Pseudo PBKDF2 */
-      result = pass_salt_init(ctx);
-      if (result != OK) {
-        PRINT_OPERATION_STATUS(ctx, result);
-        free_global_memory(ctx, ctx_length);
-        fprintf(stderr, "[X] Generating salt of password error.\n");
-        return 1;
-      }  
-
       if (!KDFCLOMUL(ctx, (uint8_t *)(ctx->password), real_read,
                            ctx->real_key, ctx->real_key_length)) {
-                           
+                
         free_global_memory(ctx, ctx_length);
         MEMORY_ERROR;
         return 1;
