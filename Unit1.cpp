@@ -1080,6 +1080,7 @@ int __fastcall Crycon::WriteSalt() {
     return WRITE_FILE_ERROR;
   }
 
+  fflush(ctx->file_output);
   return OK;
 }
 
@@ -1088,6 +1089,7 @@ int __fastcall Crycon::ReadSalt() {
     return READ_FILE_ERROR;
   }
 
+  fflush(ctx->file_input);
   return OK;
 }
 
