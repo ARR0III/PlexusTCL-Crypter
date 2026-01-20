@@ -27,7 +27,7 @@
 
 /****************************************************************************/
 /* DEFINED THIS SYMBOL IF YOU WANT COMPILE SOFTWARE WITCH RUSSIAN LANGUAGE  */
-#define PTCL_RUSSIAN_LANGUAGE 
+#define PTCL_RUSSIAN_LANGUAGE
 #include "LANGUAGE_STRINGS.h"
 /****************************************************************************/
 
@@ -64,6 +64,7 @@
 #define CIPHER_NOT_ENTER            16
 #define KEY_SIZE_NOT_ENTER          17
 
+#define PASS_SALT_SIZE              16
 #define HMAC_DATA_BUFFER            64
 
 #define STATUS_BUFFER_SIZE         256
@@ -131,6 +132,7 @@ static HCRYPTPROV  hcrypt    = NULL;
 /* Global section for syncronize thread and GUI */
 static bool       PROCESSING = false;
 
+/* For entropy */
 uint8_t entrp[SHA256_BLOCK_SIZE]; /* NOT initialized == ALL OK */
 
 /* Only sorted strings for bin search function */
@@ -257,13 +259,13 @@ static int size_correct(const GLOBAL_MEMORY * ctx, fsize_t fsize) {
 
   if (ENCRYPT == ctx->operation) {
 /* if post encrypt size of file >= 4 EiB then this operation BAD ->> don't for decrypting */
-    if ((fsize_t)(fsize + SHA256_BLOCK_SIZE + ctx->vector_length) & ((fsize_t)1 << 62)) {
+    if ((fsize_t)(fsize + SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length) >= ((fsize_t)1 << 62)) {
       return SIZE_FILE_VERY_BIG;
     }
   }
   else {
 /* if fsize < minimal size, this file don't for decrypt */
-    if (fsize < (fsize_t)(SHA256_BLOCK_SIZE + ctx->vector_length + 1)) {
+    if (fsize < (fsize_t)(SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length + 1)) {
       return SIZE_DECRYPT_FILE_INCORRECT;
     }
   }
@@ -350,55 +352,75 @@ void cursorpos(uint8_t * data) {
   position.x = position.y = 0;
 }
 
-void LastHopeEntropy(uint8_t * trash, size_t size) {
+void LastHopeEntropyGen(uint8_t * trash, size_t size) {
   size_t i, j;
   SHA256_CTX ctx;
 
-  memxormove(entrp, &ctx, SHA256_BLOCK_SIZE);
-
-  *(uint32_t*)(&entrp[0])  += GetCurrentProcessId();
-  *(uint32_t*)(&entrp[4])  += GetCurrentThreadId();
-  *(uint32_t*)(&entrp[8])  += GetTickCount();
-  *(uint32_t*)(&entrp[12]) += (uint32_t)(&ctx);
-  *(uint32_t*)(&entrp[16]) += (uint32_t)(&LastHopeEntropy);
-  *(uint32_t*)(&entrp[20]) += (uint32_t)(&entrp) ^ (uint32_t)(&LastHopeEntropy);
-
-  sha256_init(ctx);
+  sha256_init(&ctx);
 
   i = 0;
   j = size;
 
+  *(uint32_t*)(&entrp[0]) ^= GetTickCount();
+
   while (i < size) {
-    sha256_update(ctx, entrp, SHA256_BLOCK_SIZE);
-    sha256_final(ctx);
+    sha256_update(&ctx, entrp, SHA256_BLOCK_SIZE);
+    sha256_final(&ctx);
 
     if (j > SHA256_BLOCK_SIZE)
       j = SHA256_BLOCK_SIZE;
 
-    memxormove(entrp, ctx->hash, SHA256_BLOCK_SIZE);
-    memxormove(trash + i, ctx->hash, j);
+    memxormove(entrp, ctx.hash, SHA256_BLOCK_SIZE);
+    memcpy(trash + i, ctx.hash, j);
 
     i += SHA256_BLOCK_SIZE;
     j -= SHA256_BLOCK_SIZE;
   }
-
-  meminit(ctx, 0x00, sizeof(SHA256_CTX));
 }
 
-void vector_init(uint8_t * data, size_t size) {
+void LastHopeEntropyInit(void) {
+  size_t i, j;
+  SHA256_CTX ctx;
+
+/* i'am know what not good, but me ok */
+  memxormove(entrp, ctx.hash, SHA256_BLOCK_SIZE);
+
+  /* entrp - global array for entropy */
+  *(uint32_t*)(&entrp[0])  ^= GetCurrentProcessId();
+  *(uint32_t*)(&entrp[4])  ^= GetCurrentThreadId();
+  *(uint32_t*)(&entrp[8])  ^= GetTickCount();
+  *(uint32_t*)(&entrp[12]) ^= GetACP();
+  *(uint32_t*)(&entrp[16]) ^= (uint32_t)(&ctx);
+  *(uint32_t*)(&entrp[20]) ^= (uint32_t)(&LastHopeEntropyInit);
+  *(uint32_t*)(&entrp[24]) ^= (uint32_t)(&entrp) ^ (uint32_t)(&LastHopeEntropyGen);
+
+  for (i = 0; i < SHA256_BLOCK_SIZE; i++) {
+    entrp[i] ^= (uint8_t)genrand(0x00, 0xFF);
+  }
+
+  cursorpos(entrp); // X and Y cursor position xor operation for data[0] and data[1];
+
+  sha256_init(&ctx);
+  sha256_update(&ctx, entrp, SHA256_BLOCK_SIZE);
+  sha256_final(&ctx);
+
+  memxormove(entrp, ctx.hash, SHA256_BLOCK_SIZE);
+}
+
+void StrongRandomGen(uint8_t * data, size_t size) {
   size_t i;
-                             
+
   CryptGenRandom(hcrypt, size, data);
 
   for (i = 0; i < size; i++) {
     data[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
-  cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
+  cursorpos(entrp); // X and Y cursor position xor operation for data[0] and data[1];
 
-/* if in your Windows OS not install crypto-provider or your system-boy are idiot
-   i'am try save you, BUT i'am not God! */
-  LastHopeEntropy(data, size);
+/* If the crypto provider doesn't work */
+/* I did everything I could and I'm praying for you */
+  LastHopeEntropyGen(data, size);
 }
 
 int operation_variant(const int operation) {
@@ -546,6 +568,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
   sha256_update(ctx->sha256sum, password, password_len);
+  sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
   sha256_final(ctx->sha256sum);
 
   count  = *(uint32_t *)(ctx->sha256sum->hash);
@@ -560,6 +583,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   for (i = 0; i < count; i++) {  /* ~500.000 */
     sha256_update(ctx->sha256sum, password, password_len);
+    sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
 
     if (!(i & div)) continue; /* if i != 1/10 */
 
@@ -575,14 +599,10 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
       Form1->Label7->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
         "Генерация "
-         + IntToStr(key_len * 8)  + "-битного ключа из "
-         + IntToStr(password_len) + "-символьного пароля: "
-         + IntToStr(real) + " %";
+         + IntToStr(key_len * 8)  + "-битного ключа: " + IntToStr(real) + " %";
 #else
         "Generating "
-          + IntToStr(key_len * 8) + "-bit key from "
-          + IntToStr(password_len) + "-character password: "
-          + IntToStr(real) + " %";
+          + IntToStr(key_len * 8) + "-bit key: "  + IntToStr(real) + " %";
 #endif
       Application->ProcessMessages();
       past = real;
@@ -591,6 +611,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
   for (i = 0; i < ctx->hash_matrix_length; i += SHA256_BLOCK_SIZE) {
     sha256_update(ctx->sha256sum, password, password_len);
+	sha256_update(ctx->sha256sum, (uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
     sha256_final(ctx->sha256sum);
     memcpy(ctx->hash_matrix + i, ctx->sha256sum->hash, SHA256_BLOCK_SIZE);
   }
@@ -1054,6 +1075,42 @@ bool __fastcall Crycon::SetOutputFile(const char * name) {
   return true;
 }
 
+int __fastcall Crycon::WriteSalt() {
+  if (fwrite(ctx->pass_salt, 1, PASS_SALT_SIZE, ctx->file_output) != PASS_SALT_SIZE) {
+    return WRITE_FILE_ERROR;
+  }
+
+  return OK;
+}
+
+int __fastcall Crycon::ReadSalt() {
+  if (fread(ctx->pass_salt, 1, PASS_SALT_SIZE, ctx->file_input) != PASS_SALT_SIZE) {
+    return READ_FILE_ERROR;
+  }
+
+  return OK;
+}
+
+/* if not OK then BAD */
+int __fastcall Crycon::PassSaltInit() {
+  int result = OK;
+
+  switch(ctx->operation) {
+    case ENCRYPT:
+      StrongRandomGen((uint8_t *)ctx->pass_salt, PASS_SALT_SIZE);
+      result = WriteSalt();
+      break;
+    case DECRYPT:
+      result = ReadSalt();
+      break;
+  }
+
+  /* operation result this is status object */
+  status = result;
+  
+  return result;
+}
+
 bool __fastcall Crycon::SetCipher(const char * cipher_name) {
   int result = str_list_search(cipher_name, ALGORITM_NAME, ALGORITM_NAME_COUNT);
 
@@ -1190,7 +1247,7 @@ void _fastcall Crycon::SetOperation(const int operation) {
   ctx->operation = operation;
 
   if (ENCRYPT == operation) {
-    vector_init(ctx->vector, ctx->vector_length);
+    StrongRandomGen(ctx->vector, ctx->vector_length);
   }
 
   status_buffer_pos = snprintf(ctx->status_buffer, STATUS_BUFFER_SIZE,
@@ -1215,6 +1272,17 @@ bool __fastcall Crycon::ReadKeyFile(const char * key_file) {
     status = KEY_FILE_NOT_OPENNED;
     return false;
   }
+  
+  /* all data by read */
+
+  if (KDFCLOMUL(ctx, ctx->real_key, ctx->real_key_length, ctx->new_key, ctx->new_key_length) == false) {
+    status = CANNOT_ALLOCATE_MEMORY;
+    return false;
+  }
+
+  memcpy(ctx->real_key, ctx->new_key, ctx->real_key_length); /* real_key_length == new_key_length */
+  /* now key(data || salt) in ctx->real_key */
+  meminit(ctx->new_key, 0x00, ctx->new_key_length);
 
   /* if by read ctx->real_key_length byte */
   return true;
@@ -1267,6 +1335,9 @@ bool __fastcall Crycon::CorrectSizeOfFile(const char * name) {
   }
 
   div = (double)fsize * 0.01L;
+
+  if (ctx->operation)
+    fsize -= PASS_SALT_SIZE;
 
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
@@ -1537,19 +1608,27 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
 
   thread->SetOperation(result);
 
-  if (FileExists(MemoKey->Text) == true) {
-    if (thread->ReadKeyFile(MemoKey->Text.c_str()) == false) {
-      UnicodeMsg =
-#ifdef PTCL_RUSSIAN_LANGUAGE
-      "Недостаточно данных в ключевом файле!";
-#else
-      "Not enough data in the key file!";
-#endif
-      MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG, UnicodeMsg.c_str());
-      delete thread;
-      return;
-    }
+  if (thread->CorrectSizeOfFile(InputFile->Text.c_str()) == false) {
+    delete thread;
+    return;
+  }
 
+  if (thread->SetInputFile(InputFile->Text.c_str()) == false) {
+    delete thread;
+    return;
+  }
+
+  if (thread->SetOutputFile(OutputFile->Text.c_str()) == false) {
+    delete thread;
+    return;
+  }
+
+  if (thread->PassSaltInit() != OK) {
+    delete thread;
+    return;
+  }
+
+  if (FileExists(MemoKey->Text) == true) {
     UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
     "Использовать " + IntToStr(thread->GetKeySize() * 8) + "-битный ключ шифрования из файла?\n";
@@ -1561,6 +1640,14 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
       delete thread;
       return;
     }
+	
+    ButtonStart->Enabled = false;
+    if (thread->ReadKeyFile(MemoKey->Text.c_str()) == false) {
+      ButtonStart->Enabled = true;
+      delete thread;
+      return;
+    }
+    ButtonStart->Enabled = true;
   }
   else {
     UnicodeMsg =
@@ -1606,21 +1693,6 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
     return;
   }
 
-  if (thread->CorrectSizeOfFile(InputFile->Text.c_str()) == false) {
-    delete thread;
-    return;
-  }
-
-  if (thread->SetInputFile(InputFile->Text.c_str()) == false) {
-    delete thread;
-    return;
-  }
-
-  if (thread->SetOutputFile(OutputFile->Text.c_str()) == false) {
-    delete thread;
-    return;
-  }
-
   Form1->ProgressBar1->Position = 0;
   Form1->ProgressBar1->Update();
 
@@ -1641,6 +1713,8 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 
   InitializeCriticalSection(&CrSec);
   srand(time(NULL) + (uint32_t)(&settings));
+
+  LastHopeEntropyInit(); /* WARNING: custom entropy generator! */
 
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
@@ -1879,12 +1953,7 @@ void __fastcall TForm1::ButtonKeyGenClick(TObject *Sender) {
     return;
   }
 
-  CryptGenRandom(hcrypt, len, memory->input);
-
-  /* random byte to 0x00 do 0xFF xor random memory block */
-  for (int i = 0; i < len; i++) {
-    memory->input[i] ^= (uint8_t)genrand(0x00, 0xFF);
-  }
+  StrongRandomGen(memory->input, len);
 
   arc4_init(arc4_ctx, memory->input, len);
   arc4(arc4_ctx, memory->input, memory->output, len);
