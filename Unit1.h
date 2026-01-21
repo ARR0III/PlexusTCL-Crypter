@@ -73,7 +73,8 @@ typedef struct {
 
   int          operation;          /* ENCRYPT == 0x00 or DECRYPT == 0xDE */
   cipher_t     cipher;             /* search type name cipher_number_enum */  
-  
+
+  unsigned char pass_salt[PASS_SALT_SIZE];
   unsigned char plain_text[DATA_SIZE];
   unsigned char cipher_text[DATA_SIZE];
 
@@ -113,6 +114,9 @@ private:
   void __fastcall Init();
   void __fastcall Clear();
 
+  int __fastcall WriteSalt();
+  int __fastcall ReadSalt();
+
   void __fastcall ShowStatus();
   void __fastcall ProgressBar();
   void __fastcall ButtonUpdate();
@@ -132,6 +136,7 @@ public:
 
   bool __fastcall SetInputFile(const char * name);
   bool __fastcall SetOutputFile(const char * name);
+  int  __fastcall PassSaltInit();
 
   bool __fastcall GeneratingCryptKey(const char * message);
 
@@ -139,7 +144,7 @@ public:
   int  __fastcall SetKeyLen(const char * key_size, int * aes);
   void __fastcall SetOperation(const int operation);
   void __fastcall SetErased();
-  bool __fastcall ReadKeyFile(const char * key_file);
+  bool __fastcall GenKeyFromFile(const char * key_file);
   bool __fastcall KeyGenFromPass(const char * password);  
   void __fastcall InitCipherKey();
   

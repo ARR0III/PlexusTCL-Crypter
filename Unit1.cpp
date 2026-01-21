@@ -209,6 +209,27 @@ static const TColor FORM_HEAD_TEXT_COLOR   = TColor(0x00FFFFFF);
 __fastcall TForm1::TForm1(TComponent* Owner) : TForm(Owner) {
 }
 
+/*
+void ShowMemoryDump(void * data, size_t size) {
+  size_t hex_dump_size = size * 2 + 1;
+  char * hex_dump = (char *)malloc(hex_dump_size);
+
+  if (NULL == hex_dump) {
+    ShowMessage("NO DATA FOR SHOW!\nERROR: cannot allocate memory!\n");
+    return;
+  }
+
+  meminit(hex_dump, 0x00, hex_dump_size);
+
+  strtohex(hex_dump, hex_dump_size, (char*)data, size);
+  hex_dump[hex_dump_size-1] = 0x00;
+
+  ShowMessage(hex_dump);
+
+  meminit(hex_dump, 0x00, hex_dump_size);
+  free(hex_dump);
+}
+*/
 
 uint32_t MessageForUser(const int tumbler,
                         const char * head,
@@ -416,7 +437,7 @@ void StrongRandomGen(uint8_t * data, size_t size) {
     data[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
-  cursorpos(entrp); // X and Y cursor position xor operation for data[0] and data[1];
+  cursorpos(data); // X and Y cursor position xor operation for data[0] and data[1];
 
 /* If the crypto provider doesn't work */
 /* I did everything I could and I'm praying for you */
@@ -1079,7 +1100,6 @@ int __fastcall Crycon::WriteSalt() {
   if (fwrite(ctx->pass_salt, 1, PASS_SALT_SIZE, ctx->file_output) != PASS_SALT_SIZE) {
     return WRITE_FILE_ERROR;
   }
-
   fflush(ctx->file_output);
   return OK;
 }
@@ -1089,7 +1109,6 @@ int __fastcall Crycon::ReadSalt() {
     return READ_FILE_ERROR;
   }
 
-  fflush(ctx->file_input);
   return OK;
 }
 
@@ -1248,7 +1267,7 @@ int __fastcall Crycon::SetKeyLen(const char * key_size, int * aes) {
 void _fastcall Crycon::SetOperation(const int operation) {
   ctx->operation = operation;
 
-  if (ENCRYPT == operation) {
+  if (ENCRYPT == ctx->operation) {
     StrongRandomGen(ctx->vector, ctx->vector_length);
   }
 
@@ -1262,10 +1281,10 @@ void __fastcall Crycon::SetStatus(const int x) {
   status = x;
 }
 
-bool __fastcall Crycon::ReadKeyFile(const char * key_file) {
-  int real_read = readfromfile(key_file, ctx->real_key, ctx->real_key_length);
+bool __fastcall Crycon::GenKeyFromFile(const char * key_file) {
+  int real_read = readfromfile(key_file, ctx->new_key, ctx->new_key_length);
 
-  if ((real_read > 0) && (real_read < (int)(ctx->real_key_length))) {
+  if ((real_read > 0) && (real_read < (int)(ctx->new_key_length))) {
     status = DATA_FROM_FILE_SMALL;
     return false;
   }
@@ -1274,30 +1293,26 @@ bool __fastcall Crycon::ReadKeyFile(const char * key_file) {
     status = KEY_FILE_NOT_OPENNED;
     return false;
   }
-  
-  /* all data by read */
 
-  if (KDFCLOMUL(ctx, ctx->real_key, ctx->real_key_length, ctx->new_key, ctx->new_key_length) == false) {
+  /* all data by read */
+  if (KDFCLOMUL(ctx, ctx->new_key, ctx->new_key_length, ctx->real_key, ctx->real_key_length) == false) {
     status = CANNOT_ALLOCATE_MEMORY;
     return false;
   }
 
-  memcpy(ctx->real_key, ctx->new_key, ctx->real_key_length); /* real_key_length == new_key_length */
-  /* now key(data || salt) in ctx->real_key */
   meminit(ctx->new_key, 0x00, ctx->new_key_length);
-
   /* if by read ctx->real_key_length byte */
   return true;
 }
 
 bool __fastcall Crycon::KeyGenFromPass(const char * password) {
   int length = (int)x_strnlen(password, 256);
-  
-  if (length < 8 || length == 257) {
+
+  if (length < 8 || length > 256) {
     status = KEY_LEN_INCORRECT;
     return false;
   }
-    
+
   if (KDFCLOMUL(ctx, password, length, ctx->real_key, ctx->real_key_length) == false) {
     status = CANNOT_ALLOCATE_MEMORY;
     return false;
@@ -1336,10 +1351,10 @@ bool __fastcall Crycon::CorrectSizeOfFile(const char * name) {
     return false;
   }
 
-  div = (double)fsize * 0.01L;
-
-  if (ctx->operation)
+  if (DECRYPT == ctx->operation)
     fsize -= PASS_SALT_SIZE;
+
+  div = (double)fsize * 0.01L;
 
   fsize_check  = size_check(fsize);
   fsize_double = sizetodoubleprint(fsize_check, (double)fsize);
@@ -1575,7 +1590,7 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
     }
   }
 /*****************************************************************************/
-/* if object to delete, then sgow status operation in window */
+/* if object to delete, then show status operation in window */
   thread = new Crycon(true);
 
   if (NULL == thread) {
@@ -1644,7 +1659,7 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
     }
 	
     ButtonStart->Enabled = false;
-    if (thread->ReadKeyFile(MemoKey->Text.c_str()) == false) {
+    if (thread->GenKeyFromFile(MemoKey->Text.c_str()) == false) {
       ButtonStart->Enabled = true;
       delete thread;
       return;
@@ -1716,8 +1731,6 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   InitializeCriticalSection(&CrSec);
   srand(time(NULL) + (uint32_t)(&settings));
 
-  LastHopeEntropyInit(); /* WARNING: custom entropy generator! */
-
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
@@ -1727,6 +1740,8 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
 #endif
     );
   }
+
+  LastHopeEntropyInit(); /* WARNING: custom entropy generator! */
 
   settings.top_color        = FORM_HEAD_COLOR;
   settings.top_text_color   = FORM_HEAD_TEXT_COLOR;
