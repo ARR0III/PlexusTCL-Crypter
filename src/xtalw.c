@@ -14,6 +14,46 @@
 
 enum {false = 0, true = 1};
 
+size_t _memcmp_s(const void * s, const void * d, const size_t size) {
+  size_t  i;
+  size_t  result = 0;
+  size_t  sz     = size;
+
+  char  * m1 = (char*)s;
+  char  * m2 = (char*)d;
+  
+  if (sz < sizeof(size_t)) {
+    for (i = 0; i < sz; i++) {
+      result |= (size_t)(*(m1 + i) ^ *(m2 + i)); /* A1 xor A1 = 0 */
+    }
+  }
+  
+  while (sz >= sizeof(size_t) * 4) {
+    result |= (*(size_t*)m1 + 0) ^ (*(size_t*)m2 + 0);
+    result |= (*(size_t*)m1 + 1) ^ (*(size_t*)m2 + 1);
+    result |= (*(size_t*)m1 + 2) ^ (*(size_t*)m2 + 2);
+    result |= (*(size_t*)m1 + 3) ^ (*(size_t*)m2 + 3);
+			
+    m1 += sizeof(size_t) * 4;
+    m2 += sizeof(size_t) * 4;
+    sz -= sizeof(size_t) * 4;
+  }
+  
+  while (sz >= sizeof(size_t)) {
+    result |= *(size_t*)m1 ^ *(size_t*)m2;
+
+    m1 += sizeof(size_t);
+    m2 += sizeof(size_t);
+    sz -= sizeof(size_t);
+  }
+  
+  if (m1 > (char*)s && sz) {
+    result |= (*(size_t*)m1 - sizeof(size_t) + sz) ^ (*(size_t*)m2 - sizeof(size_t) + sz);
+  }
+  
+  return result;
+}
+
 int readstr(char * str, const int len, FILE * f) {
   int chr, count;
   int comment = false;
@@ -697,14 +737,14 @@ void strtohex(char * buffer, const size_t buffer_len, const uint8_t * data, cons
   i = j = 0;
 
   while(1) {
-    if (i >= data_len || j >= buffer_len)
+	if (i >= data_len || j >= buffer_len)
       break;
 	
     buffer[j+0] = digits[(int)data[i] >> 0x04];
     buffer[j+1] = digits[(int)data[i]  & 0x0F];
 	
-    i++;
-    j += 2;
+	i++;
+	j += 2;
   }
 }
 

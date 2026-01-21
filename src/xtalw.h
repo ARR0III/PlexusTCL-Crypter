@@ -53,6 +53,7 @@ void memxormove(void * output, const void * input, size_t length);
 void meminit(void * data, const size_t number, size_t length); /* <-- memset function analog */
 
 /* Only C language source code */
+size_t   _memcmp_s(const void * s, const void * d, const size_t size);
 int      readstr(char * str, const int len, FILE * f);
 uint32_t HexToInt32(const char * hex);
 
