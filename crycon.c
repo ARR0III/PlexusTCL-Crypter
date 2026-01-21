@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v6.00;
+ * Console Encryption Software v7.00;
  *
  * Developer:         ARR0III;
- * Modification date: 16 JAN 2026;
+ * Modification date: 20 JAN 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -83,7 +83,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 6.00 16JAN26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.00 20JAN26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -586,6 +586,9 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
     else
       return WRITE_FILE_NOT_OPEN;
   }
+
+  if (ctx->operation)
+    fsize -= PASS_SALT_SIZE;
   
   div          = (double)fsize * 0.01L;
   //div          = (double)((double)fsize / 100.0);
@@ -601,9 +604,6 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
   sha256_init(ctx->sha256sum);
 
   fseeko(ctx->operation ? fi : fo, PASS_SALT_SIZE, SEEK_SET);
-
-  if (ctx->operation)
-    fsize -= PASS_SALT_SIZE;
 
   while (position < fsize) {
     if (0ULL == position) { /* if first block */
@@ -876,9 +876,6 @@ static int pass_salt_init(GLOBAL_MEMORY * ctx) {
       break;
     case DECRYPT:
       result = readfromfile(ctx->finput, (void *)ctx->pass_salt, PASS_SALT_SIZE) - PASS_SALT_SIZE;
-      break;
-    default:
-      result = ~OK;
       break;
   }
 
@@ -1303,7 +1300,7 @@ int main(int argc, char * argv[]) {
       MEMORY_ERROR;
       return 1;
     }
-    memcpy(ctx->real_key, ctx->new_key, ctx->new_key_length);
+    memcpy(ctx->real_key, ctx->new_key, ctx->real_key_length);
     meminit(ctx->new_key, 0x00, ctx->new_key_length);
   }
   else
