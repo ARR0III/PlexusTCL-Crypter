@@ -1,4 +1,4 @@
-# PlexusTCL Crypter v6.00
+# PlexusTCL Crypter v7.00
 
 <p align="center">
   <img src="screenshot.png"/>
