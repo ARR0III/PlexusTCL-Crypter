@@ -1,4 +1,4 @@
-# PlexusTCL Crypter v7.00
+# PlexusTCL Crypter v7.00 [Version build: EN/RU]
 
 <p align="center">
   <img src="screenshot.png"/>
