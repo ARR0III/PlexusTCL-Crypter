@@ -392,7 +392,7 @@ void LastHopeEntropyGen(uint8_t * trash, size_t size) {
       j = SHA256_BLOCK_SIZE;
 
     memxormove(entrp, ctx.hash, SHA256_BLOCK_SIZE);
-    memcpy(trash + i, ctx.hash, j);
+    memxormove(trash + i, ctx.hash, j);
 
     i += SHA256_BLOCK_SIZE;
     j -= SHA256_BLOCK_SIZE;
@@ -419,7 +419,8 @@ void LastHopeEntropyInit(void) {
     entrp[i] ^= (uint8_t)genrand(0x00, 0xFF);
   }
 
-  cursorpos(entrp); // X and Y cursor position xor operation for data[0] and data[1];
+/* X and Y cursor position xor operation for data[0] and data[1] and data[2]; */
+  cursorpos(entrp);
 
   sha256_init(&ctx);
   sha256_update(&ctx, entrp, SHA256_BLOCK_SIZE);
