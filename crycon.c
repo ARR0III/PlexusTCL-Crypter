@@ -478,7 +478,7 @@ static int size_correct(const GLOBAL_MEMORY * ctx, off_t fsize) {
 
   if (ENCRYPT == ctx->operation) {
 /* if post encrypt size of file >= 8 EiB then this operation BAD ->> don't for decrypting */
-    if ((off_t)(fsize + SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length) & ((off_t)1 << 62)) {
+    if ((off_t)(fsize + SHA256_BLOCK_SIZE + PASS_SALT_SIZE + ctx->vector_length) >= ((off_t)1 << 62)) {
       return SIZE_FILE_ERROR;
     }
   }
