@@ -19,36 +19,37 @@ size_t _memcmp_s(const void * s, const void * d, const size_t size) {
   size_t  result = 0;
   size_t  sz     = size;
 
-  char  * m1 = (char*)s;
-  char  * m2 = (char*)d;
+  size_t * m1 = (size_t*)s;
+  size_t * m2 = (size_t*)d;
   
   if (sz < sizeof(size_t)) {
     for (i = 0; i < sz; i++) {
-      result |= (size_t)(*(m1 + i) ^ *(m2 + i)); /* A1 xor A1 = 0 */
+      result |= *((char*)m1 + i) ^ *((char*)m2 + i);
     }
   }
   
   while (sz >= sizeof(size_t) * 4) {
-    result |= (*(size_t*)m1 + 0) ^ (*(size_t*)m2 + 0);
-    result |= (*(size_t*)m1 + 1) ^ (*(size_t*)m2 + 1);
-    result |= (*(size_t*)m1 + 2) ^ (*(size_t*)m2 + 2);
-    result |= (*(size_t*)m1 + 3) ^ (*(size_t*)m2 + 3);
+    result |= *(m1 + 0) ^ *(m2 + 0);
+    result |= *(m1 + 1) ^ *(m2 + 1);
+    result |= *(m1 + 2) ^ *(m2 + 2);
+    result |= *(m1 + 3) ^ *(m2 + 3);
 			
-    m1 += sizeof(size_t) * 4;
-    m2 += sizeof(size_t) * 4;
+    m1 += 4;
+    m2 += 4;
     sz -= sizeof(size_t) * 4;
   }
   
   while (sz >= sizeof(size_t)) {
-    result |= *(size_t*)m1 ^ *(size_t*)m2;
+    result |= *m1 ^ *m2;
 
-    m1 += sizeof(size_t);
-    m2 += sizeof(size_t);
+    m1 += 1;
+    m2 += 1;
     sz -= sizeof(size_t);
   }
   
-  if (m1 > (char*)s && sz) {
-    result |= (*(size_t*)m1 - sizeof(size_t) + sz) ^ (*(size_t*)m2 - sizeof(size_t) + sz);
+  if ((char*)m1 > (char*)s && sz) {
+    result |= *(size_t*)((char*)m1 - sizeof(size_t) + sz) ^
+              *(size_t*)((char*)m2 - sizeof(size_t) + sz);
   }
   
   return result;
