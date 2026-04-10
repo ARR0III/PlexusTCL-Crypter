@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v7.00;
+ * Console Encryption Software v7.01;
  *
  * Developer:         ARR0III;
- * Modification date: 20 JAN 2026;
+ * Modification date: 05 APR 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -41,6 +41,10 @@
 #  define CRYCON_DEBUG 1
 #endif
 /*****************************************************************************/
+#define FILE_NOT_FOUND(S) do { \
+    fprintf(stderr, "[!] File \"%s\" not found.\n", S); \
+  } while(0)
+
 #define MEMORY_ERROR do { \
     fprintf(stderr, "[!] Cannot allocate memory.\n"); \
   } while(0)
@@ -83,7 +87,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.00 20JAN26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.01 05APR26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -1039,6 +1043,12 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   return OK;
 }
 
+int FileExists(const char * filename, const char * mode) {
+  FILE * f = fopen(filename, mode);
+  if (NULL == f) return 0;
+  return fclose(f) + 1;
+}
+
 int main(int argc, char * argv[]) {
 /*****************************************************************************/
   extern int AES_Rounds;      /* in rijndael.c source code file */
@@ -1211,6 +1221,34 @@ int main(int argc, char * argv[]) {
       fprintf(stderr, "[!] Key length \"%s\" incorrect.\n", argv[3]);
       return 1;
     }
+  }
+
+  if (!FileExists(ctx->finput, "rb")) {
+    FILE_NOT_FOUND(ctx->finput);
+    free_global_memory(ctx, ctx_length);
+    return 1;
+  }
+
+  if (FileExists(ctx->foutput, "rb")) {
+    int c;
+
+    printf("[!] File \"%s\" exists. Rewrite? [Y/N]:", ctx->foutput);
+    fflush(stdout);
+    c = getc(stdin);
+    if ('N' == c || 'n' == c) {
+      printf("[!] Change name output file.\n");
+      free_global_memory(ctx, ctx_length);
+      return 1;
+    }
+    else
+    if (c != 'Y' && c != 'y') {
+      printf("[!] Simbol \"%c\" not \'y\' or \'n\'.\n", c);
+      free_global_memory(ctx, ctx_length);
+      return 1;
+    }
+    result = 0;
+    while (++result < 1000 && c != '\n')
+      c = getc(stdin);
   }
 
   if (password_read(ctx) == ERROR_GET_STRING) {
