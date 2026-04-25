@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v7.01;
+ * Console Encryption Software v7.02;
  *
  * Developer:         ARR0III;
- * Modification date: 05 APR 2026;
+ * Modification date: 26 APR 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -20,6 +20,7 @@
 #include <limits.h>
 
 #include <sys/types.h>
+#include <sys/mman.h>
 
 #include <unistd.h>
 #include <termios.h>
@@ -87,7 +88,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.01 05APR26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.02 26APR26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -1122,6 +1123,10 @@ int main(int argc, char * argv[]) {
     return result;
   }
 /*****************************************************************************/
+
+  if (mlock(ctx, ctx_length) == -1) {
+    fprintf(stderr, "[!] Memory not protected. Good luck...\n");
+  }
 
   ctx->foutput = argv[argc - 1];
   ctx->finput  = argv[argc - 2];
