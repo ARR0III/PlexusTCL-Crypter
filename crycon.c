@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v7.02;
+ * Console Encryption Software v7.03;
  *
  * Developer:         ARR0III;
- * Modification date: 26 APR 2026;
+ * Modification date: 15 MAY 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -88,7 +88,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.02 26APR26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.03 15MAY26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -1124,10 +1124,6 @@ int main(int argc, char * argv[]) {
   }
 /*****************************************************************************/
 
-  if (mlock(ctx, ctx_length) == -1) {
-    fprintf(stderr, "[!] Memory not protected. Good luck...\n");
-  }
-
   ctx->foutput = argv[argc - 1];
   ctx->finput  = argv[argc - 2];
 
@@ -1450,6 +1446,17 @@ int main(int argc, char * argv[]) {
   printf("[#] Operation %s file \"%s\" started.\n",
     OPERATION_NAME[operation_variant(ctx->operation)], ctx->finput);
 
+  result  = 0;
+  result |= mlock(ctx, ctx_length);
+  result |= mlock(ctx->real_key,  ctx->real_key_length);
+  result |= mlock(ctx->new_key,   ctx->new_key_length);
+  /*result |= mlock(ctx->password,  ctx->password_length);*/
+  result |= mlock(ctx->sha256sum, ctx->sha256sum_length);
+  result |= mlock(cipher_pointer, cipher_ctx_len);
+
+  if (result != 0) {
+    printf("[!] Memory not blocked. Good luck...\n");
+  }
 /*****************************************************************************/
 /* STARTING ENCRYPT/DECRYPT OPERATION AND RETURN STATUS */
 
