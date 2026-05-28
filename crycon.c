@@ -3,7 +3,7 @@
  * Console Encryption Software v7.03;
  *
  * Developer:         ARR0III;
- * Modification date: 15 MAY 2026;
+ * Modification date: 29 MAY 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -20,6 +20,7 @@
 #include <limits.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 
 #include <unistd.h>
@@ -361,12 +362,11 @@ static int operation_variant(const int operation) {
 }
 
 static off_t size_of_file(FILE * f) {
-  off_t result;
+  off_t  result;
 
-  if (!f) {
+  if (!f)
     return (-1);
-  }
-	
+
   if (fseeko(f, 0, SEEK_END) != 0) {
     return (-1);
   }
@@ -1045,7 +1045,20 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
 }
 
 int FileExists(const char * filename, const char * mode) {
-  FILE * f = fopen(filename, mode);
+  struct stat file;
+  FILE * f;
+
+  if (stat(filename, &file) == -1)
+    return 0;
+
+  if (!S_ISREG(file.st_mode)) {
+    meminit(&file, 0x00, sizeof(struct stat));
+    return 0;
+  }
+
+  meminit(&file, 0x00, sizeof(struct stat));
+
+  f = fopen(filename, mode);
   if (NULL == f) return 0;
   return fclose(f) + 1;
 }
@@ -1457,9 +1470,9 @@ int main(int argc, char * argv[]) {
   if (result != 0) {
     printf("[!] Memory not blocked. Good luck...\n");
   }
+	
 /*****************************************************************************/
 /* STARTING ENCRYPT/DECRYPT OPERATION AND RETURN STATUS */
-
   result = filecrypt(ctx);
   PRINT_OPERATION_STATUS(ctx, result);
 
