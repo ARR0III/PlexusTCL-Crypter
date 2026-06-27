@@ -3,7 +3,7 @@
  * Console Encryption Software v7.03;
  *
  * Developer:         ARR0III;
- * Modification date: 29 MAY 2026;
+ * Modification date: 27 JUN 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -89,7 +89,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.03 15MAY26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.03 29MAY26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -828,7 +828,7 @@ static void random_vector_init(uint8_t * data, size_t size) {
 void vector_init(uint8_t * data, size_t size) {
   size_t i;
 
-  FILE * furand = fopen("/dev/urandom", "rb");
+  FILE * furand = fopen("/dev/urandom", PARAM_READ_BYTE);
 
   if (furand) {
     i = 0;
@@ -1237,13 +1237,13 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  if (!FileExists(ctx->finput, "rb")) {
+  if (!FileExists(ctx->finput, PARAM_READ_BYTE)) {
     FILE_NOT_FOUND(ctx->finput);
     free_global_memory(ctx, ctx_length);
     return 1;
   }
 
-  if (FileExists(ctx->foutput, "rb")) {
+  if (FileExists(ctx->foutput, PARAM_WRITE_BYTE)) {
     int c;
 
     printf("[!] File \"%s\" exists. Rewrite? [Y/N]:", ctx->foutput);
@@ -1470,9 +1470,9 @@ int main(int argc, char * argv[]) {
   if (result != 0) {
     printf("[!] Memory not blocked. Good luck...\n");
   }
-	
 /*****************************************************************************/
 /* STARTING ENCRYPT/DECRYPT OPERATION AND RETURN STATUS */
+
   result = filecrypt(ctx);
   PRINT_OPERATION_STATUS(ctx, result);
 
