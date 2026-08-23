@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 219
-  Top = 351
+  Left = 331
+  Top = 316
   BorderStyle = bsNone
   Caption = 'Form1'
   ClientHeight = 306
@@ -36,7 +36,7 @@ object Form1: TForm1
   end
   object Label1: TLabel
     Left = 9
-    Top = 7
+    Top = 6
     Width = 70
     Height = 13
     Cursor = crSizeAll
@@ -96,8 +96,8 @@ object Form1: TForm1
     Caption = #1057#1086#1089#1090#1086#1103#1085#1080#1077'...'
   end
   object Label8: TLabel
-    Left = 441
-    Top = 7
+    Left = 443
+    Top = 6
     Width = 18
     Height = 13
     Cursor = crHandPoint
@@ -115,8 +115,8 @@ object Form1: TForm1
     OnMouseLeave = Label8MouseLeave
   end
   object Label9: TLabel
-    Left = 463
-    Top = 7
+    Left = 465
+    Top = 6
     Width = 19
     Height = 13
     Cursor = crHandPoint
@@ -208,6 +208,7 @@ object Form1: TForm1
     Cursor = crIBeam
     MaxLength = 3
     TabOrder = 7
+    Text = '8'
   end
   object RadioEncrypt: TRadioButton
     Left = 176

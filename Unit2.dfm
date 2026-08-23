@@ -1,9 +1,9 @@
 object Form2: TForm2
-  Left = 228
-  Top = 154
+  Left = 418
+  Top = 234
   BorderStyle = bsNone
   Caption = #1057#1055#1056#1040#1042#1050#1040
-  ClientHeight = 154
+  ClientHeight = 158
   ClientWidth = 346
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,7 +19,7 @@ object Form2: TForm2
     Left = 1
     Top = 1
     Width = 344
-    Height = 22
+    Height = 25
     Cursor = crSizeAll
     Align = alCustom
     Brush.Color = clNavy
@@ -28,7 +28,7 @@ object Form2: TForm2
   end
   object Label5: TLabel
     Left = 320
-    Top = 5
+    Top = 6
     Width = 19
     Height = 13
     Cursor = crHandPoint
@@ -47,8 +47,8 @@ object Form2: TForm2
   end
   object Label4: TLabel
     Left = 8
-    Top = 5
-    Width = 88
+    Top = 6
+    Width = 3
     Height = 13
     Cursor = crSizeAll
     Color = clNavy
@@ -63,15 +63,15 @@ object Form2: TForm2
   end
   object Shape2: TShape
     Left = 1
-    Top = 23
+    Top = 25
     Width = 344
-    Height = 130
+    Height = 132
     Align = alCustom
     Brush.Color = clBtnFace
   end
   object Label3: TLabel
     Left = 8
-    Top = 133
+    Top = 135
     Width = 3
     Height = 13
     Font.Charset = DEFAULT_CHARSET
@@ -83,20 +83,20 @@ object Form2: TForm2
   end
   object Bevel1: TBevel
     Left = 8
-    Top = 50
+    Top = 52
     Width = 329
     Height = 79
     Shape = bsFrame
   end
   object Label2: TLabel
     Left = 14
-    Top = 56
+    Top = 58
     Width = 3
     Height = 13
   end
   object Label1: TLabel
     Left = 20
-    Top = 30
+    Top = 32
     Width = 306
     Height = 13
     Caption = 'PLEXUS TECHNOLOGY CYBERNETIC LABORATORY'

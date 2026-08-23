@@ -97,18 +97,6 @@
     LeaveCriticalSection(&Form1->CrSec);  \
   } while(0)
 
-#define CHECK_BREAK_STREAM                                  \
-  do {                                                      \
-    if (TryEnterCriticalSection(&Form1->CrSec)) {           \
-      if (false == PROCESSING) {                            \
-        LeaveCriticalSection(&Form1->CrSec);                \
-        break;                                              \
-      }                                                     \
-                                                            \
-      LeaveCriticalSection(&Form1->CrSec);                  \
-    }                                                       \
-  } while(0)
-
 #define READ_PARAM_BYTE     "rb"
 #define WRITE_PARAM_BYTE    "wb"
 #define REWRITE_PARAM_BYTE  "r+b"
@@ -675,6 +663,7 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 //-----------------------------------------------------------------------------
 
 __fastcall Crycon::Crycon(bool CreateSuspended):TThread(CreateSuspended) {
+  SET_START_STREAM;
   Init();
 }
 
@@ -682,6 +671,7 @@ __fastcall Crycon::~Crycon() {
   ButtonUpdate();
   ShowStatus();
   Clear();
+  SET_STOP_STREAM;
 }
 
 FILE * __fastcall Crycon::GetFile() {
@@ -912,10 +902,8 @@ void __fastcall Crycon::Encrypt() {
 
 void __fastcall Crycon::Execute() {
   Priority        = tpNormal;
-  FreeOnTerminate = true;	
-	
-  SET_START_STREAM;
-  
+  FreeOnTerminate = true;
+
   meminit(ctx->sha256sum, 0x00, sizeof(SHA256_CTX));
   sha256_init(ctx->sha256sum);
 
@@ -963,9 +951,7 @@ void __fastcall Crycon::Execute() {
       status = OPERATION_BREAK;
       break;
     }
-
-    CHECK_BREAK_STREAM;
-
+    
     for (nblock = 0; nblock < realread; nblock += ctx->vector_length) {
       Encrypt();
       memxormove(ctx->cipher_text + nblock, ctx->plain_text + nblock, ctx->vector_length);
@@ -1012,8 +998,6 @@ void __fastcall Crycon::Execute() {
       break;
     }
 
-    CHECK_BREAK_STREAM;
-
     if (real_percent > past_percent) {
       check = size_check(position);
 
@@ -1042,7 +1026,6 @@ void __fastcall Crycon::Execute() {
   }
 
   if (status != OK) {
-    SET_STOP_STREAM;
     return;
   }
 
@@ -1052,13 +1035,11 @@ void __fastcall Crycon::Execute() {
   if (ENCRYPT == ctx->operation) {
     if (fwrite(ctx->sha256sum->hash, 1, SHA256_BLOCK_SIZE, ctx->file_output) != SHA256_BLOCK_SIZE) {
       status = WRITE_FILE_ERROR;
-      SET_STOP_STREAM;
       return;
     }
 
     if (ferror(ctx->file_output)) {
       status = WRITE_FILE_ERROR;
-      SET_STOP_STREAM;
       return;
     }
 
@@ -1067,12 +1048,9 @@ void __fastcall Crycon::Execute() {
   else {
     if (HMAC_Check(realread) == false) {
       status = CONTROL_SUM_FILE_ERROR;
-      SET_STOP_STREAM;
       return;
     }
   }
-
-  SET_STOP_STREAM;
 }
 
 bool __fastcall Crycon::SetInputFile(const char * name) {
