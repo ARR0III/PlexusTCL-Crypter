@@ -111,6 +111,9 @@
 
 TForm1 * Form1;
 
+/* For sleeping/working thread */
+static HANDLE      HEvent    = NULL;
+
 /* Thread pointer for core works */
 static Crycon     *thread    = NULL;
 
@@ -146,7 +149,7 @@ static const char * ALGORITM_NAME[ALGORITM_NAME_COUNT] = {
 
 static const char *CHAR_SIZE_DATA[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "бт" , "КиБ", "МиБ", "ГиБ", "ТиБ", "ПиБ", "ЕиБ"
+  "Р±С‚" , "РљРёР‘", "РњРёР‘", "Р“РёР‘", "РўРёР‘", "РџРёР‘", "Р•РёР‘"
 #else
   "bt" , "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
 #endif
@@ -154,7 +157,7 @@ static const char *CHAR_SIZE_DATA[] = {
 
 static const char * OPERATION_NAME[] = {
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Шифрование", "Расшифровка"
+  "РЁРёС„СЂРѕРІР°РЅРёРµ", "Р Р°СЃС€РёС„СЂРѕРІРєР°"
 #else
   "Encrypting", "Decrypting"
 #endif
@@ -608,8 +611,8 @@ static bool KDFCLOMUL(GLOBAL_MEMORY * ctx,
 
       Form1->Label7->Caption =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-        "Генерация "
-         + IntToStr(key_len * 8)  + "-битного ключа: " + IntToStr(real) + " %";
+        "Р“РµРЅРµСЂР°С†РёСЏ "
+         + IntToStr(key_len * 8)  + "-Р±РёС‚РЅРѕРіРѕ РєР»СЋС‡Р°: " + IntToStr(real) + " %";
 #else
         "Generating "
           + IntToStr(key_len * 8) + "-bit key: "  + IntToStr(real) + " %";
@@ -947,6 +950,8 @@ void __fastcall Crycon::Execute() {
       break;
     }
 
+	WaitForSingleObject(HEvent, INFINITE);
+
     if (Terminated) {
       status = OPERATION_BREAK;
       break;
@@ -974,6 +979,8 @@ void __fastcall Crycon::Execute() {
       realread -= SHA256_BLOCK_SIZE;
     }
 
+	WaitForSingleObject(HEvent, INFINITE);
+
     HashCalculate(realread);
 
     if (Terminated) {
@@ -992,6 +999,8 @@ void __fastcall Crycon::Execute() {
     }
 
     fflush(ctx->file_output);
+
+	WaitForSingleObject(HEvent, INFINITE);
 
     if (Terminated) {
       status = OPERATION_BREAK;
@@ -1487,7 +1496,7 @@ void __fastcall TForm1::Label9Click(TObject *Sender) {
 //---------------------------------------------------------------------------
 
 const char * CharA_Or_CharOV(size_t length) {
-  return (24 == length || 128 == length) ? " бита" : " бит";
+  return (24 == length || 128 == length) ? " Р±РёС‚Р°" : " Р±РёС‚";
 }
 
 void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
@@ -1498,18 +1507,16 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
 
   EnterCriticalSection(&Form1->CrSec);
   if (PROCESSING) {
-    thread->Suspend();
+    ResetEvent(HEvent);
     if (MessageForUser(MB_ICONQUESTION + MB_YESNO, STR_PROGRAMM_NAME, UnicodeMsg.c_str()) == IDYES) {
       PROCESSING = false;
       LeaveCriticalSection(&Form1->CrSec);
       
-      thread->Resume();
-      thread->Terminate();
-      //thread->WaitFor();
-      //delete thread;
+	  thread->Terminate();
+      SetEvent(HEvent);
     }
     else {
-      thread->Resume();
+      SetEvent(HEvent);
       LeaveCriticalSection(&Form1->CrSec);
     }
 
@@ -1627,7 +1634,7 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
   if (FileExists(MemoKey->Text) == true) {
     UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Использовать " + IntToStr(thread->GetKeySize() * 8) + "-битный ключ шифрования из файла?\n";
+    "РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ " + IntToStr(thread->GetKeySize() * 8) + "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· С„Р°Р№Р»Р°?\n";
 #else
     "Use " + IntToStr(thread->GetKeySize() * 8) + "-bit encryption key from file?\n";
 #endif
@@ -1648,8 +1655,8 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
   else {
     UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-    "Сгенерировать " + IntToStr(thread->GetKeySize() * 8) +
-    "-битный ключ шифрования из пароля?\n";
+    "РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ " + IntToStr(thread->GetKeySize() * 8) +
+    "-Р±РёС‚РЅС‹Р№ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ РёР· РїР°СЂРѕР»СЏ?\n";
 #else
     "Generate " + IntToStr(thread->GetKeySize() * 8) +
     "-bit encryption key from password?\n";
@@ -1671,10 +1678,10 @@ void __fastcall TForm1::ButtonStartClick(TObject *Sender) {
 
   UnicodeMsg =
 #ifdef PTCL_RUSSIAN_LANGUAGE
-  "Приступить к выполнению выбранной операции?\n\n"
-  "Операция:\t" + String(OPERATION_NAME[thread->GetOperation() ? 1 : 0]) + "\n"
-  "Алгоритм:\t" + String(ALGORITM_NAME[thread->GetCipher()]) + CIPHER_MODE + "\n"
-  "Длина ключа:\t" + IntToStr(thread->GetKeySize() * 8).c_str() +
+  "РџСЂРёСЃС‚СѓРїРёС‚СЊ Рє РІС‹РїРѕР»РЅРµРЅРёСЋ РІС‹Р±СЂР°РЅРЅРѕР№ РѕРїРµСЂР°С†РёРё?\n\n"
+  "РћРїРµСЂР°С†РёСЏ:\t" + String(OPERATION_NAME[thread->GetOperation() ? 1 : 0]) + "\n"
+  "РђР»РіРѕСЂРёС‚Рј:\t" + String(ALGORITM_NAME[thread->GetCipher()]) + CIPHER_MODE + "\n"
+  "Р”Р»РёРЅР° РєР»СЋС‡Р°:\t" + IntToStr(thread->GetKeySize() * 8).c_str() +
     CharA_Or_CharOV(thread->GetKeySize());
 #else
   "Proceed with the operation you selected?\n\n"
@@ -1708,12 +1715,26 @@ void __fastcall TForm1::FormCreate(TObject *Sender) {
   SETTINGS settings;
 
   InitializeCriticalSection(&CrSec);
+
+  HEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
+
+  if (NULL == HEvent) {
+	MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
+#ifdef PTCL_RUSSIAN_LANGUAGE
+	  "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РёРЅСЃС‚СЂСѓРјРµРЅС‚ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё.\nР—Р°РїСѓСЃРє РїСЂРѕРіСЂР°РјРјС‹ РЅРµРІРѕР·РјРѕР¶РµРЅ!"
+#else
+	  "Failed to create the synchronization tool.\nThe program cannot start!"
+#endif
+    );
+	Form1->Close();
+  }  
+
   srand(time(NULL) + (uint32_t)(&settings));
 
   if (!CryptAcquireContext(&hcrypt, NULL, NULL, PROV_RSA_FULL, 0)) {
     MessageForUser(MB_ICONWARNING + MB_OK, STR_WARNING_MSG,
 #ifdef PTCL_RUSSIAN_LANGUAGE
-      "Криптопровайдер Microsoft Windows недоступен!"
+      "РљСЂРёРїС‚РѕРїСЂРѕРІР°Р№РґРµСЂ Microsoft Windows РЅРµРґРѕСЃС‚СѓРїРµРЅ!"
 #else
       "Microsoft Windows cryptographic provider is unavailable!"
 #endif
