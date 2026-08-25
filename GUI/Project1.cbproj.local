@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.166,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Unit1.cpp=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Unit1.cpp</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.166,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Unit1.dfm=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.455,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\xtalw.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.299,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\blowfish.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.346,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\rijndael.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.189,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\all_source_codes\Crycon WIN8.1\Unit2.cpp</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.361,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\serpent.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.197,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Project1.cbproj=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Project1.cbproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.509,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Project1.cbproj=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Project1.cbproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.440,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\twofish.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.166,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Unit1.h=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Unit1.h</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.413,=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Project1PCH1.h</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.994,=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Project1PCH1.h</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.268,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\base64.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.475,=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Unit1.cpp</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.087,=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Unit1.cpp</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.377,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\sha256.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.424,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\threefish.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.447,D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\Project1PCH1.h=C:\Users\ARR0III\Documents\Embarcadero\Studio\Projects\Project1PCH1.h</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.315,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\crc32.c</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.252,=D:\Software\PlexusTCL Crypter 5.14 (GUI)\Crycon WIN8.1\src\arc4.c</Transaction>
+  </Transactions>
+	<BT_BuildType>Debug</BT_BuildType>
+</BorlandProject>
