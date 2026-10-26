@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+#include <curses.h>
 #include <unistd.h>
 #include <termios.h>
 
@@ -960,10 +961,42 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
   }
 }
 
+/* old code
+int password_read(GLOBAL_MEMORY * ctx) {
+  int i;
+  struct termios trms, trms_old;
+  int result = ERROR_GET_STRING;
+  tcgetattr(0, &trms);                    
+  memcpy(&trms_old, &trms, sizeof(trms)); 
+  trms.c_lflag &= ~ECHO;                 
+  tcsetattr(0, TCSANOW, &trms);        
+  fflush(stdin);
+  printf("[$] Enter password or name keyfile:");
+  fflush(stdout);
+  if (fgets(ctx->password, ctx->password_length, stdin)) {
+    for (i = 0; i < ctx->password_length; i++) {
+      if ('\0' == ctx->password[i]) {
+        break;
+      }
+      if ('\n' == ctx->password[i]) {
+        ctx->password[i] = '\0';
+        break;
+      }
+    }
+    if (i > 0 && i < ctx->password_length) {
+      result = OK;
+    }
+  }
+  tcsetattr(0, TCSANOW, &trms_old); 
+  putc('\n', stdout);
+  return result;
+}
+*/
+
 /* function return code OK only if string
    read and string length > 0 and < 2048  */
 int password_read(GLOBAL_MEMORY * ctx) {
-  int i;
+  int  i, c;
   struct termios trms, trms_old;
 
   int result = ERROR_GET_STRING;
@@ -973,25 +1006,33 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
 
-  fflush(stdin);
-  printf("[$] Enter password or name keyfile:");
+  printf("[$] password:");
   fflush(stdout);
 
-  if (fgets(ctx->password, ctx->password_length, stdin)) {
-    for (i = 0; i < ctx->password_length; i++) {
-      if ('\0' == ctx->password[i]) {
-        break;
-      }
+  i = 0;
+  while(i < STRING_MAX_LENGTH) {
+    c = getchar();
 
-      if ('\n' == ctx->password[i]) {
-        ctx->password[i] = '\0';
-        break;
-      }
+    if (KEY_BACKSPACE == c) {
+      if (i > 0)
+        --i;
+      continue;
     }
+    if (EOF  == c || '\0' == c) {
+      meminit(ctx->password, 0x00, STRING_MAX_LENGTH);
+      i = 0;
+      break;
+    }
+    if ('\n' == c) {
+      ctx->password[i] = '\0';
+      break;
+    }
+    ctx->password[i] = (char)c;
+    i++;
+  }
 
-    if (i > 0 && i < ctx->password_length) {
-      result = OK;
-    }
+  if (i > 0 && i < STRING_MAX_LENGTH) {
+    result = OK;
   }
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
