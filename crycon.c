@@ -1003,27 +1003,37 @@ int password_read(GLOBAL_MEMORY * ctx) {
 
   tcgetattr(0, &trms);                    /* get settings termios system */
   memcpy(&trms_old, &trms, sizeof(trms)); /* copy normal settings */
-  trms.c_lflag &= ~ECHO;                  /* flush flag ECHO */
+  trms.c_lflag    &= ~(ECHO | ICANON);    /* invert flags ECHO and ICANON */
+  trms.c_cc[VMIN]  = 1;
+  trms.c_cc[VTIME] = 0;
   tcsetattr(0, TCSANOW, &trms);           /* set new settings */
-
-  printf("[$] password:");
-  fflush(stdout);
 
   i = 0;
   while(i < STRING_MAX_LENGTH) {
+    if (i) {
+      printf("\r[%4d] password:", i);
+      fflush(stdout);
+    }
+    else {
+      printf("\r[$$$$] password:");
+      fflush(stdout);
+    }
+
     c = getchar();
 
-    if (KEY_BACKSPACE == c) {
-      if (i > 0)
-        --i;
+    if (127 == c || 8 == c) { /* backspace */
+      if (i > 0) {
+        i--;
+        ctx->password[i] = '\0';
+      }
       continue;
     }
-    if (EOF  == c || '\0' == c) {
+    if (0 == c || 4 == c) {  /* zero byte or CTRL+D */
       meminit(ctx->password, 0x00, STRING_MAX_LENGTH);
       i = 0;
       break;
     }
-    if ('\n' == c) {
+    if ('\n' == c) {         /* Enter  */
       ctx->password[i] = '\0';
       break;
     }
@@ -1034,6 +1044,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
   if (i > 0 && i < STRING_MAX_LENGTH) {
     result = OK;
   }
+
+  ctx->password[i] = '\0';
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
   putc('\n', stdout);
