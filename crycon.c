@@ -720,7 +720,7 @@ static int filecrypt(GLOBAL_MEMORY * ctx) {
 
       real_check = size_check(position);
 
-      printf("\r >  %s [%s] (%7.2f %s/%7.2f %s) %3d %% ",
+      printf("\r >  %s [%s] (%4.2f %s/%4.2f %s) %3d %%  ",
         OPERATION_NAME[operation_variant(ctx->operation)],
         ctx->progress_bar,
         sizetodoubleprint(real_check, (double)position),
