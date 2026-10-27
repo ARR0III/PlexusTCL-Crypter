@@ -1067,7 +1067,6 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
 
 int FileExists(const char * filename) {
   struct stat file;
-  FILE * f;
 
   if (stat(filename, &file) == -1)
     return 0;
@@ -1508,4 +1507,5 @@ int main(int argc, char * argv[]) {
 	
   return 0;
 }
+
 
