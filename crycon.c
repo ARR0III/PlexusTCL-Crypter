@@ -18,13 +18,12 @@
 #include <stddef.h>
 
 #include <limits.h>
+#include <unistd.h>
+#include <termios.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-
-#include <unistd.h>
-#include <termios.h>
 
 #include "src/arc4.h"
 #include "src/sha256.h"
@@ -1015,6 +1014,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
   ctx->password[i] = '\0';
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
+  printf("\r[$$$$] password:");
+  fflush(stdout);
   putc('\n', stdout);
 
   return result;
