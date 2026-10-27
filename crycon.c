@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-#include <curses.h>
 #include <unistd.h>
 #include <termios.h>
 
@@ -974,10 +973,10 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag    &= ~(ECHO | ICANON);    /* invert flags ECHO and ICANON */
   trms.c_cc[VMIN]  = 1;
   trms.c_cc[VTIME] = 0;
-  tcsetattr(0, TCSANOW, &trms);           /* set new settings */
+  tcsetattr(0, TCSAFLUSH, &trms);           /* set new settings */
 
   i = 0;
-  while(i < STRING_MAX_LENGTH) {
+  while(i < (STRING_MAX_LENGTH-1)) {
     if (i) {
       printf("\r[%4d] password:", i);
       fflush(stdout);
