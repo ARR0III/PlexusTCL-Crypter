@@ -1,9 +1,9 @@
 /*
  * Plexus Technology Cybernetic Laboratory;
- * Console Encryption Software v7.03;
+ * Console Encryption Software v7.04;
  *
  * Developer:         ARR0III;
- * Modification date: 27 JUN 2026;
+ * Modification date: 28 OKT 2026;
  * Modification:      Release;
  * Language:          English;
  */
@@ -90,7 +90,7 @@
 static const char * PARAM_READ_BYTE  = "rb";
 static const char * PARAM_WRITE_BYTE = "wb";
 static const char * PARAM_APPND_BYTE = "ab";
-static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.03 29MAY26 [EN]";
+static const char * PROGRAMM_NAME    = "PlexusTCL Console Crypter 7.04 28OKT26 [EN]";
 
 static uint32_t      * rijndael_ctx  = NULL;
 static SERPENT_CTX   * serpent_ctx   = NULL;
@@ -961,38 +961,6 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
   }
 }
 
-/* old code
-int password_read(GLOBAL_MEMORY * ctx) {
-  int i;
-  struct termios trms, trms_old;
-  int result = ERROR_GET_STRING;
-  tcgetattr(0, &trms);                    
-  memcpy(&trms_old, &trms, sizeof(trms)); 
-  trms.c_lflag &= ~ECHO;                 
-  tcsetattr(0, TCSANOW, &trms);        
-  fflush(stdin);
-  printf("[$] Enter password or name keyfile:");
-  fflush(stdout);
-  if (fgets(ctx->password, ctx->password_length, stdin)) {
-    for (i = 0; i < ctx->password_length; i++) {
-      if ('\0' == ctx->password[i]) {
-        break;
-      }
-      if ('\n' == ctx->password[i]) {
-        ctx->password[i] = '\0';
-        break;
-      }
-    }
-    if (i > 0 && i < ctx->password_length) {
-      result = OK;
-    }
-  }
-  tcsetattr(0, TCSANOW, &trms_old); 
-  putc('\n', stdout);
-  return result;
-}
-*/
-
 /* function return code OK only if string
    read and string length > 0 and < 2048  */
 int password_read(GLOBAL_MEMORY * ctx) {
@@ -1023,7 +991,7 @@ int password_read(GLOBAL_MEMORY * ctx) {
 
     if (127 == c || 8 == c) { /* backspace */
       if (i > 0) {
-        i--;
+        --i;
         ctx->password[i] = '\0';
       }
       continue;
@@ -1097,7 +1065,7 @@ int INITIALIZED_GLOBAL_MEMORY(GLOBAL_MEMORY ** ctx, size_t ctx_size) {
   return OK;
 }
 
-int FileExists(const char * filename, const char * mode) {
+int FileExists(const char * filename) {
   struct stat file;
   FILE * f;
 
@@ -1110,10 +1078,7 @@ int FileExists(const char * filename, const char * mode) {
   }
 
   meminit(&file, 0x00, sizeof(struct stat));
-
-  f = fopen(filename, mode);
-  if (NULL == f) return 0;
-  return fclose(f) + 1;
+  return 1;
 }
 
 int main(int argc, char * argv[]) {
@@ -1290,13 +1255,13 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  if (!FileExists(ctx->finput, PARAM_READ_BYTE)) {
+  if (!FileExists(ctx->finput)) {
     FILE_NOT_FOUND(ctx->finput);
     free_global_memory(ctx, ctx_length);
     return 1;
   }
 
-  if (FileExists(ctx->foutput, PARAM_WRITE_BYTE)) {
+  if (FileExists(ctx->foutput)) {
     int c;
 
     printf("[!] File \"%s\" exists. Rewrite? [Y/N]:", ctx->foutput);
@@ -1543,5 +1508,4 @@ int main(int argc, char * argv[]) {
 	
   return 0;
 }
-
 
