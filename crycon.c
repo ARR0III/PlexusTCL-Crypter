@@ -972,19 +972,16 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag    &= ~(ECHO | ICANON);    /* invert flags ECHO and ICANON */
   trms.c_cc[VMIN]  = 1;
   trms.c_cc[VTIME] = 0;
-  tcsetattr(0, TCSAFLUSH, &trms);           /* set new settings */
+  tcsetattr(0, TCSAFLUSH, &trms);         /* set new settings and burn stdio stream */
 
   i = 0;
   while(i < (STRING_MAX_LENGTH-1)) {
-    if (i) {
+    if (i)
       printf("\r[%4d] password:", i);
-      fflush(stdout);
-    }
-    else {
+    else
       printf("\r[$$$$] password:");
-      fflush(stdout);
-    }
-
+	  
+    fflush(stdout);
     c = getchar();
 
     if (127 == c || 8 == c) { /* backspace */
