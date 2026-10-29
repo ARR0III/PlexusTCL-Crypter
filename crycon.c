@@ -964,15 +964,31 @@ void PRINT_OPERATION_STATUS(GLOBAL_MEMORY * ctx, int result) {
 int password_read(GLOBAL_MEMORY * ctx) {
   int  i, c;
   struct termios trms, trms_old;
-
   int result = ERROR_GET_STRING;
 
-  tcgetattr(0, &trms);                    /* get settings termios system */
-  memcpy(&trms_old, &trms, sizeof(trms)); /* copy normal settings */
-  trms.c_lflag    &= ~(ECHO | ICANON);    /* invert flags ECHO and ICANON */
+  if (tcgetattr(0, &trms) == (-1))
+    return result;
+
+  trms_old = trms;
+
+  trms.c_lflag    &= ~(ECHO | ICANON);
   trms.c_cc[VMIN]  = 1;
   trms.c_cc[VTIME] = 0;
-  tcsetattr(0, TCSAFLUSH, &trms);           /* set new settings */
+
+  if (tcsetattr(0, TCSANOW, &trms) == (-1))
+    return result;
+
+  if (tcgetattr(0, &trms) == (-1))
+    return result;
+
+  trms.c_lflag     ^= (trms.c_lflag & ~(ECHO | ICANON));
+  trms.c_cc[VMIN]  ^= 1;
+  trms.c_cc[VTIME] ^= 0;
+
+  if (trms.c_lflag || trms.c_cc[VMIN] || trms.c_cc[VTIME]) {
+    fprintf(stderr, "[X] SYSTEM ERROR: attributes terminal not change.\n");
+    return result;
+  }
 
   i = 0;
   while(i < (STRING_MAX_LENGTH-1)) {
@@ -1010,7 +1026,7 @@ int password_read(GLOBAL_MEMORY * ctx) {
   }
 
   ctx->password[i] = '\0';
-
+	
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
   putc('\n', stdout);
 
