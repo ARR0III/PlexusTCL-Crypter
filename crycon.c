@@ -972,7 +972,7 @@ int password_read(GLOBAL_MEMORY * ctx) {
   trms.c_lflag    &= ~(ECHO | ICANON);    /* invert flags ECHO and ICANON */
   trms.c_cc[VMIN]  = 1;
   trms.c_cc[VTIME] = 0;
-  tcsetattr(0, TCSAFLUSH, &trms);         /* set new settings and burn stdio stream */
+  tcsetattr(0, TCSAFLUSH, &trms);           /* set new settings */
 
   i = 0;
   while(i < (STRING_MAX_LENGTH-1)) {
@@ -980,8 +980,8 @@ int password_read(GLOBAL_MEMORY * ctx) {
       printf("\r[%4d] password:", i);
     else
       printf("\r[$$$$] password:");
-	  
     fflush(stdout);
+
     c = getchar();
 
     if (127 == c || 8 == c) { /* backspace */
@@ -1005,14 +1005,13 @@ int password_read(GLOBAL_MEMORY * ctx) {
   }
 
   if (i > 0 && i < STRING_MAX_LENGTH) {
+    printf("\r[$$$$] password:");
     result = OK;
   }
 
   ctx->password[i] = '\0';
 
   tcsetattr(0, TCSANOW, &trms_old); /* reability settings */
-  printf("\r[$$$$] password:");
-  fflush(stdout);
   putc('\n', stdout);
 
   return result;
